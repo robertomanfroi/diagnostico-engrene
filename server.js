@@ -103,7 +103,7 @@ class Supervisor {
     // Fallback para Instaloader se Scout falhou
     if (!results.perfilApify?.ok) {
       this.warn('supervisor', 'Scout falhou — usando Instaloader como fallback');
-      results.perfilFallback = agentInstaloader(arroba, this);
+      results.perfilFallback = await agentInstaloader(arroba, this);
     }
 
     // ── Imager: baixa imagens dos posts (depende do Scout) ───
