@@ -15,9 +15,9 @@ const fetch     = require('node-fetch');
 const app  = express();
 const PORT = process.env.PORT || 3000;
 
-// ── Controle de concorrência (máx 50 análises simultâneas) ──
+// ── Controle de concorrência (máx 5 análises simultâneas) ──
 let analiseEmCurso = 0;
-const MAX_ANALISES = 50;
+const MAX_ANALISES = 5;
 
 // ── Rate Limiting: 1 análise por @ por semana + 2 por IP por semana ──
 const RATE_LIMIT_SEMANAS_MS = 7 * 24 * 60 * 60 * 1000; // 7 dias
@@ -1141,7 +1141,18 @@ app.post('/api/analisar-manual', async (req, res) => {
     } = req.body;
 
     if (!nome?.trim() || !nicho?.trim() || !arroba?.trim()) {
+      analiseEmCurso--;
       return res.status(400).json({ sucesso: false, erro: 'Nome, nicho e @ são obrigatórios.' });
+    }
+
+    // ── Rate Limiting (mesmo critério do endpoint principal) ──
+    const clienteIP = req.headers['x-forwarded-for']?.split(',')[0]?.trim()
+                   || req.socket?.remoteAddress
+                   || 'unknown';
+    const rl = checkRateLimit(arroba.trim(), clienteIP);
+    if (rl.bloqueado) {
+      analiseEmCurso--;
+      return res.status(429).json({ sucesso: false, erro: rl.motivo });
     }
 
     sv.info('supervisor', `Análise manual: ${nome} | @${arroba} | ${nicho}`);
@@ -1206,6 +1217,8 @@ NOTA: Dados coletados manualmente pelo usuário durante o evento. Use exatamente
     const tokens    = (response.usage?.input_tokens || 0) + (response.usage?.output_tokens || 0);
 
     sv.info('analyst', `✅ Análise manual concluída — ${tokens} tokens`);
+
+    registrarAnalise(arroba.trim(), clienteIP);
 
     res.json({
       sucesso: true,
