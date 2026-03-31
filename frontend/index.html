@@ -719,6 +719,74 @@
       border-radius:100px;
       font-size:11px; font-weight:600; color:var(--orange);
     }
+    /* ── Metrics cards ───────────────────────────────────── */
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+      gap: 10px;
+      margin: 24px 0;
+    }
+    .metric-card {
+      background: var(--surface-md);
+      border: 1px solid var(--border);
+      border-radius: var(--r-md);
+      padding: 14px 16px;
+      text-align: center;
+    }
+    .metric-card-value {
+      font-family: 'Calistoga', serif;
+      font-size: 22px;
+      color: var(--orange);
+      line-height: 1.1;
+      margin-bottom: 4px;
+    }
+    .metric-card-label {
+      font-size: 11px;
+      color: var(--muted);
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+    /* Score grande circular */
+    .score-circle-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-bottom: 24px;
+    }
+    .score-circle {
+      position: relative;
+      width: 110px; height: 110px;
+      margin-bottom: 10px;
+    }
+    .score-circle svg {
+      transform: rotate(-90deg);
+    }
+    .score-circle-inner {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    .score-circle-num {
+      font-family: 'Calistoga', serif;
+      font-size: 32px;
+      color: var(--white);
+      line-height: 1;
+    }
+    .score-circle-den {
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .score-circle-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+    }
     /* ── Report body ──────────────────────────────────────── */
     .report-body {
       background: var(--surface);
@@ -1200,13 +1268,36 @@
           <div class="resultado-eyebrow">Diagnóstico Engrene — Concluído</div>
           <div class="resultado-title" id="r-titulo">Análise pronta!</div>
           <div class="resultado-meta" id="r-meta"></div>
-          <div class="resultado-score-row">
+          <!-- Nota circular -->
+          <div class="score-circle-wrap" id="score-circle-wrap" style="display:none">
+            <div class="score-circle">
+              <svg width="110" height="110" viewBox="0 0 110 110">
+                <circle cx="55" cy="55" r="46" fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="8"/>
+                <circle id="score-arc" cx="55" cy="55" r="46" fill="none" stroke="var(--orange)" stroke-width="8"
+                  stroke-linecap="round"
+                  stroke-dasharray="289" stroke-dashoffset="289"
+                  style="transition: stroke-dashoffset 1s cubic-bezier(0.16,1,0.3,1)"/>
+              </svg>
+              <div class="score-circle-inner">
+                <span class="score-circle-num" id="r-score">—</span>
+                <span class="score-circle-den">/10</span>
+              </div>
+            </div>
+            <span class="score-circle-title">Nota geral do perfil</span>
+          </div>
+
+          <!-- Fallback score (sem círculo) -->
+          <div class="resultado-score-row" id="score-row-fallback">
             <div class="score-badge">
-              <span class="score-num" id="r-score">—</span>
+              <span class="score-num" id="r-score-fb">—</span>
               <span class="score-den">/10</span>
             </div>
             <span class="score-label">Nota geral<br>do perfil</span>
           </div>
+
+          <!-- Cards de métricas -->
+          <div class="metrics-grid" id="metrics-grid" style="display:none"></div>
+
           <div class="fontes-row" id="r-fontes"></div>
         </div>
         <div class="report-body" id="r-body"></div>
@@ -1425,8 +1516,43 @@
       `${nome} · ${new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'})} · IA Avançada`;
 
     // Score
-    const m = relatorio.match(/NOTA GERAL[:\s]+(\d+)/i) || relatorio.match(/(\d+)\/10/);
-    if (m) document.getElementById('r-score').textContent = m[1];
+    const m = relatorio.match(/NOTA GERAL[:\s]*\**(\d+)/i) || relatorio.match(/(\d+)\/10/);
+    const scoreVal = m ? parseInt(m[1]) : null;
+
+    if (scoreVal !== null && scoreVal >= 1 && scoreVal <= 10) {
+      // Mostra círculo animado
+      document.getElementById('score-circle-wrap').style.display = 'flex';
+      document.getElementById('score-row-fallback').style.display = 'none';
+      document.getElementById('r-score').textContent = scoreVal;
+      // Anima arco: circunferência = 2*π*46 ≈ 289
+      setTimeout(() => {
+        const offset = 289 - (289 * scoreVal / 10);
+        document.getElementById('score-arc').style.strokeDashoffset = offset;
+      }, 100);
+    }
+
+    // Extrai métricas do texto do relatório
+    const metricas = [];
+    const segM   = relatorio.match(/Seguidores[:\s]*([0-9.,]+[kKmM]?)/i);
+    const engM   = relatorio.match(/engajamento[^:\n]*[:\s]*([0-9.,]+%)/i);
+    const postsM = relatorio.match(/Total de posts[:\s]*([0-9.,]+)/i) || relatorio.match(/posts[:\s]*([0-9]+)/i);
+    const ratioM = relatorio.match(/Ratio[:\s]*([0-9.,]+)/i);
+
+    if (segM)   metricas.push({ label: 'Seguidores',   value: segM[1] });
+    if (engM)   metricas.push({ label: 'Engajamento',  value: engM[1] });
+    if (postsM) metricas.push({ label: 'Posts',        value: postsM[1] });
+    if (ratioM) metricas.push({ label: 'Ratio seg/seg', value: ratioM[1] });
+
+    if (metricas.length > 0) {
+      const grid = document.getElementById('metrics-grid');
+      grid.style.display = 'grid';
+      grid.innerHTML = metricas.map(c =>
+        `<div class="metric-card">
+          <div class="metric-card-value">${c.value}</div>
+          <div class="metric-card-label">${c.label}</div>
+        </div>`
+      ).join('');
+    }
 
     // Fontes badges
     const fontesEl = document.getElementById('r-fontes');
