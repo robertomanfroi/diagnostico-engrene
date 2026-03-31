@@ -756,6 +756,12 @@ app.post('/api/analisar', upload.fields([
   }
   analiseEmCurso++;
 
+  // Keepalive: envia \n a cada 20s para evitar timeout do proxy Nginx do Render
+  // JSON.parse ignora whitespace no inicio, entao o cliente processa normalmente
+  res.setHeader('Content-Type', 'application/json; charset=utf-8');
+  res.setHeader('Transfer-Encoding', 'chunked');
+  const keepAlive = setInterval(() => { try { res.write('\n'); } catch(e) {} }, 20000);
+
   const uploadedFiles = [];
   const jobId = `job_${Date.now()}`;
   const sv    = new Supervisor(jobId);
@@ -765,7 +771,8 @@ app.post('/api/analisar', upload.fields([
 
     // ── Validação básica ────────────────────────────────────
     if (!nome?.trim() || !nicho?.trim() || !arroba?.trim()) {
-      return res.status(400).json({ sucesso: false, erro: 'Nome, nicho e @ do Instagram são obrigatórios.' });
+      clearInterval(keepAlive);
+      return res.end(JSON.stringify({ sucesso: false, erro: 'Nome, nicho e @ do Instagram são obrigatórios.' }));
     }
     const reelUrl     = (req.body.reel_url     || '').trim();
     const reelLegenda = (req.body.reel_legenda || '').trim();
@@ -784,10 +791,11 @@ app.post('/api/analisar', upload.fields([
 
     // ── Sem dados reais: erro claro ──────────────────────────
     if (!perfilData) {
-      return res.status(422).json({
+      clearInterval(keepAlive);
+      return res.end(JSON.stringify({
         sucesso: false,
         erro: `Não consegui acessar o perfil @${arroba}. Verifique se o @ está correto e se a conta é pública.`
-      });
+      }));
     }
 
     // ── Prepara imagens para o Analyst (Claude) ─────────────
@@ -897,7 +905,8 @@ ${squadResultado.conteudosVirais ? `\nCONTEÚDOS VIRAIS DO NICHO "${nicho}" (col
     // Limpa uploads
     uploadedFiles.forEach(f => { try { fs.unlinkSync(f); } catch(e) {} });
 
-    res.json({
+    clearInterval(keepAlive);
+    res.end(JSON.stringify({
       sucesso: true,
       relatorio,
       tokens_usados: tokens,
@@ -907,12 +916,13 @@ ${squadResultado.conteudosVirais ? `\nCONTEÚDOS VIRAIS DO NICHO "${nicho}" (col
         transcricao: squadResultado.transcricao ? 'whisper' : (reelLegenda ? 'manual' : 'não disponível'),
         virais:      squadResultado.conteudosVirais ? 'apify' : 'não coletado'
       }
-    });
+    }));
 
   } catch (error) {
+    clearInterval(keepAlive);
     uploadedFiles.forEach(f => { try { fs.unlinkSync(f); } catch(e) {} });
     sv.err('supervisor', error.message);
-    res.status(500).json({ sucesso: false, erro: error.message });
+    res.end(JSON.stringify({ sucesso: false, erro: error.message }));
   } finally {
     analiseEmCurso--;
   }
