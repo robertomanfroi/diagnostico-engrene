@@ -955,7 +955,7 @@
     </h1>
 
     <p class="hero-sub">
-      Squad de IA analisa seu perfil em tempo real — métricas, conteúdo, virais do nicho e roteiro de Reel.
+      Squad de IA analisa seu perfil em tempo real: métricas, conteúdo, virais do nicho e roteiro de Reel.
       Relatório completo em menos de 2 minutos.
     </p>
 
@@ -1182,7 +1182,7 @@
         <div class="card">
           <div class="card-eyebrow">Etapa 3 de 3</div>
           <h2 class="card-title">Qual é o seu foco?</h2>
-          <p class="card-sub">Escolha seu objetivo — isso direciona a análise para o que mais importa pra você agora.</p>
+          <p class="card-sub">Escolha seu objetivo. Isso direciona a análise para o que mais importa pra você agora.</p>
 
           <div class="alert" id="err3" role="alert">
             <svg width="16" height="16" fill="none" stroke="#f87171" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01" stroke-linecap="round"/></svg>
@@ -1206,9 +1206,9 @@
               <div class="pill-radio"></div>
               <span class="pill-text">Construir autoridade no meu nicho</span>
             </div>
-            <div class="pill" onclick="selecionarObj(this,'Análise geral — quero tudo')">
+            <div class="pill" onclick="selecionarObj(this,'Análise geral: quero tudo')">
               <div class="pill-radio"></div>
-              <span class="pill-text">Análise geral — quero tudo</span>
+              <span class="pill-text">Análise geral: quero tudo</span>
             </div>
           </div>
 
@@ -1249,7 +1249,7 @@
           </div>
         </div>
         <div class="loading-fila" id="loading-fila">
-          <span id="fila-txt">32 análises</span> em andamento — sua análise está na fila
+          <span id="fila-txt">32 análises</span> em andamento. Sua análise está na fila
         </div>
         <div class="loading-steps">
           <div class="lstep" id="ls1"><div class="lstep-dot"></div>Scout buscando métricas do perfil</div>
@@ -1265,7 +1265,7 @@
     <div id="resultado-screen">
       <div class="resultado-wrap">
         <div class="resultado-header">
-          <div class="resultado-eyebrow">Diagnóstico Engrene — Concluído</div>
+          <div class="resultado-eyebrow">Diagnóstico Engrene - Concluído</div>
           <div class="resultado-title" id="r-titulo">Análise pronta!</div>
           <div class="resultado-meta" id="r-meta"></div>
           <!-- Nota circular -->
@@ -1497,9 +1497,15 @@
       document.getElementById('loading-screen').style.display = 'none';
       document.getElementById('form-screen').style.display = 'block';
 
-      // Mostra erro inline
+      // Mostra erro inline em português
       const err = document.getElementById('err3');
-      err.textContent = '❌ ' + e.message;
+      let msgErro = e.message;
+      if (msgErro.includes('pattern') || msgErro.includes('URL') || msgErro.includes('url')) {
+        msgErro = 'Verifique o link do Reel. Ele deve começar com https://';
+      } else if (msgErro.includes('Failed to fetch') || msgErro.includes('NetworkError')) {
+        msgErro = 'Sem conexão com o servidor. Tente novamente.';
+      }
+      err.innerHTML = '❌ ' + msgErro;
       err.classList.add('show');
     }
   }
