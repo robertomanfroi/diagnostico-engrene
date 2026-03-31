@@ -605,7 +605,27 @@
       color: var(--white);
       margin-bottom: 8px;
     }
-    .loading-sub { font-size: 14px; color: var(--muted); margin-bottom: 36px; }
+    .loading-sub { font-size: 14px; color: var(--muted); margin-bottom: 20px; }
+    .loading-timer-box {
+      display: flex; align-items: center; gap: 16px;
+      background: rgba(252,76,4,0.08);
+      border: 1px solid rgba(252,76,4,0.2);
+      border-radius: 12px;
+      padding: 12px 24px;
+      margin-bottom: 28px;
+      font-size: 13px; color: var(--muted);
+    }
+    .loading-timer-box .timer-val {
+      font-family: 'Calistoga', serif;
+      font-size: 22px; color: var(--orange);
+      min-width: 50px; text-align: center;
+    }
+    .loading-fila {
+      font-size: 12px; color: var(--muted);
+      margin-bottom: 20px;
+      display: none;
+    }
+    .loading-fila span { color: var(--orange); font-weight: 600; }
     .loading-steps {
       width: 100%; max-width: 400px;
       display: flex; flex-direction: column; gap: 10px;
@@ -1148,7 +1168,21 @@
           <div class="loading-center-dot"></div>
         </div>
         <div class="loading-title">Squad analisando…</div>
-        <div class="loading-sub">Processamento profundo — pode levar até 90 segundos</div>
+        <div class="loading-sub">Processamento profundo com IA</div>
+        <div class="loading-timer-box">
+          <div>
+            <div style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:2px;">Tempo decorrido</div>
+            <div class="timer-val" id="timer-elapsed">0s</div>
+          </div>
+          <div style="width:1px;height:36px;background:rgba(255,255,255,0.1)"></div>
+          <div>
+            <div style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:2px;">Estimativa</div>
+            <div class="timer-val" id="timer-est">~60s</div>
+          </div>
+        </div>
+        <div class="loading-fila" id="loading-fila">
+          <span id="fila-txt">32 análises</span> em andamento — sua análise está na fila
+        </div>
         <div class="loading-steps">
           <div class="lstep" id="ls1"><div class="lstep-dot"></div>Scout buscando métricas do perfil</div>
           <div class="lstep" id="ls2"><div class="lstep-dot"></div>Imager baixando imagens do feed</div>
@@ -1292,6 +1326,36 @@
     document.getElementById('loading-screen').style.display = 'block';
     window.scrollTo({ top: 0, behavior: 'smooth' });
 
+    // ── Timer elapsed + estimativa ────────────────────────
+    let segundos = 0;
+    let tempoEst = 60;
+    const elEl  = document.getElementById('timer-elapsed');
+    const estEl = document.getElementById('timer-est');
+    const filaEl = document.getElementById('loading-fila');
+    const filaTxt = document.getElementById('fila-txt');
+
+    const timerInterval = setInterval(() => {
+      segundos++;
+      elEl.textContent = segundos < 60 ? `${segundos}s` : `${Math.floor(segundos/60)}m${segundos%60}s`;
+      const restante = Math.max(0, tempoEst - segundos);
+      estEl.textContent = restante > 0 ? `~${restante}s` : 'Finalizando…';
+    }, 1000);
+
+    // ── Poll status da fila a cada 5s ─────────────────────
+    const statusInterval = setInterval(async () => {
+      try {
+        const s = await fetch('/api/status').then(r => r.json());
+        tempoEst = s.tempoEstimadoSeg || 60;
+        estEl.textContent = `~${Math.max(0, tempoEst - segundos)}s`;
+        if (s.analiseEmCurso >= s.maxAnalises) {
+          filaEl.style.display = 'block';
+          filaTxt.textContent = `${s.analiseEmCurso} análises`;
+        } else {
+          filaEl.style.display = 'none';
+        }
+      } catch(e) {}
+    }, 5000);
+
     // Animação dos steps de loading
     const ls = ['ls1','ls2','ls3','ls4'];
     let idx = 0;
@@ -1323,6 +1387,8 @@
       const data = await res.json();
 
       clearInterval(tick);
+      clearInterval(timerInterval);
+      clearInterval(statusInterval);
       ls.forEach(id => {
         document.getElementById(id).classList.remove('ativo');
         document.getElementById(id).classList.add('done');
@@ -1334,6 +1400,8 @@
 
     } catch(e) {
       clearInterval(tick);
+      clearInterval(timerInterval);
+      clearInterval(statusInterval);
       btn.disabled = false;
       document.getElementById('loading-screen').style.display = 'none';
       document.getElementById('form-screen').style.display = 'block';

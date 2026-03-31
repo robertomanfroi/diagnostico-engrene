@@ -1026,6 +1026,20 @@ NOTA: Dados coletados manualmente pelo usuário durante o evento. Use exatamente
   }
 });
 
+// ── Status da fila ─────────────────────────────────────────
+app.get('/api/status', (req, res) => {
+  const disponivel = analiseEmCurso < MAX_ANALISES;
+  const posicaoFila = analiseEmCurso;
+  const tempoEstimadoSeg = disponivel ? 60 : 60 + Math.ceil((posicaoFila - MAX_ANALISES + 1) * 5);
+  res.json({
+    analiseEmCurso,
+    maxAnalises: MAX_ANALISES,
+    disponivel,
+    posicaoFila,
+    tempoEstimadoSeg
+  });
+});
+
 // ── Serve frontend ─────────────────────────────────────────
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
