@@ -1,0 +1,1424 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Diagnóstico Engrene — Análise de Instagram com IA</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Calistoga:ital@0;1&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    /* ── Tokens ───────────────────────────────────────────── */
+    :root {
+      --bg:          #080808;
+      --bg-warm:     #0d0806;
+      --surface:     rgba(255,255,255,0.04);
+      --surface-md:  rgba(255,255,255,0.07);
+      --surface-hi:  rgba(255,255,255,0.10);
+      --border:      rgba(255,255,255,0.08);
+      --border-hi:   rgba(255,255,255,0.14);
+      --orange:      #FC4C04;
+      --orange-dim:  rgba(252,76,4,0.15);
+      --orange-glow: rgba(252,76,4,0.30);
+      --cream:       #FCE9D9;
+      --white:       #EDEDEF;
+      --muted:       rgba(237,237,239,0.45);
+      --subtle:      rgba(237,237,239,0.22);
+      --r-sm:  10px;
+      --r-md:  16px;
+      --r-lg:  22px;
+      --r-xl:  28px;
+      --ease:  cubic-bezier(0.16,1,0.3,1);
+    }
+
+    /* ── Reset ────────────────────────────────────────────── */
+    *,*::before,*::after { box-sizing:border-box; margin:0; padding:0; }
+    html { scroll-behavior:smooth; -webkit-text-size-adjust:100%; }
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--white);
+      min-height: 100dvh;
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── Ambient blobs ────────────────────────────────────── */
+    .blob-layer {
+      position: fixed; inset: 0; z-index: 0;
+      pointer-events: none; overflow: hidden;
+    }
+    .blob {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(80px);
+      animation: blobDrift 18s ease-in-out infinite alternate;
+    }
+    .blob-1 {
+      width: 500px; height: 500px;
+      background: radial-gradient(circle, rgba(252,76,4,0.08) 0%, transparent 70%);
+      top: -100px; left: -100px;
+      animation-duration: 20s;
+    }
+    .blob-2 {
+      width: 400px; height: 400px;
+      background: radial-gradient(circle, rgba(252,76,4,0.05) 0%, transparent 70%);
+      bottom: 10%; right: -80px;
+      animation-duration: 25s; animation-delay: -8s;
+    }
+    .blob-3 {
+      width: 300px; height: 300px;
+      background: radial-gradient(circle, rgba(252,120,4,0.04) 0%, transparent 70%);
+      top: 45%; left: 30%;
+      animation-duration: 30s; animation-delay: -14s;
+    }
+    @keyframes blobDrift {
+      0%   { transform: translate(0,0) scale(1); }
+      50%  { transform: translate(40px,30px) scale(1.08); }
+      100% { transform: translate(-20px,50px) scale(0.95); }
+    }
+
+    /* ── Layout ───────────────────────────────────────────── */
+    .shell {
+      position: relative; z-index: 1;
+      min-height: 100dvh;
+    }
+
+    /* ── HERO ─────────────────────────────────────────────── */
+    .hero {
+      position: relative;
+      padding: 72px 24px 64px;
+      text-align: center;
+      overflow: hidden;
+    }
+    .hero::after {
+      content: '';
+      position: absolute;
+      bottom: 0; left: 50%; transform: translateX(-50%);
+      width: 80%; height: 1px;
+      background: linear-gradient(90deg, transparent, var(--border), transparent);
+    }
+    .hero-badge {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 6px 14px;
+      background: var(--orange-dim);
+      border: 1px solid rgba(252,76,4,0.25);
+      border-radius: 100px;
+      font-size: 11px; font-weight: 600;
+      letter-spacing: 0.08em; text-transform: uppercase;
+      color: var(--orange);
+      margin-bottom: 28px;
+    }
+    .hero-badge-dot {
+      width: 6px; height: 6px;
+      background: var(--orange);
+      border-radius: 50%;
+      animation: pulse 2s ease infinite;
+    }
+    @keyframes pulse {
+      0%,100% { opacity:1; transform:scale(1); }
+      50%     { opacity:0.5; transform:scale(0.8); }
+    }
+    .hero-title {
+      font-family: 'Calistoga', serif;
+      font-size: clamp(36px, 8vw, 72px);
+      line-height: 1.05;
+      letter-spacing: -0.02em;
+      color: var(--white);
+      margin-bottom: 20px;
+    }
+    .hero-title em {
+      font-style: italic;
+      background: linear-gradient(135deg, var(--orange) 0%, #ff8c42 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .hero-sub {
+      font-size: clamp(15px, 3vw, 18px);
+      font-weight: 400;
+      line-height: 1.65;
+      color: var(--muted);
+      max-width: 520px;
+      margin: 0 auto 36px;
+    }
+    .hero-chips {
+      display: flex; flex-wrap: wrap; justify-content: center; gap: 8px;
+      margin-bottom: 44px;
+    }
+    .hero-chip {
+      padding: 6px 14px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 100px;
+      font-size: 12px; font-weight: 500;
+      color: var(--muted);
+      display: flex; align-items: center; gap: 6px;
+    }
+    .hero-chip svg { width:13px; height:13px; flex-shrink:0; color: var(--orange); }
+    .hero-cta {
+      display: inline-flex; align-items: center; gap: 10px;
+      padding: 16px 36px;
+      background: var(--orange);
+      color: #fff;
+      font-size: 15px; font-weight: 700;
+      border: none; border-radius: var(--r-md);
+      cursor: pointer;
+      box-shadow: 0 0 40px var(--orange-glow), 0 4px 16px rgba(0,0,0,0.4);
+      transition: transform 200ms var(--ease), box-shadow 200ms var(--ease);
+      touch-action: manipulation;
+    }
+    .hero-cta:hover  { transform:translateY(-2px); box-shadow:0 0 56px var(--orange-glow), 0 8px 24px rgba(0,0,0,0.4); }
+    .hero-cta:active { transform:translateY(0) scale(0.97); }
+    .hero-cta svg { width:18px; height:18px; transition:transform 200ms var(--ease); }
+    .hero-cta:hover svg { transform:translateX(3px); }
+
+    /* ── Marquee ──────────────────────────────────────────── */
+    .marquee-track {
+      position: relative;
+      overflow: hidden;
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      padding: 12px 0;
+      background: rgba(252,76,4,0.03);
+    }
+    .marquee-inner {
+      display: flex; gap: 48px;
+      animation: marquee 28s linear infinite;
+      width: max-content;
+    }
+    .marquee-track:hover .marquee-inner { animation-play-state: paused; }
+    @keyframes marquee {
+      from { transform: translateX(0); }
+      to   { transform: translateX(-50%); }
+    }
+    .marquee-item {
+      display: flex; align-items: center; gap: 10px;
+      font-size: 12px; font-weight: 600;
+      letter-spacing: 0.05em; text-transform: uppercase;
+      color: var(--subtle); white-space: nowrap;
+    }
+    .marquee-sep { color: var(--orange); font-size:14px; }
+
+    /* ── Form Container ───────────────────────────────────── */
+    .form-wrap {
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 0 20px 80px;
+    }
+
+    /* ── Step Nav ─────────────────────────────────────────── */
+    .step-nav {
+      display: flex; align-items: center; gap: 0;
+      margin-bottom: 36px;
+    }
+    .step-item {
+      display: flex; align-items: center; gap: 10px;
+      flex: 1;
+    }
+    .step-item:last-child { flex: 0; }
+    .step-dot {
+      width: 32px; height: 32px; flex-shrink: 0;
+      border-radius: 50%;
+      display: grid; place-items: center;
+      font-size: 12px; font-weight: 700;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--subtle);
+      transition: all 300ms var(--ease);
+      position: relative; z-index: 1;
+    }
+    .step-dot.active {
+      background: var(--orange);
+      border-color: var(--orange);
+      color: #fff;
+      box-shadow: 0 0 20px var(--orange-glow);
+    }
+    .step-dot.done {
+      background: rgba(252,76,4,0.15);
+      border-color: rgba(252,76,4,0.4);
+      color: var(--orange);
+    }
+    .step-line {
+      flex: 1; height: 1px;
+      background: var(--border);
+      position: relative; overflow: hidden;
+    }
+    .step-line-fill {
+      position: absolute; inset-block: 0; left: 0;
+      width: 0%; background: var(--orange);
+      transition: width 500ms var(--ease);
+    }
+    .step-label {
+      font-size: 11px; font-weight: 600;
+      letter-spacing: 0.04em; text-transform: uppercase;
+      color: var(--subtle);
+      position: absolute; top: calc(100% + 6px);
+      white-space: nowrap;
+      transition: color 300ms;
+    }
+    .step-dot-wrap {
+      position: relative;
+      display: flex; flex-direction: column; align-items: center;
+    }
+
+    /* ── Card ─────────────────────────────────────────────── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--r-xl);
+      padding: 32px 28px;
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+    }
+    .card-eyebrow {
+      font-size: 11px; font-weight: 700;
+      letter-spacing: 0.08em; text-transform: uppercase;
+      color: var(--orange);
+      margin-bottom: 8px;
+    }
+    .card-title {
+      font-family: 'Calistoga', serif;
+      font-size: clamp(22px, 5vw, 28px);
+      font-weight: 400;
+      line-height: 1.2;
+      color: var(--white);
+      margin-bottom: 8px;
+    }
+    .card-sub {
+      font-size: 14px; line-height: 1.6;
+      color: var(--muted);
+      margin-bottom: 28px;
+    }
+
+    /* ── Field ────────────────────────────────────────────── */
+    .field { margin-bottom: 20px; }
+    .field-label {
+      display: block;
+      font-size: 12px; font-weight: 600;
+      letter-spacing: 0.03em; text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+    .field-label .opt {
+      font-weight: 400; text-transform: none;
+      letter-spacing: 0; color: var(--subtle);
+    }
+    .field-input {
+      width: 100%;
+      padding: 14px 16px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--border);
+      border-radius: var(--r-md);
+      color: var(--white);
+      font-family: 'Inter', sans-serif;
+      font-size: 15px; font-weight: 400;
+      transition: border-color 200ms, box-shadow 200ms;
+      -webkit-appearance: none;
+    }
+    .field-input::placeholder { color: var(--subtle); }
+    .field-input:focus {
+      outline: none;
+      border-color: rgba(252,76,4,0.5);
+      box-shadow: 0 0 0 3px rgba(252,76,4,0.12);
+      background: rgba(255,255,255,0.07);
+    }
+    select.field-input { cursor: pointer; }
+    select.field-input option { background: #1a1a1a; color: #fff; }
+    textarea.field-input { resize: vertical; min-height: 88px; line-height: 1.55; }
+
+    /* ── Fields row ───────────────────────────────────────── */
+    .fields-row { display: grid; grid-template-columns:1fr 1fr; gap:16px; }
+    @media(max-width:480px){ .fields-row { grid-template-columns:1fr; } }
+
+    /* ── Alert ────────────────────────────────────────────── */
+    .alert {
+      display: none; align-items: center; gap: 10px;
+      padding: 12px 16px;
+      background: rgba(220,38,38,0.08);
+      border: 1px solid rgba(220,38,38,0.25);
+      border-radius: var(--r-sm);
+      font-size: 13px; color: #f87171;
+      margin-bottom: 20px;
+    }
+    .alert.show { display: flex; }
+
+    /* ── Divider ──────────────────────────────────────────── */
+    .divider {
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--border), transparent);
+      margin: 28px 0;
+    }
+
+    /* ── Squad Panel (Etapa 2) ────────────────────────────── */
+    .squad-grid {
+      display: grid; gap: 10px;
+      margin-bottom: 28px;
+    }
+    .squad-item {
+      display: flex; align-items: center; gap: 14px;
+      padding: 16px 18px;
+      background: rgba(252,76,4,0.04);
+      border: 1px solid rgba(252,76,4,0.12);
+      border-radius: var(--r-md);
+      transition: border-color 250ms, background 250ms;
+    }
+    .squad-item:hover {
+      background: rgba(252,76,4,0.07);
+      border-color: rgba(252,76,4,0.22);
+    }
+    .squad-icon {
+      width: 40px; height: 40px; flex-shrink: 0;
+      border-radius: var(--r-sm);
+      background: rgba(252,76,4,0.10);
+      border: 1px solid rgba(252,76,4,0.20);
+      display: grid; place-items: center;
+    }
+    .squad-icon svg { width:18px; height:18px; color: var(--orange); }
+    .squad-name {
+      font-size: 13px; font-weight: 700;
+      color: var(--white); margin-bottom: 3px;
+    }
+    .squad-desc { font-size: 12px; color: var(--subtle); line-height:1.4; }
+    .squad-notice {
+      padding: 14px 16px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--r-sm);
+      font-size: 12px; color: var(--subtle); line-height: 1.6;
+      margin-bottom: 28px;
+    }
+    .squad-notice strong { color: var(--muted); font-weight:600; }
+    .squad-optional-label {
+      font-size: 12px; font-weight: 700;
+      letter-spacing: 0.05em; text-transform: uppercase;
+      color: var(--subtle);
+      margin-bottom: 16px; display: block;
+    }
+
+    /* ── Print zones (opcionais) ──────────────────────────── */
+    .prints-grid {
+      display: grid;
+      grid-template-columns: repeat(3,1fr);
+      gap: 10px;
+      margin-bottom: 24px;
+    }
+    @media(max-width:440px){ .prints-grid { grid-template-columns: repeat(2,1fr); } }
+    .print-zone {
+      position: relative;
+      border: 1px dashed var(--border);
+      border-radius: var(--r-md);
+      overflow: hidden;
+      cursor: pointer;
+      transition: border-color 200ms, background 200ms;
+      text-align: center;
+    }
+    .print-zone:hover { border-color: rgba(252,76,4,0.4); background: var(--orange-dim); }
+    .print-zone.uploaded {
+      border-style: solid;
+      border-color: rgba(252,76,4,0.4);
+      background: rgba(252,76,4,0.05);
+    }
+    .print-zone input[type=file] { position:absolute; inset:0; opacity:0; cursor:pointer; }
+    .print-zone-inner {
+      padding: 20px 12px;
+      display: flex; flex-direction: column; align-items: center; gap: 8px;
+    }
+    .print-zone-icon {
+      width: 36px; height: 36px;
+      background: var(--surface-md);
+      border-radius: var(--r-sm);
+      display: grid; place-items: center;
+    }
+    .print-zone-icon svg { width:16px; height:16px; color: var(--muted); }
+    .print-zone-label { font-size: 11px; font-weight: 600; color: var(--muted); }
+    .print-zone-sub { font-size: 10px; color: var(--subtle); }
+    .print-check {
+      display: none;
+      position: absolute; top:8px; right:8px;
+      width:20px; height:20px;
+      background: var(--orange);
+      border-radius: 50%;
+      place-items: center;
+    }
+    .print-check svg { width:11px; height:11px; }
+    .uploaded .print-check { display: grid; }
+
+    /* ── Print bio (full width) ───────────────────────────── */
+    .print-bio-zone {
+      position: relative;
+      border: 1px dashed var(--border);
+      border-radius: var(--r-md);
+      overflow: hidden;
+      cursor: pointer;
+      transition: border-color 200ms, background 200ms;
+      margin-bottom: 12px;
+      display: flex; align-items: center; gap: 0;
+      min-height: 72px;
+    }
+    .print-bio-zone:hover { border-color: rgba(252,76,4,0.4); background: var(--orange-dim); }
+    .print-bio-zone.uploaded { border-style:solid; border-color:rgba(252,76,4,0.4); background:rgba(252,76,4,0.05); }
+    .print-bio-zone input[type=file] { position:absolute; inset:0; opacity:0; cursor:pointer; }
+    .print-bio-inner { display:flex; align-items:center; gap:14px; padding:14px 18px; width:100%; }
+    .print-bio-icon {
+      width:40px; height:40px; flex-shrink:0;
+      background: var(--surface-md); border-radius:var(--r-sm);
+      display:grid; place-items:center;
+    }
+    .print-bio-icon svg { width:18px; height:18px; color:var(--muted); }
+    .print-bio-text .pbt-title { font-size:13px; font-weight:700; color:var(--white); margin-bottom:3px; }
+    .print-bio-text .pbt-desc { font-size:11px; color:var(--subtle); }
+    .print-bio-check {
+      display:none; margin-left:auto; flex-shrink:0;
+      width:22px; height:22px;
+      background:var(--orange); border-radius:50%;
+      place-items:center;
+    }
+    .print-bio-check svg { width:12px; height:12px; }
+    .print-bio-zone.uploaded .print-bio-check { display:grid; }
+
+    /* ── Pills ────────────────────────────────────────────── */
+    .pills-grid { display: grid; gap: 10px; }
+    .pill {
+      display: flex; align-items: center; gap: 14px;
+      padding: 14px 18px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--r-md);
+      cursor: pointer;
+      transition: all 200ms var(--ease);
+      touch-action: manipulation;
+    }
+    .pill:hover { background: var(--surface-md); border-color: var(--border-hi); }
+    .pill.selected {
+      background: rgba(252,76,4,0.08);
+      border-color: rgba(252,76,4,0.35);
+    }
+    .pill-radio {
+      width: 18px; height: 18px; flex-shrink: 0;
+      border-radius: 50%;
+      border: 2px solid var(--border-hi);
+      transition: all 200ms var(--ease);
+      display: grid; place-items: center;
+    }
+    .pill.selected .pill-radio {
+      border-color: var(--orange);
+      background: var(--orange);
+      box-shadow: 0 0 10px var(--orange-glow);
+    }
+    .pill.selected .pill-radio::after {
+      content:''; width:6px; height:6px;
+      background:#fff; border-radius:50%;
+    }
+    .pill-text { font-size: 14px; font-weight: 500; color: var(--white); line-height:1.4; }
+
+    /* ── Buttons ──────────────────────────────────────────── */
+    .btn-row {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 12px; margin-top: 28px;
+    }
+    .btn-primary {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 14px 28px;
+      background: var(--orange);
+      color: #fff;
+      font-family: 'Inter',sans-serif;
+      font-size: 14px; font-weight: 700;
+      border: none; border-radius: var(--r-md);
+      cursor: pointer;
+      box-shadow: 0 0 28px var(--orange-glow);
+      transition: transform 200ms var(--ease), box-shadow 200ms var(--ease), opacity 200ms;
+      touch-action: manipulation;
+    }
+    .btn-primary:hover  { transform:translateY(-1px); box-shadow:0 0 40px var(--orange-glow); }
+    .btn-primary:active { transform:scale(0.97); }
+    .btn-primary:disabled { opacity:0.4; pointer-events:none; }
+    .btn-primary svg { width:16px; height:16px; }
+    .btn-ghost {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 14px 20px;
+      background: transparent;
+      color: var(--muted);
+      font-family: 'Inter',sans-serif;
+      font-size: 14px; font-weight: 500;
+      border: 1px solid var(--border);
+      border-radius: var(--r-md);
+      cursor: pointer;
+      transition: all 200ms var(--ease);
+      touch-action: manipulation;
+    }
+    .btn-ghost:hover { background:var(--surface-md); color:var(--white); border-color:var(--border-hi); }
+    .btn-ghost svg { width:16px; height:16px; }
+
+    /* ── Etapas ───────────────────────────────────────────── */
+    .etapa { display: none; }
+    .etapa.ativa { display: block; animation: fadeUp 400ms var(--ease); }
+    @keyframes fadeUp {
+      from { opacity:0; transform:translateY(16px); }
+      to   { opacity:1; transform:translateY(0); }
+    }
+
+    /* ── Loading ──────────────────────────────────────────── */
+    #loading-screen { display:none; }
+    .loading-wrap {
+      min-height: 80dvh;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      text-align: center;
+      padding: 40px 24px;
+    }
+    .loading-ring-wrap {
+      position: relative;
+      width: 100px; height: 100px;
+      margin-bottom: 36px;
+    }
+    .loading-ring {
+      width: 100%; height: 100%;
+      border-radius: 50%;
+      border: 2px solid rgba(255,255,255,0.06);
+      border-top-color: var(--orange);
+      animation: spin 1s linear infinite;
+    }
+    .loading-ring-inner {
+      position: absolute; inset: 10px;
+      border-radius: 50%;
+      border: 1px solid rgba(255,255,255,0.04);
+      border-top-color: rgba(252,76,4,0.4);
+      animation: spin 1.8s linear infinite reverse;
+    }
+    .loading-center-dot {
+      position: absolute; inset:0;
+      display:grid; place-items:center;
+    }
+    .loading-center-dot::after {
+      content:'';
+      width:12px; height:12px;
+      background: var(--orange);
+      border-radius:50%;
+      box-shadow: 0 0 20px var(--orange-glow);
+      animation: pulse 1.5s ease infinite;
+    }
+    @keyframes spin { to { transform:rotate(360deg); } }
+    .loading-title {
+      font-family: 'Calistoga', serif;
+      font-size: 24px;
+      color: var(--white);
+      margin-bottom: 8px;
+    }
+    .loading-sub { font-size: 14px; color: var(--muted); margin-bottom: 36px; }
+    .loading-steps {
+      width: 100%; max-width: 400px;
+      display: flex; flex-direction: column; gap: 10px;
+      text-align: left;
+    }
+    .lstep {
+      display: flex; align-items: center; gap: 12px;
+      padding: 12px 16px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--r-sm);
+      font-size: 13px; color: var(--subtle);
+      transition: all 300ms var(--ease);
+    }
+    .lstep.ativo {
+      background: rgba(252,76,4,0.07);
+      border-color: rgba(252,76,4,0.25);
+      color: var(--white);
+    }
+    .lstep.done {
+      border-color: rgba(252,76,4,0.2);
+      color: var(--muted);
+    }
+    .lstep-dot {
+      width: 8px; height: 8px; flex-shrink:0;
+      border-radius: 50%;
+      background: var(--border-hi);
+      transition: all 300ms;
+    }
+    .lstep.ativo .lstep-dot {
+      background: var(--orange);
+      box-shadow: 0 0 10px var(--orange-glow);
+      animation: pulse 1.2s ease infinite;
+    }
+    .lstep.done .lstep-dot {
+      background: rgba(252,76,4,0.5);
+    }
+
+    /* ── Resultado ────────────────────────────────────────── */
+    #resultado-screen { display:none; }
+    .resultado-wrap { padding: 40px 20px 80px; max-width: 760px; margin: 0 auto; }
+    .resultado-header {
+      background: linear-gradient(135deg, rgba(252,76,4,0.08) 0%, transparent 60%);
+      border: 1px solid rgba(252,76,4,0.15);
+      border-radius: var(--r-xl);
+      padding: 36px 32px;
+      margin-bottom: 32px;
+      position: relative; overflow: hidden;
+    }
+    .resultado-header::before {
+      content:'';
+      position:absolute; top:-40px; right:-40px;
+      width:180px; height:180px;
+      background: radial-gradient(circle, rgba(252,76,4,0.12) 0%, transparent 70%);
+      border-radius:50%; pointer-events:none;
+    }
+    .resultado-eyebrow {
+      font-size: 11px; font-weight: 700;
+      letter-spacing: 0.08em; text-transform: uppercase;
+      color: var(--orange); margin-bottom: 10px;
+    }
+    .resultado-title {
+      font-family: 'Calistoga', serif;
+      font-size: clamp(22px,5vw,30px);
+      color: var(--white); margin-bottom: 6px;
+    }
+    .resultado-meta { font-size: 12px; color: var(--subtle); margin-bottom: 24px; }
+    .resultado-score-row { display:flex; align-items:center; gap:16px; }
+    .score-badge {
+      display: flex; align-items: baseline; gap: 4px;
+      padding: 10px 20px;
+      background: var(--orange);
+      border-radius: var(--r-md);
+      box-shadow: 0 0 28px var(--orange-glow);
+    }
+    .score-num {
+      font-family:'Calistoga',serif;
+      font-size: 36px; color:#fff; line-height:1;
+    }
+    .score-den { font-size: 16px; color:rgba(255,255,255,0.7); }
+    .score-label { font-size: 13px; color: var(--muted); }
+    .fontes-row {
+      display:flex; flex-wrap:wrap; gap:8px;
+      margin-top:20px;
+    }
+    .fonte-chip {
+      display:flex; align-items:center; gap:6px;
+      padding:5px 12px;
+      background:rgba(252,76,4,0.08);
+      border:1px solid rgba(252,76,4,0.2);
+      border-radius:100px;
+      font-size:11px; font-weight:600; color:var(--orange);
+    }
+    /* ── Report body ──────────────────────────────────────── */
+    .report-body {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--r-xl);
+      padding: 36px 32px;
+      backdrop-filter: blur(20px);
+      line-height: 1.7;
+      font-size: 15px;
+      color: rgba(237,237,239,0.88);
+    }
+    @media(max-width:480px){ .report-body { padding:24px 20px; } }
+    .report-body h2 {
+      font-family:'Calistoga',serif;
+      font-size:20px; font-weight:400;
+      color:var(--white);
+      margin:32px 0 12px;
+      padding-bottom:10px;
+      border-bottom:1px solid var(--border);
+    }
+    .report-body h2:first-child { margin-top:0; }
+    .report-body h3 {
+      font-size:15px; font-weight:700;
+      color:var(--cream);
+      margin:20px 0 8px;
+    }
+    .report-body strong { color:var(--white); font-weight:700; }
+    .report-body em { color:var(--orange); font-style:normal; font-weight:500; }
+    .report-body code {
+      font-family:'JetBrains Mono',monospace;
+      font-size:13px;
+      background:rgba(255,255,255,0.06);
+      border:1px solid var(--border);
+      border-radius:6px; padding:2px 8px;
+      color:var(--cream);
+    }
+    .report-body pre {
+      background:rgba(0,0,0,0.3);
+      border:1px solid var(--border);
+      border-radius:var(--r-sm);
+      padding:16px 18px;
+      overflow-x:auto;
+      font-family:'JetBrains Mono',monospace;
+      font-size:13px; line-height:1.6;
+      color:var(--cream);
+      margin:12px 0;
+    }
+    .report-body blockquote {
+      border-left:3px solid var(--orange);
+      padding:12px 18px;
+      margin:16px 0;
+      background:var(--orange-dim);
+      border-radius:0 var(--r-sm) var(--r-sm) 0;
+      font-style:italic; color:var(--cream);
+    }
+    .report-body ul, .report-body ol {
+      padding-left:20px; margin:10px 0;
+    }
+    .report-body li { margin-bottom:6px; }
+    .report-body table {
+      width:100%; border-collapse:collapse; margin:16px 0;
+      font-size:13px;
+    }
+    .report-body th {
+      padding:10px 14px; text-align:left;
+      background:rgba(255,255,255,0.05);
+      border:1px solid var(--border);
+      font-size:11px; font-weight:700; text-transform:uppercase;
+      letter-spacing:.05em; color:var(--muted);
+    }
+    .report-body td {
+      padding:10px 14px;
+      border:1px solid var(--border);
+      color:rgba(237,237,239,0.8);
+    }
+    .report-body tr:hover td { background:rgba(255,255,255,0.03); }
+    /* ── Botão nova análise ─────────────────────────────────── */
+    /* ── CTA Método ───────────────────────────────────────── */
+    .cta-metodo {
+      margin: 40px 0 28px;
+      border-radius: var(--r-xl);
+      background: linear-gradient(135deg, rgba(252,76,4,0.12) 0%, rgba(252,76,4,0.05) 100%);
+      border: 1px solid rgba(252,76,4,0.25);
+      overflow: hidden;
+    }
+    .cta-metodo-inner { padding: 32px 28px; }
+    .cta-eyebrow {
+      font-size: 11px; font-weight: 700; letter-spacing: 0.08em;
+      text-transform: uppercase; color: var(--orange); margin-bottom: 10px;
+    }
+    .cta-title {
+      font-family: 'Calistoga', serif; font-style: italic;
+      font-size: 22px; color: var(--white); margin-bottom: 10px;
+    }
+    .cta-desc { font-size: 14px; color: var(--muted); line-height: 1.6; margin-bottom: 20px; }
+    .cta-bullets { display: flex; flex-direction: column; gap: 8px; margin-bottom: 24px; }
+    .cta-bullet {
+      display: flex; align-items: flex-start; gap: 8px;
+      font-size: 13px; color: var(--white); line-height: 1.5;
+    }
+    .cta-bullet svg { flex-shrink: 0; margin-top: 2px; }
+    .cta-btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 14px 24px; border-radius: var(--r-md);
+      background: var(--orange); color: #fff;
+      font-size: 15px; font-weight: 600; text-decoration: none;
+      transition: opacity 0.2s, transform 0.15s var(--ease);
+    }
+    .cta-btn:hover { opacity: 0.9; transform: translateY(-1px); }
+
+    .nova-analise-btn {
+      display:flex; align-items:center; justify-content:center; gap:10px;
+      width:100%; padding:16px;
+      background:transparent;
+      border:1px solid var(--border);
+      border-radius:var(--r-md);
+      color:var(--muted);
+      font-family:'Inter',sans-serif;
+      font-size:14px; font-weight:600;
+      cursor:pointer; margin-top:24px;
+      transition:all 200ms var(--ease);
+      touch-action:manipulation;
+    }
+    .nova-analise-btn:hover {
+      background:var(--surface-md);
+      border-color:var(--border-hi);
+      color:var(--white);
+    }
+    .nova-analise-btn svg { width:16px; height:16px; }
+
+    /* ── Footer ───────────────────────────────────────────── */
+    .footer {
+      text-align:center;
+      padding:32px 24px;
+      font-size:12px; color:var(--subtle);
+      border-top:1px solid var(--border);
+    }
+    .footer strong { color:var(--muted); }
+
+    /* ── Reduced motion ───────────────────────────────────── */
+    @media(prefers-reduced-motion:reduce){
+      *,*::before,*::after { animation-duration:.01ms !important; transition-duration:.01ms !important; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="blob-layer" aria-hidden="true">
+  <div class="blob blob-1"></div>
+  <div class="blob blob-2"></div>
+  <div class="blob blob-3"></div>
+</div>
+
+<div class="shell">
+
+  <!-- ══ HERO ══════════════════════════════════════════════ -->
+  <section class="hero" id="hero">
+    <div class="hero-badge">
+      <span class="hero-badge-dot"></span>
+      Engrene Experience — 28 e 29 de março · Francisco Beltrão/PR
+    </div>
+
+    <h1 class="hero-title">
+      Diagnóstico<br>
+      <em>Instagram</em> com IA
+    </h1>
+
+    <p class="hero-sub">
+      Squad de IA analisa seu perfil em tempo real — métricas, conteúdo, virais do nicho e roteiro de Reel.
+      Relatório completo em menos de 2 minutos.
+    </p>
+
+    <div class="hero-chips">
+      <span class="hero-chip">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6"/><path d="M8 5v3l2 1.5" stroke-linecap="round"/></svg>
+        ~90 segundos
+      </span>
+      <span class="hero-chip">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 2l1.8 3.6L14 6.5l-3 2.9.7 4.1L8 11.4l-3.7 2.1.7-4.1L2 6.5l4.2-.9z" stroke-linejoin="round"/></svg>
+        Zero prints necessários
+      </span>
+      <span class="hero-chip">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 11l4-4 3 3 5-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Dados reais do seu perfil
+      </span>
+      <span class="hero-chip">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="12" height="10" rx="2"/><path d="M5 7h6M5 10h4" stroke-linecap="round"/></svg>
+        Relatório com 11 seções
+      </span>
+    </div>
+
+    <button class="hero-cta" onclick="document.getElementById('form-section').scrollIntoView({behavior:'smooth'})">
+      Analisar meu Instagram agora
+      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 10h12M11 5l5 5-5 5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+  </section>
+
+  <!-- Marquee -->
+  <div class="marquee-track" aria-hidden="true">
+    <div class="marquee-inner">
+      <!-- set 1 -->
+      <span class="marquee-item">Scout — Métricas reais</span><span class="marquee-sep">✦</span>
+      <span class="marquee-item">Imager — Feed visual</span><span class="marquee-sep">✦</span>
+      <span class="marquee-item">Downloader — Reel automático</span><span class="marquee-sep">✦</span>
+      <span class="marquee-item">Transcriber — Whisper IA</span><span class="marquee-sep">✦</span>
+      <span class="marquee-item">Hashtag — Virais do nicho</span><span class="marquee-sep">✦</span>
+      <span class="marquee-item">Analyst — Claude AI</span><span class="marquee-sep">✦</span>
+      <span class="marquee-item">Supervisor — Orquestra tudo</span><span class="marquee-sep">✦</span>
+      <!-- set 2 (repeat for seamless) -->
+      <span class="marquee-item">Scout — Métricas reais</span><span class="marquee-sep">✦</span>
+      <span class="marquee-item">Imager — Feed visual</span><span class="marquee-sep">✦</span>
+      <span class="marquee-item">Downloader — Reel automático</span><span class="marquee-sep">✦</span>
+      <span class="marquee-item">Transcriber — Whisper IA</span><span class="marquee-sep">✦</span>
+      <span class="marquee-item">Hashtag — Virais do nicho</span><span class="marquee-sep">✦</span>
+      <span class="marquee-item">Analyst — Claude AI</span><span class="marquee-sep">✦</span>
+      <span class="marquee-item">Supervisor — Orquestra tudo</span><span class="marquee-sep">✦</span>
+    </div>
+  </div>
+
+  <!-- ══ FORM ═══════════════════════════════════════════════ -->
+  <section id="form-section">
+    <div id="form-screen" class="form-wrap">
+
+      <!-- Step nav -->
+      <div class="step-nav" role="navigation" aria-label="Etapas">
+        <div class="step-item">
+          <div class="step-dot-wrap">
+            <div class="step-dot active" id="sn-1" aria-label="Etapa 1">1</div>
+          </div>
+          <div class="step-line"><div class="step-line-fill" id="sl-1"></div></div>
+        </div>
+        <div class="step-item">
+          <div class="step-dot-wrap">
+            <div class="step-dot" id="sn-2" aria-label="Etapa 2">2</div>
+          </div>
+          <div class="step-line"><div class="step-line-fill" id="sl-2"></div></div>
+        </div>
+        <div class="step-dot-wrap">
+          <div class="step-dot" id="sn-3" aria-label="Etapa 3">3</div>
+        </div>
+      </div>
+
+      <!-- ── ETAPA 1 ── -->
+      <div class="etapa ativa" id="etapa-1">
+        <div class="card">
+          <div class="card-eyebrow">Etapa 1 de 3</div>
+          <h2 class="card-title">Sobre o seu negócio</h2>
+          <p class="card-sub">Quanto mais contexto você der, mais preciso será o diagnóstico.</p>
+
+          <div class="alert" id="err1" role="alert">
+            <svg width="16" height="16" fill="none" stroke="#f87171" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01" stroke-linecap="round"/></svg>
+            Preencha nome, nicho e @ do Instagram para continuar.
+          </div>
+
+          <div class="field">
+            <label class="field-label" for="f-nome">Nome do negócio</label>
+            <input class="field-input" type="text" id="f-nome" autocomplete="organization"
+              placeholder="Ex: Confeitaria da Mari, Salão Bella...">
+          </div>
+
+          <div class="fields-row">
+            <div class="field">
+              <label class="field-label" for="f-nicho">Nicho / segmento</label>
+              <select class="field-input" id="f-nicho">
+                <option value="">Selecione...</option>
+                <option>Salão de beleza / Estética</option>
+                <option>Confeitaria / Doces</option>
+                <option>Loja de roupas / Moda</option>
+                <option>Restaurante / Alimentação</option>
+                <option>Pet shop / Veterinário</option>
+                <option>Academia / Personal</option>
+                <option>Nutrição / Saúde</option>
+                <option>Médico / Dentista</option>
+                <option>Advogado / Contabilidade</option>
+                <option>Arquitetura / Design</option>
+                <option>Fotografia</option>
+                <option>Outro</option>
+              </select>
+            </div>
+            <div class="field">
+              <label class="field-label" for="f-arroba">Instagram <span class="opt">(sem @)</span></label>
+              <input class="field-input" type="text" id="f-arroba"
+                autocomplete="off" autocorrect="off" autocapitalize="none"
+                placeholder="seuperfil">
+            </div>
+          </div>
+
+          <div class="fields-row">
+            <div class="field">
+              <label class="field-label" for="f-seguidores">Seguidores <span class="opt">(aprox.)</span></label>
+              <select class="field-input" id="f-seguidores">
+                <option value="">Não sei</option>
+                <option>Menos de 500</option>
+                <option>500 – 2.000</option>
+                <option>2.000 – 5.000</option>
+                <option>5.000 – 20.000</option>
+                <option>Mais de 20.000</option>
+              </select>
+            </div>
+            <div class="field">
+              <label class="field-label" for="f-frequencia">Frequência de posts</label>
+              <select class="field-input" id="f-frequencia">
+                <option value="">Não sei</option>
+                <option>Raramente (menos de 1x/sem)</option>
+                <option>1–2x por semana</option>
+                <option>3–4x por semana</option>
+                <option>5+ vezes por semana</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="field">
+            <label class="field-label" for="f-desc">O que você vende / oferece <span class="opt">(opcional)</span></label>
+            <textarea class="field-input" id="f-desc"
+              placeholder="Ex: Faço bolos personalizados para festas. Atendo em Francisco Beltrão/PR. Preço médio R$280..."></textarea>
+          </div>
+
+          <div class="btn-row">
+            <div></div>
+            <button class="btn-primary" onclick="irEtapa(2)">
+              Próximo
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 10h12M11 5l5 5-5 5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── ETAPA 2 ── -->
+      <div class="etapa" id="etapa-2">
+        <div class="card">
+          <div class="card-eyebrow">Etapa 2 de 3</div>
+          <h2 class="card-title">O Squad busca tudo automaticamente</h2>
+          <p class="card-sub">Nosso time de IA coleta dados reais do seu perfil público. Nenhum print necessário.</p>
+
+          <div class="squad-grid">
+            <div class="squad-item">
+              <div class="squad-icon">
+                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="7"/><path d="M10 6v4l3 2" stroke-linecap="round"/></svg>
+              </div>
+              <div>
+                <div class="squad-name">Scout — Métricas do perfil</div>
+                <div class="squad-desc">Bio, seguidores, últimos 9 posts com curtidas, comentários e legendas</div>
+              </div>
+            </div>
+            <div class="squad-item">
+              <div class="squad-icon">
+                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="4" width="16" height="12" rx="2"/><circle cx="8" cy="10" r="2.5"/><path d="M12 8h4M12 11h3" stroke-linecap="round"/></svg>
+              </div>
+              <div>
+                <div class="squad-name">Imager — Feed visual</div>
+                <div class="squad-desc">Baixa as imagens reais dos posts para análise visual com Claude</div>
+              </div>
+            </div>
+            <div class="squad-item">
+              <div class="squad-icon">
+                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 3v10M6 7l4-4 4 4" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 15c0-1 4-2 7-2s7 1 7 2v1H3v-1z"/></svg>
+              </div>
+              <div>
+                <div class="squad-name">Downloader + Transcriber</div>
+                <div class="squad-desc">Baixa e transcreve o áudio do Reel automaticamente via Whisper AI</div>
+              </div>
+            </div>
+            <div class="squad-item">
+              <div class="squad-icon">
+                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 10c0-4 3-7 7-7s7 3 7 7-3 7-7 7" stroke-linecap="round"/><path d="M10 6v4l2.5 2.5" stroke-linecap="round"/></svg>
+              </div>
+              <div>
+                <div class="squad-name">Hashtag — Virais do nicho</div>
+                <div class="squad-desc">Busca o que está bombando no Instagram para o seu segmento agora</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="squad-notice">
+            ℹ️ Analisamos apenas dados <strong>públicos</strong> do seu perfil. Certifique-se de que seu perfil está público antes de continuar.
+          </div>
+
+          <div class="btn-row">
+            <button class="btn-ghost" onclick="irEtapa(1)">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 10H4M9 5l-5 5 5 5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              Voltar
+            </button>
+            <button class="btn-primary" onclick="irEtapa(3)">
+              Próximo
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 10h12M11 5l5 5-5 5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── ETAPA 3 ── -->
+      <div class="etapa" id="etapa-3">
+        <div class="card">
+          <div class="card-eyebrow">Etapa 3 de 3</div>
+          <h2 class="card-title">Qual é o seu foco?</h2>
+          <p class="card-sub">Escolha seu objetivo — isso direciona a análise para o que mais importa pra você agora.</p>
+
+          <div class="alert" id="err3" role="alert">
+            <svg width="16" height="16" fill="none" stroke="#f87171" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01" stroke-linecap="round"/></svg>
+            Selecione seu objetivo para continuar.
+          </div>
+
+          <div class="pills-grid">
+            <div class="pill" onclick="selecionarObj(this,'Atrair mais clientes para o meu negócio físico')">
+              <div class="pill-radio"></div>
+              <span class="pill-text">Atrair mais clientes para o negócio físico</span>
+            </div>
+            <div class="pill" onclick="selecionarObj(this,'Aumentar o alcance e ficar mais conhecido na cidade')">
+              <div class="pill-radio"></div>
+              <span class="pill-text">Aumentar o alcance e ficar mais conhecido na cidade</span>
+            </div>
+            <div class="pill" onclick="selecionarObj(this,'Vender produtos/serviços pelo direct (DM)')">
+              <div class="pill-radio"></div>
+              <span class="pill-text">Vender pelo direct (DM)</span>
+            </div>
+            <div class="pill" onclick="selecionarObj(this,'Construir autoridade no meu nicho')">
+              <div class="pill-radio"></div>
+              <span class="pill-text">Construir autoridade no meu nicho</span>
+            </div>
+            <div class="pill" onclick="selecionarObj(this,'Análise geral — quero tudo')">
+              <div class="pill-radio"></div>
+              <span class="pill-text">Análise geral — quero tudo</span>
+            </div>
+          </div>
+
+          <div class="btn-row">
+            <button class="btn-ghost" onclick="irEtapa(2)">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 10H4M9 5l-5 5 5 5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              Voltar
+            </button>
+            <button class="btn-primary" id="btn-analisar" onclick="iniciarAnalise()">
+              Analisar agora
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 3l7 7-7 7M3 10h14" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /form-screen -->
+
+    <!-- ══ LOADING ══════════════════════════════════════════ -->
+    <div id="loading-screen">
+      <div class="loading-wrap">
+        <div class="loading-ring-wrap">
+          <div class="loading-ring"></div>
+          <div class="loading-ring-inner"></div>
+          <div class="loading-center-dot"></div>
+        </div>
+        <div class="loading-title">Squad analisando…</div>
+        <div class="loading-sub">Processamento profundo — pode levar até 90 segundos</div>
+        <div class="loading-steps">
+          <div class="lstep" id="ls1"><div class="lstep-dot"></div>Scout buscando métricas do perfil</div>
+          <div class="lstep" id="ls2"><div class="lstep-dot"></div>Imager baixando imagens do feed</div>
+          <div class="lstep" id="ls3"><div class="lstep-dot"></div>Hashtag buscando virais do nicho</div>
+          <div class="lstep" id="ls4"><div class="lstep-dot"></div>Analyst (Claude AI) gerando diagnóstico</div>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- ══ RESULTADO ════════════════════════════════════════ -->
+    <div id="resultado-screen">
+      <div class="resultado-wrap">
+        <div class="resultado-header">
+          <div class="resultado-eyebrow">Diagnóstico Engrene — Concluído</div>
+          <div class="resultado-title" id="r-titulo">Análise pronta!</div>
+          <div class="resultado-meta" id="r-meta"></div>
+          <div class="resultado-score-row">
+            <div class="score-badge">
+              <span class="score-num" id="r-score">—</span>
+              <span class="score-den">/10</span>
+            </div>
+            <span class="score-label">Nota geral<br>do perfil</span>
+          </div>
+          <div class="fontes-row" id="r-fontes"></div>
+        </div>
+        <div class="report-body" id="r-body"></div>
+
+        <!-- CTA: Método Clientes no Direct -->
+        <div class="cta-metodo">
+          <div class="cta-metodo-inner">
+            <div class="cta-eyebrow">Próximo passo</div>
+            <h3 class="cta-title">Mentoria Sublime</h3>
+            <p class="cta-desc">Sublime seu caminho para vender mais e ser destaque no seu negócio. Fale com nosso time e descubra como aplicar esse diagnóstico na prática.</p>
+            <div class="cta-bullets">
+              <div class="cta-bullet">
+                <svg viewBox="0 0 16 16" fill="var(--orange)" width="14"><path fill-rule="evenodd" d="M12.416 3.376a.75.75 0 0 1 .208 1.04l-5 7.5a.75.75 0 0 1-1.154.114l-3-3a.75.75 0 0 1 1.06-1.06l2.353 2.353 4.493-6.74a.75.75 0 0 1 1.04-.207Z"/></svg>
+                Acompanhamento personalizado para o seu negócio
+              </div>
+              <div class="cta-bullet">
+                <svg viewBox="0 0 16 16" fill="var(--orange)" width="14"><path fill-rule="evenodd" d="M12.416 3.376a.75.75 0 0 1 .208 1.04l-5 7.5a.75.75 0 0 1-1.154.114l-3-3a.75.75 0 0 1 1.06-1.06l2.353 2.353 4.493-6.74a.75.75 0 0 1 1.04-.207Z"/></svg>
+                Estratégia aplicada direto ao seu Instagram
+              </div>
+              <div class="cta-bullet">
+                <svg viewBox="0 0 16 16" fill="var(--orange)" width="14"><path fill-rule="evenodd" d="M12.416 3.376a.75.75 0 0 1 .208 1.04l-5 7.5a.75.75 0 0 1-1.154.114l-3-3a.75.75 0 0 1 1.06-1.06l2.353 2.353 4.493-6.74a.75.75 0 0 1 1.04-.207Z"/></svg>
+                Resultados reais para negócios locais
+              </div>
+            </div>
+            <a href="https://wa.me/554631911158?text=Olá!%20Acabei%20de%20fazer%20o%20diagnóstico%20do%20meu%20perfil%20no%20Engrene%20Experience%20e%20quero%20saber%20mais%20sobre%20a%20Mentoria%20Sublime." class="cta-btn" target="_blank">
+              <svg viewBox="0 0 20 20" fill="currentColor" width="18"><path d="M10 2C5.58 2 2 5.58 2 10c0 1.57.43 3.04 1.18 4.3L2 18l3.8-1.16A7.96 7.96 0 0010 18c4.42 0 8-3.58 8-8s-3.58-8-8-8zm3.93 11.07c-.17.47-.99.9-1.36.96-.34.05-.77.07-1.24-.08a11.3 11.3 0 01-1.12-.42c-1.97-.85-3.25-2.84-3.35-2.97-.1-.13-.8-1.07-.8-2.04 0-.97.51-1.45.69-1.65.18-.2.39-.25.52-.25h.37c.12 0 .28-.05.44.33l.56 1.36c.05.12.08.26.02.4l-.2.38-.3.38c-.1.1-.21.21-.09.42.12.2.54.9 1.17 1.46.8.72 1.48.94 1.69 1.04.2.1.32.08.44-.05l.63-.74c.14-.17.27-.12.45-.07l1.27.6c.2.09.33.14.38.22.05.09.05.5-.12.97z"/></svg>
+              Falar com nosso time
+            </a>
+          </div>
+        </div>
+
+        <button class="nova-analise-btn" onclick="novaAnalise()">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 10a6 6 0 116 6" stroke-linecap="round"/><path d="M4 6v4h4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Fazer nova análise
+        </button>
+      </div>
+    </div>
+
+  </section><!-- /form-section -->
+
+  <footer class="footer">
+    <strong>Diagnóstico Engrene</strong> · Powered by Squad IA · Claude AI + Apify + Whisper<br>
+    Dados públicos analisados em tempo real · Nenhuma informação armazenada
+  </footer>
+
+</div><!-- /shell -->
+
+<script>
+  /* ── State ──────────────────────────────────────────────── */
+  let objetivoSelecionado = '';
+
+  /* ── Step navigation ────────────────────────────────────── */
+  function irEtapa(n) {
+    // Validação etapa 1
+    if (n === 2) {
+      const nome   = document.getElementById('f-nome').value.trim();
+      const nicho  = document.getElementById('f-nicho').value;
+      const arroba = document.getElementById('f-arroba').value.trim();
+      if (!nome || !nicho || !arroba) {
+        document.getElementById('err1').classList.add('show');
+        return;
+      }
+      document.getElementById('err1').classList.remove('show');
+    }
+
+    // Validação etapa 3
+    if (n === 4 && !objetivoSelecionado) {
+      document.getElementById('err3').classList.add('show');
+      return;
+    }
+
+    document.querySelectorAll('.etapa').forEach(e => e.classList.remove('ativa'));
+    document.getElementById(`etapa-${n}`).classList.add('ativa');
+    document.getElementById('form-section').scrollIntoView({ behavior:'smooth', block:'start' });
+
+    // Atualiza dots e linhas
+    const dots  = ['sn-1','sn-2','sn-3'];
+    const lines = ['sl-1','sl-2'];
+    dots.forEach((id, i) => {
+      const el = document.getElementById(id);
+      el.classList.remove('active','done');
+      if (i + 1 < n)  el.classList.add('done');
+      if (i + 1 === n) el.classList.add('active');
+    });
+    lines.forEach((id, i) => {
+      document.getElementById(id).style.width = (i + 1 < n) ? '100%' : '0%';
+    });
+  }
+
+  /* ── Objetivo ───────────────────────────────────────────── */
+  function selecionarObj(el, valor) {
+    document.querySelectorAll('.pill').forEach(p => p.classList.remove('selected'));
+    el.classList.add('selected');
+    objetivoSelecionado = valor;
+    document.getElementById('err3').classList.remove('show');
+  }
+
+  /* ── Uploads ────────────────────────────────────────────── */
+  function uploadPrintBio(input) {
+    if (input.files[0]) document.getElementById('pz-bio').classList.add('uploaded');
+  }
+  function uploadPrint(input, zoneId) {
+    if (input.files[0]) document.getElementById(zoneId).classList.add('uploaded');
+  }
+
+  /* ── Análise ────────────────────────────────────────────── */
+  async function iniciarAnalise() {
+    if (!objetivoSelecionado) {
+      document.getElementById('err3').classList.add('show');
+      return;
+    }
+
+    const btn = document.getElementById('btn-analisar');
+    btn.disabled = true;
+
+    document.getElementById('form-screen').style.display = 'none';
+    document.getElementById('loading-screen').style.display = 'block';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+
+    // Animação dos steps de loading
+    const ls = ['ls1','ls2','ls3','ls4'];
+    let idx = 0;
+    const tick = setInterval(() => {
+      if (idx > 0) {
+        document.getElementById(ls[idx-1]).classList.remove('ativo');
+        document.getElementById(ls[idx-1]).classList.add('done');
+      }
+      if (idx < ls.length) {
+        document.getElementById(ls[idx]).classList.add('ativo');
+        idx++;
+      } else {
+        clearInterval(tick);
+      }
+    }, 10000);
+
+    try {
+      const fd = new FormData();
+      fd.append('nome',       document.getElementById('f-nome').value);
+      fd.append('nicho',      document.getElementById('f-nicho').value);
+      fd.append('arroba',     document.getElementById('f-arroba').value.trim().replace('@',''));
+      fd.append('objetivo',   objetivoSelecionado);
+      fd.append('seguidores', document.getElementById('f-seguidores').value || '');
+      fd.append('frequencia', document.getElementById('f-frequencia').value || '');
+      fd.append('descricao',  document.getElementById('f-desc').value || '');
+
+
+      const res  = await fetch('/api/analisar', { method:'POST', body:fd });
+      const data = await res.json();
+
+      clearInterval(tick);
+      ls.forEach(id => {
+        document.getElementById(id).classList.remove('ativo');
+        document.getElementById(id).classList.add('done');
+      });
+
+      if (!data.sucesso) throw new Error(data.erro || 'Erro desconhecido');
+
+      exibirResultado(data.relatorio, data.fontes);
+
+    } catch(e) {
+      clearInterval(tick);
+      btn.disabled = false;
+      document.getElementById('loading-screen').style.display = 'none';
+      document.getElementById('form-screen').style.display = 'block';
+
+      // Mostra erro inline
+      const err = document.getElementById('err3');
+      err.textContent = '❌ ' + e.message;
+      err.classList.add('show');
+    }
+  }
+
+  /* ── Exibir resultado ───────────────────────────────────── */
+  function exibirResultado(relatorio, fontes) {
+    document.getElementById('loading-screen').style.display = 'none';
+
+    const arroba = document.getElementById('f-arroba').value.replace('@','');
+    const nome   = document.getElementById('f-nome').value;
+
+    document.getElementById('r-titulo').textContent = `Diagnóstico de @${arroba}`;
+    document.getElementById('r-meta').textContent =
+      `${nome} · ${new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'})} · IA Avançada`;
+
+    // Score
+    const m = relatorio.match(/NOTA GERAL[:\s]+(\d+)/i) || relatorio.match(/(\d+)\/10/);
+    if (m) document.getElementById('r-score').textContent = m[1];
+
+    // Fontes badges
+    const fontesEl = document.getElementById('r-fontes');
+    fontesEl.innerHTML = '';
+    const badges = [];
+    if (fontes?.perfil && fontes.perfil !== 'não coletado') badges.push(`📊 ${fontes.perfil}`);
+    if (fontes?.transcricao === 'whisper') badges.push('🎙️ Reel transcrito');
+    else if (fontes?.transcricao === 'manual') badges.push('📝 Legenda manual');
+    if (fontes?.virais === 'apify') badges.push('🔥 Virais do nicho');
+    badges.forEach(b => {
+      const chip = document.createElement('span');
+      chip.className = 'fonte-chip';
+      chip.textContent = b;
+      fontesEl.appendChild(chip);
+    });
+
+    document.getElementById('r-body').innerHTML = mdToHtml(relatorio);
+    document.getElementById('resultado-screen').style.display = 'block';
+    document.getElementById('resultado-screen').scrollIntoView({ behavior:'smooth' });
+  }
+
+  /* ── Nova análise ───────────────────────────────────────── */
+  function novaAnalise() {
+    document.getElementById('resultado-screen').style.display = 'none';
+    document.getElementById('form-screen').style.display = 'block';
+    objetivoSelecionado = '';
+    document.querySelectorAll('.pill').forEach(p => p.classList.remove('selected'));
+    document.querySelectorAll('.print-zone').forEach(z => z.classList.remove('uploaded'));
+    document.querySelectorAll('.print-bio-zone').forEach(z => z.classList.remove('uploaded'));
+    document.getElementById('btn-analisar').disabled = false;
+    irEtapa(1);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  /* ── Markdown → HTML ────────────────────────────────────── */
+  function mdToHtml(md) {
+    return md
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+      .replace(/^---+$/gm, '<hr style="border:none;border-top:1px solid rgba(255,255,255,0.08);margin:24px 0">')
+      .replace(/^## (.+)$/gm, '<h2>$1</h2>')
+      .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*([^*\n]+)\*/g, '<em>$1</em>')
+      .replace(/`([^`\n]+)`/g, '<code>$1</code>')
+      .replace(/^```[\s\S]*?```/gm, m => `<pre>${m.replace(/^```\w*\n?/,'').replace(/\n?```$/,'')}</pre>`)
+      .replace(/^> (.+)$/gm, '<blockquote>$1</blockquote>')
+      .replace(/^\| (.+) \|$/gm, m => {
+        const cells = m.split('|').filter(c => c.trim() && !c.trim().match(/^[-:]+$/));
+        const tag = m.includes('---') ? '' : cells.map(c => `<td>${c.trim()}</td>`).join('');
+        return tag ? `<tr>${tag}</tr>` : '';
+      })
+      .replace(/(<tr>[\s\S]+?<\/tr>)+/g, t => `<table>${t}</table>`)
+      .replace(/^[-*] (.+)$/gm, '<li>$1</li>')
+      .replace(/(<li>[\s\S]+?<\/li>)(?!\s*<li>)/g, '<ul>$&</ul>')
+      .replace(/^\d+\. (.+)$/gm, '<li>$1</li>')
+      .replace(/\n{2,}/g, '</p><p>')
+      .replace(/^(?!<[h|u|o|l|b|p|t|h])/gm, '')
+      .replace(/<p><\/p>/g, '');
+  }
+
+</script>
+</body>
+</html>
