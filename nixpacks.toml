@@ -1,0 +1,8 @@
+[phases.setup]
+nixPkgs = ["nodejs_20", "python3", "ffmpeg"]
+
+[phases.install]
+cmds = ["npm ci --only=production"]
+
+[start]
+cmd = "node server.js"

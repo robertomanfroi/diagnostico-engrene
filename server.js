@@ -21,7 +21,7 @@ const MAX_ANALISES = 50;
 
 app.use(cors({ origin: '*' }));
 app.use(express.json({ limit: '50mb' }));
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, 'frontend')));
 
 // ── Upload config ──────────────────────────────────────────
 const storage = multer.diskStorage({
@@ -288,7 +288,7 @@ except Exception as e:
 // ══════════════════════════════════════════════════════════════
 //  AGENT: INSTALOADER FALLBACK — scraping local via Python
 // ══════════════════════════════════════════════════════════════
-function agentInstaloader(username, sv) {
+async function agentInstaloader(username, sv) {
   sv.info('instaloader', `Tentando Instaloader para @${username}...`);
 
   const script = `
@@ -1042,7 +1042,7 @@ app.get('/api/status', (req, res) => {
 
 // ── Serve frontend ─────────────────────────────────────────
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  res.sendFile(path.join(__dirname, 'frontend', 'index.html'));
 });
 
 const server = app.listen(PORT, () => {
