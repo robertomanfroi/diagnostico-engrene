@@ -881,7 +881,7 @@ app.post('/api/analisar', upload.fields([
       clearInterval(keepAlive);
       return res.end(JSON.stringify({
         sucesso: false,
-        erro: `Problema temporário ao acessar @${arroba}. O Instagram pode estar limitando as requisições agora — aguarde 1-2 minutos e tente novamente. Se o erro persistir, confira se o perfil é público.`
+        erro: `Estamos com alta demanda agora e o serviço de coleta de dados atingiu o limite. Tente novamente em alguns minutos ou entre em contato com o suporte.`
       }));
     }
 
