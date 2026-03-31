@@ -1206,6 +1206,7 @@
             <svg width="16" height="16" fill="none" stroke="#f87171" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01" stroke-linecap="round"/></svg>
             Selecione seu objetivo para continuar.
           </div>
+          <div class="alert alert-submit" id="err-submit" role="alert" style="display:none"></div>
 
           <div class="pills-grid">
             <div class="pill" onclick="selecionarObj(this,'Atrair mais clientes para o meu negócio físico')">
@@ -1548,16 +1549,18 @@
       document.getElementById('loading-screen').style.display = 'none';
       document.getElementById('form-screen').style.display = 'block';
 
-      // Mostra erro inline em português
-      const err = document.getElementById('err3');
+      // Mostra erro em div dedicada (não contamina validação de objetivo)
       let msgErro = e.message;
       if (msgErro.includes('pattern') || msgErro.includes('URL') || msgErro.includes('url')) {
         msgErro = 'Verifique o link do Reel. Ele deve começar com https://';
       } else if (msgErro.includes('Failed to fetch') || msgErro.includes('NetworkError')) {
         msgErro = 'Sem conexão com o servidor. Tente novamente.';
       }
-      err.innerHTML = '❌ ' + msgErro;
-      err.classList.add('show');
+      const errSubmit = document.getElementById('err-submit');
+      errSubmit.innerHTML = '❌ ' + msgErro;
+      errSubmit.style.display = 'block';
+      // Scroll para o erro ficar visível
+      errSubmit.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
   }
 
@@ -1820,6 +1823,7 @@
     document.getElementById('charts-panel').style.display = 'none';
     document.getElementById('chart-acoes-card').style.display = 'none';
     document.getElementById('chart-metas-card').style.display = 'none';
+    document.getElementById('err-submit').style.display = 'none';
     document.getElementById('resultado-screen').style.display = 'none';
     document.getElementById('form-screen').style.display = 'block';
     objetivoSelecionado = '';

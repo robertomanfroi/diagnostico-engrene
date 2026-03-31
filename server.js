@@ -172,16 +172,80 @@ async function agentScout(username, sv) {
     }
   }
 
-  // ── Tentativa 2: instagrapi com login ────────────────────
+  // ── Tentativa 2: Instagram Web API pública (sem login) ───
+  try {
+    sv.info('scout', 'Apify indisponível — tentando Instagram Web API...');
+    const igResp = await fetch(
+      `https://www.instagram.com/api/v1/users/web_profile_info/?username=${encodeURIComponent(username)}`,
+      {
+        headers: {
+          'X-IG-App-ID': '936619743392459',
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Accept': '*/*',
+          'Accept-Language': 'pt-BR,pt;q=0.9',
+          'Referer': 'https://www.instagram.com/',
+        },
+        signal: AbortSignal.timeout(15000)
+      }
+    );
+
+    if (igResp.ok) {
+      const json = await igResp.json();
+      const u = json?.data?.user;
+      if (u && u.id) {
+        if (u.is_private) {
+          sv.warn('scout', `@${username} é privado — não é possível analisar`);
+        } else {
+          sv.info('scout', `✅ Instagram Web API — @${u.username} | ${u.edge_followed_by?.count} seguidores`);
+
+          const edges = u.edge_owner_to_timeline_media?.edges || [];
+          const posts = edges.slice(0, 9).map(e => {
+            const n = e.node;
+            return {
+              tipo:        n.__typename || 'GraphImage',
+              legenda:     (n.edge_media_to_caption?.edges?.[0]?.node?.text || '').substring(0, 300),
+              curtidas:    n.edge_liked_by?.count || n.edge_media_preview_like?.count || 0,
+              comentarios: n.edge_media_to_comment?.count || 0,
+              views:       n.video_view_count || 0,
+              is_video:    n.is_video || false,
+              shortcode:   n.shortcode || '',
+              imagem_url:  n.display_url || '',
+              video_url:   n.video_url   || ''
+            };
+          });
+
+          return normalizarPerfil('instagram_web', {
+            username:             u.username,
+            fullName:             u.full_name,
+            biography:            u.biography,
+            externalUrl:          u.external_url,
+            followersCount:       u.edge_followed_by?.count || 0,
+            followsCount:         u.edge_follow?.count || 0,
+            postsCount:           u.edge_owner_to_timeline_media?.count || 0,
+            isBusinessAccount:    u.is_business_account || false,
+            businessCategoryName: u.category_name || '',
+            verified:             u.is_verified || false,
+            profilePicUrl:        u.profile_pic_url || '',
+          }, posts);
+        }
+      }
+    } else {
+      sv.warn('scout', `Instagram Web API HTTP ${igResp.status}`);
+    }
+  } catch(e) {
+    sv.warn('scout', `Instagram Web API erro: ${e.message}`);
+  }
+
+  // ── Tentativa 3: instagrapi com login ────────────────────
   if (process.env.IG_USERNAME && process.env.IG_PASSWORD) {
-    sv.info('scout', 'Apify indisponível — usando instagrapi (conta IG configurada)...');
+    sv.info('scout', 'Tentando instagrapi (conta IG configurada)...');
     const resultado = await agentInstagrapiLogin(username, sv);
     if (resultado) return resultado;
   } else {
-    sv.warn('scout', 'IG_USERNAME/IG_PASSWORD não configurados — configure no .env para usar como fallback');
+    sv.warn('scout', 'IG_USERNAME/IG_PASSWORD não configurados');
   }
 
-  sv.err('scout', 'Todas as fontes falharam. Configure IG_USERNAME+IG_PASSWORD no .env ou recarregue os créditos do Apify.');
+  sv.err('scout', 'Todas as fontes falharam.');
   return null;
 }
 
@@ -817,7 +881,7 @@ app.post('/api/analisar', upload.fields([
       clearInterval(keepAlive);
       return res.end(JSON.stringify({
         sucesso: false,
-        erro: `Não consegui acessar o perfil @${arroba}. Verifique se o @ está correto e se a conta é pública.`
+        erro: `Problema temporário ao acessar @${arroba}. O Instagram pode estar limitando as requisições agora — aguarde 1-2 minutos e tente novamente. Se o erro persistir, confira se o perfil é público.`
       }));
     }
 
