@@ -19,9 +19,9 @@ const PORT = process.env.PORT || 3000;
 let analiseEmCurso = 0;
 const MAX_ANALISES = 50;
 
-// ── Rate Limiting: 1 análise por @ por semana + 3 por IP por semana ──
+// ── Rate Limiting: 1 análise por @ por semana + 2 por IP por semana ──
 const RATE_LIMIT_SEMANAS_MS = 7 * 24 * 60 * 60 * 1000; // 7 dias
-const RATE_LIMIT_IP_MAX     = 3; // análises por IP por semana
+const RATE_LIMIT_IP_MAX     = 2; // análises por IP por semana
 const RATE_LIMIT_FILE       = path.join('/app/data', 'rate-limits.json');
 const RATE_LIMIT_FILE_LOCAL = path.join(__dirname, 'data', 'rate-limits.json');
 
