@@ -7,6 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Calistoga:ital@0;1&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <style>
     /* ── Tokens ───────────────────────────────────────────── */
     :root {
@@ -926,6 +927,23 @@
     }
     .footer strong { color:var(--muted); }
 
+    /* ── Painel de Gráficos ────────────────────────────────── */
+    .charts-panel { display:flex; flex-direction:column; gap:16px; margin:28px 0; }
+    .chart-card {
+      background: rgba(255,255,255,0.035);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 16px;
+      padding: 20px 22px;
+    }
+    .chart-card-label {
+      font-size: 10px; font-weight: 600; text-transform: uppercase;
+      letter-spacing: .08em; color: var(--subtle); margin-bottom: 3px;
+    }
+    .chart-card-sub {
+      font-size: 12px; color: rgba(255,255,255,0.28); margin-bottom: 16px;
+    }
+    .chart-canvas-box { position: relative; }
+
     /* ── Reduced motion ───────────────────────────────────── */
     @media(prefers-reduced-motion:reduce){
       *,*::before,*::after { animation-duration:.01ms !important; transition-duration:.01ms !important; }
@@ -1300,6 +1318,39 @@
 
           <div class="fontes-row" id="r-fontes"></div>
         </div>
+
+        <!-- Painel Visual de Dados -->
+        <div class="charts-panel" id="charts-panel" style="display:none">
+
+          <!-- Gráfico 1: Engajamento vs Benchmarks -->
+          <div class="chart-card">
+            <div class="chart-card-label">Engajamento</div>
+            <div class="chart-card-sub">Sua taxa vs benchmarks do mercado</div>
+            <div class="chart-canvas-box" style="height:155px">
+              <canvas id="chart-eng"></canvas>
+            </div>
+          </div>
+
+          <!-- Gráfico 2: Prioridade das Ações -->
+          <div class="chart-card" id="chart-acoes-card" style="display:none">
+            <div class="chart-card-label">Plano de Ação — Prioridades</div>
+            <div class="chart-card-sub">Distribuição das ações por urgência</div>
+            <div class="chart-canvas-box" style="height:120px">
+              <canvas id="chart-acoes"></canvas>
+            </div>
+          </div>
+
+          <!-- Gráfico 3: Seguidores vs Meta (se detectado) -->
+          <div class="chart-card" id="chart-metas-card" style="display:none">
+            <div class="chart-card-label">Métricas vs Metas (30 dias)</div>
+            <div class="chart-card-sub">Sua situação atual vs metas sugeridas no diagnóstico</div>
+            <div class="chart-canvas-box" style="height:120px">
+              <canvas id="chart-metas"></canvas>
+            </div>
+          </div>
+
+        </div>
+
         <div class="report-body" id="r-body"></div>
 
         <!-- CTA: Método Clientes no Direct -->
@@ -1576,12 +1627,199 @@
     });
 
     document.getElementById('r-body').innerHTML = mdToHtml(relatorio);
+
+    // ── Gráficos visuais ──────────────────────────────────
+    renderCharts(relatorio);
+
     document.getElementById('resultado-screen').style.display = 'block';
     document.getElementById('resultado-screen').scrollIntoView({ behavior:'smooth' });
   }
 
+  /* ── Instâncias de charts (destruir ao resetar) ─────── */
+  const _charts = {};
+  function destroyChart(id) {
+    if (_charts[id]) { _charts[id].destroy(); delete _charts[id]; }
+  }
+
+  function renderCharts(texto) {
+    const colorMuted = 'rgba(255,255,255,0.22)';
+    Chart.defaults.color = colorMuted;
+    Chart.defaults.font.family = 'Inter, sans-serif';
+    Chart.defaults.font.size = 11;
+
+    // ── Extrair engajamento atual e metas ─────────────────
+    // Padrão: "base atual: X%" ou "Taxa de engajamento: X%"
+    let engAtual = null;
+    const engBaseM = texto.match(/base atual[:\s]*([0-9.,]+)%/i);
+    if (engBaseM) engAtual = parseFloat(engBaseM[1].replace(',','.'));
+    if (engAtual === null) {
+      const engM2 = texto.match(/[Ee]ngajamento[^:\n]{0,30}[:\s]+([0-9.,]+)%/);
+      if (engM2) engAtual = parseFloat(engM2[1].replace(',','.'));
+    }
+
+    // ── Chart 1: Engajamento ──────────────────────────────
+    const panel = document.getElementById('charts-panel');
+    destroyChart('eng');
+
+    if (engAtual !== null && !isNaN(engAtual)) {
+      panel.style.display = 'flex';
+      const engColor = engAtual >= 6 ? '#22c55e'
+                     : engAtual >= 3 ? '#FC4C04'
+                     : engAtual >= 1 ? '#eab308'
+                     : '#ef4444';
+
+      const engCtx = document.getElementById('chart-eng').getContext('2d');
+      _charts['eng'] = new Chart(engCtx, {
+        type: 'bar',
+        data: {
+          labels: ['Você', 'Médio (1-3%)', 'Bom (3-6%)', 'Excelente (>6%)'],
+          datasets: [{
+            data: [engAtual, 2, 4.5, 7],
+            backgroundColor: [engColor, 'rgba(255,255,255,0.1)', 'rgba(34,197,94,0.2)', 'rgba(34,197,94,0.4)'],
+            borderColor:     [engColor, 'rgba(255,255,255,0.2)', 'rgba(34,197,94,0.5)', 'rgba(34,197,94,0.8)'],
+            borderWidth: 1.5,
+            borderRadius: 6,
+            borderSkipped: false,
+          }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: { callbacks: { label: ctx => ` ${ctx.parsed.y.toFixed(2)}%` } }
+          },
+          scales: {
+            x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: colorMuted }, border: { color: 'transparent' } },
+            y: {
+              grid: { color: 'rgba(255,255,255,0.04)' },
+              ticks: { color: colorMuted, callback: v => v + '%' },
+              border: { color: 'transparent' },
+              suggestedMax: Math.max(engAtual, 7) * 1.15
+            }
+          }
+        }
+      });
+    }
+
+    // ── Chart 2: Contagem de ações por prioridade ─────────
+    destroyChart('acoes');
+    const urgM  = (texto.match(/🔴 URGENTE[\s\S]*?(?=🟡|##\s*1[01])/i) || [''])[0];
+    const impM  = (texto.match(/🟡 IMPORTANTE[\s\S]*?(?=🟢|##\s*1[01])/i) || [''])[0];
+    const estM  = (texto.match(/🟢 ESTRATÉGICO[\s\S]*?(?=---|##\s*1[01])/i) || [''])[0];
+    const cntUrg = (urgM.match(/^\s*\d+\./gm) || []).length;
+    const cntImp = (impM.match(/^\s*\d+\./gm) || []).length;
+    const cntEst = (estM.match(/^\s*\d+\./gm) || []).length;
+    const totalAcoes = cntUrg + cntImp + cntEst;
+
+    if (totalAcoes > 0) {
+      document.getElementById('chart-acoes-card').style.display = 'block';
+      const acoesCtx = document.getElementById('chart-acoes').getContext('2d');
+      _charts['acoes'] = new Chart(acoesCtx, {
+        type: 'bar',
+        data: {
+          labels: ['🔴 Urgente\n(esta semana)', '🟡 Importante\n(próximo mês)', '🟢 Estratégico\n(90 dias)'],
+          datasets: [{
+            data: [cntUrg, cntImp, cntEst],
+            backgroundColor: ['rgba(239,68,68,0.7)', 'rgba(234,179,8,0.6)', 'rgba(34,197,94,0.5)'],
+            borderColor:     ['#ef4444', '#eab308', '#22c55e'],
+            borderWidth: 1.5, borderRadius: 6, borderSkipped: false,
+          }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: { callbacks: { label: ctx => ` ${ctx.parsed.y} ação${ctx.parsed.y !== 1 ? 'ões' : ''}` } }
+          },
+          scales: {
+            x: { grid: { display: false }, ticks: { color: colorMuted }, border: { color: 'transparent' } },
+            y: {
+              grid: { color: 'rgba(255,255,255,0.04)' },
+              ticks: { color: colorMuted, stepSize: 1 },
+              border: { color: 'transparent' },
+              suggestedMax: Math.max(cntUrg, cntImp, cntEst) + 1
+            }
+          }
+        }
+      });
+    }
+
+    // ── Chart 3: Métricas atuais vs metas ─────────────────
+    destroyChart('metas');
+    // Padrão: "alcance semanal: meta X (base atual: Y)"
+    const metasData = [];
+    const alcM = texto.match(/[Aa]lcance[^:\n]*meta[:\s]*([0-9.,kKmM]+)[^\n]*base atual[:\s]*([0-9.,kKmM]+)/i);
+    const engMetM = texto.match(/[Ee]ngajamento[^:\n]*meta[:\s]*([0-9.,]+)%[^\n]*base atual[:\s]*([0-9.,]+)%/i);
+    const segMetM = texto.match(/[Ss]eguidores[^\n]*meta[:\s]*([0-9.,]+)[^\n]*base atual[:\s]*([0-9.,]+)/i)
+                 || texto.match(/novos seguidores[^:\n]*meta[:\s]*([0-9.,]+)/i);
+
+    function parseNum(s) {
+      if (!s) return null;
+      s = s.replace(',','.');
+      if (/k$/i.test(s)) return parseFloat(s) * 1000;
+      if (/m$/i.test(s)) return parseFloat(s) * 1000000;
+      return parseFloat(s);
+    }
+
+    if (engMetM) {
+      const atual = parseNum(engMetM[2]), meta = parseNum(engMetM[1]);
+      if (!isNaN(atual) && !isNaN(meta)) metasData.push({ label: 'Engajamento (%)', atual, meta });
+    }
+
+    if (metasData.length > 0) {
+      document.getElementById('chart-metas-card').style.display = 'block';
+      const metasCtx = document.getElementById('chart-metas').getContext('2d');
+      _charts['metas'] = new Chart(metasCtx, {
+        type: 'bar',
+        data: {
+          labels: metasData.map(d => d.label),
+          datasets: [
+            {
+              label: 'Atual',
+              data: metasData.map(d => d.atual),
+              backgroundColor: 'rgba(252,76,4,0.7)', borderColor: '#FC4C04',
+              borderWidth: 1.5, borderRadius: 4, borderSkipped: false,
+            },
+            {
+              label: 'Meta',
+              data: metasData.map(d => d.meta),
+              backgroundColor: 'rgba(34,197,94,0.35)', borderColor: '#22c55e',
+              borderWidth: 1.5, borderRadius: 4, borderSkipped: false,
+            }
+          ]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              display: true,
+              labels: { color: colorMuted, boxWidth: 10, font: { size: 10 } }
+            },
+            tooltip: { callbacks: { label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y}` } }
+          },
+          scales: {
+            x: { grid: { display: false }, ticks: { color: colorMuted }, border: { color: 'transparent' } },
+            y: {
+              grid: { color: 'rgba(255,255,255,0.04)' },
+              ticks: { color: colorMuted },
+              border: { color: 'transparent' }
+            }
+          }
+        }
+      });
+    }
+
+    if (engAtual === null && totalAcoes === 0 && metasData.length === 0) {
+      panel.style.display = 'none';
+    }
+  }
+
   /* ── Nova análise ───────────────────────────────────────── */
   function novaAnalise() {
+    ['eng','acoes','metas'].forEach(destroyChart);
+    document.getElementById('charts-panel').style.display = 'none';
+    document.getElementById('chart-acoes-card').style.display = 'none';
+    document.getElementById('chart-metas-card').style.display = 'none';
     document.getElementById('resultado-screen').style.display = 'none';
     document.getElementById('form-screen').style.display = 'block';
     objetivoSelecionado = '';

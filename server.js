@@ -531,7 +531,7 @@ async function agentHashtag(nicho, sv) {
   const resp = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ hashtags: hashtags.slice(0, 2), resultsLimit: 8, proxy: { useApifyProxy: true } }),
+    body: JSON.stringify({ hashtags: hashtags.slice(0, 2), resultsLimit: 15, proxy: { useApifyProxy: true } }),
     timeout: 55000
   });
 
@@ -540,10 +540,33 @@ async function agentHashtag(nicho, sv) {
   const items = await resp.json();
   if (!Array.isArray(items) || items.length === 0) return '';
 
+  // Filtrar apenas posts dos últimos 90 dias
+  const corte90dias = Date.now() - 90 * 24 * 60 * 60 * 1000;
+
   const resultado = items
-    .filter(i => (i.likesCount || 0) > 50)
+    .filter(i => {
+      if ((i.likesCount || 0) <= 50) return false;
+      // Aceita timestamp em segundos (Unix) ou string ISO
+      const ts = i.timestamp
+        ? (typeof i.timestamp === 'number' ? i.timestamp * 1000 : new Date(i.timestamp).getTime())
+        : null;
+      if (ts && !isNaN(ts) && ts < corte90dias) return false; // descarta antigos
+      return true;
+    })
+    .sort((a, b) => {
+      // Mais recentes primeiro
+      const ta = a.timestamp ? (typeof a.timestamp === 'number' ? a.timestamp : new Date(a.timestamp).getTime() / 1000) : 0;
+      const tb = b.timestamp ? (typeof b.timestamp === 'number' ? b.timestamp : new Date(b.timestamp).getTime() / 1000) : 0;
+      return tb - ta;
+    })
     .slice(0, 5)
-    .map(i => `- "${(i.caption || 'sem legenda').substring(0, 120)}..." | ❤️ ${i.likesCount} | 💬 ${i.commentsCount} | Tipo: ${i.type}`)
+    .map(i => {
+      const dataPost = i.timestamp
+        ? new Date(typeof i.timestamp === 'number' ? i.timestamp * 1000 : i.timestamp)
+            .toLocaleDateString('pt-BR', { month: 'short', year: 'numeric' })
+        : '';
+      return `- "${(i.caption || 'sem legenda').substring(0, 120)}..." | ❤️ ${i.likesCount} | 💬 ${i.commentsCount} | Tipo: ${i.type}${dataPost ? ` | 📅 ${dataPost}` : ''}`;
+    })
     .join('\n');
 
   sv.info('hashtag', `✅ ${items.length} posts virais encontrados para o nicho`);
