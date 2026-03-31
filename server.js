@@ -19,6 +19,90 @@ const PORT = process.env.PORT || 3000;
 let analiseEmCurso = 0;
 const MAX_ANALISES = 50;
 
+// ── Rate Limiting: 1 análise por @ por semana + 3 por IP por semana ──
+const RATE_LIMIT_SEMANAS_MS = 7 * 24 * 60 * 60 * 1000; // 7 dias
+const RATE_LIMIT_IP_MAX     = 3; // análises por IP por semana
+const RATE_LIMIT_FILE       = path.join('/app/data', 'rate-limits.json');
+const RATE_LIMIT_FILE_LOCAL = path.join(__dirname, 'data', 'rate-limits.json');
+
+let rateLimits = { usernames: {}, ips: {} };
+
+function getRateLimitFile() {
+  // Usa volume do Railway se disponível, senão pasta local
+  try {
+    if (fs.existsSync('/app/data')) return RATE_LIMIT_FILE;
+  } catch(e) {}
+  try {
+    fs.mkdirSync(path.join(__dirname, 'data'), { recursive: true });
+    return RATE_LIMIT_FILE_LOCAL;
+  } catch(e) {}
+  return null;
+}
+
+function loadRateLimits() {
+  const file = getRateLimitFile();
+  if (!file) return;
+  try {
+    if (fs.existsSync(file)) {
+      rateLimits = JSON.parse(fs.readFileSync(file, 'utf8'));
+    }
+  } catch(e) {}
+}
+
+function saveRateLimits() {
+  const file = getRateLimitFile();
+  if (!file) return;
+  try {
+    fs.writeFileSync(file, JSON.stringify(rateLimits, null, 2), 'utf8');
+  } catch(e) {}
+}
+
+function limparExpirados() {
+  const agora = Date.now();
+  for (const k of Object.keys(rateLimits.usernames)) {
+    if (agora - rateLimits.usernames[k] > RATE_LIMIT_SEMANAS_MS) delete rateLimits.usernames[k];
+  }
+  for (const ip of Object.keys(rateLimits.ips)) {
+    rateLimits.ips[ip] = (rateLimits.ips[ip] || []).filter(t => agora - t < RATE_LIMIT_SEMANAS_MS);
+    if (rateLimits.ips[ip].length === 0) delete rateLimits.ips[ip];
+  }
+}
+
+function checkRateLimit(arroba, ip) {
+  limparExpirados();
+  const agora = Date.now();
+  const username = arroba.toLowerCase().replace('@', '');
+
+  // Verifica limite por @
+  if (rateLimits.usernames[username]) {
+    const diff = agora - rateLimits.usernames[username];
+    if (diff < RATE_LIMIT_SEMANAS_MS) {
+      const diasRestantes = Math.ceil((RATE_LIMIT_SEMANAS_MS - diff) / (24 * 60 * 60 * 1000));
+      return { bloqueado: true, motivo: `O perfil @${arroba} já foi analisado esta semana. Tente novamente em ${diasRestantes} dia${diasRestantes > 1 ? 's' : ''}.` };
+    }
+  }
+
+  // Verifica limite por IP
+  const ipRegistros = rateLimits.ips[ip] || [];
+  if (ipRegistros.length >= RATE_LIMIT_IP_MAX) {
+    const diasRestantes = Math.ceil((RATE_LIMIT_SEMANAS_MS - (agora - ipRegistros[0])) / (24 * 60 * 60 * 1000));
+    return { bloqueado: true, motivo: `Limite de ${RATE_LIMIT_IP_MAX} análises por semana atingido. Tente novamente em ${diasRestantes} dia${diasRestantes > 1 ? 's' : ''}.` };
+  }
+
+  return { bloqueado: false };
+}
+
+function registrarAnalise(arroba, ip) {
+  const username = arroba.toLowerCase().replace('@', '');
+  rateLimits.usernames[username] = Date.now();
+  if (!rateLimits.ips[ip]) rateLimits.ips[ip] = [];
+  rateLimits.ips[ip].push(Date.now());
+  saveRateLimits();
+}
+
+// Carrega limites ao iniciar
+loadRateLimits();
+
 app.use(cors({ origin: '*' }));
 app.use(express.json({ limit: '50mb' }));
 app.use(express.static(path.join(__dirname, 'frontend')));
@@ -861,6 +945,18 @@ app.post('/api/analisar', upload.fields([
       clearInterval(keepAlive);
       return res.end(JSON.stringify({ sucesso: false, erro: 'Nome, nicho e @ do Instagram são obrigatórios.' }));
     }
+
+    // ── Rate Limiting ───────────────────────────────────────
+    const clienteIP = req.headers['x-forwarded-for']?.split(',')[0]?.trim()
+                   || req.socket?.remoteAddress
+                   || 'unknown';
+    const rl = checkRateLimit(arroba.trim(), clienteIP);
+    if (rl.bloqueado) {
+      clearInterval(keepAlive);
+      analiseEmCurso--;
+      return res.end(JSON.stringify({ sucesso: false, erro: rl.motivo }));
+    }
+
     const reelUrl     = (req.body.reel_url     || '').trim();
     const reelLegenda = (req.body.reel_legenda || '').trim();
 
@@ -991,6 +1087,9 @@ ${squadResultado.conteudosVirais ? `\nCONTEÚDOS VIRAIS DO NICHO "${nicho}" (col
 
     // Limpa uploads
     uploadedFiles.forEach(f => { try { fs.unlinkSync(f); } catch(e) {} });
+
+    // Registra análise concluída no rate limiter
+    registrarAnalise(arroba.trim(), clienteIP);
 
     clearInterval(keepAlive);
     res.end(JSON.stringify({
