@@ -873,39 +873,28 @@ Top 3 temas que estão funcionando no nicho agora:
 
 ---
 
-## 9. CALENDÁRIO — PRÓXIMAS 4 SEMANAS
+## 9. PRÓXIMOS PASSOS — SEMANA 1
 
-**Semana 1 — Autoridade:**
-- Seg: [tema específico ao nicho] | Formato: [Reel/Carrossel] | Gancho: [texto]
-- Qua: [tema] | Formato: | Gancho:
-- Sex: [tema] | Formato: | Gancho:
+Foco único: a ação de maior impacto imediato para este perfil.
 
-**Semana 2 — Atração (alcance):**
-[mesma estrutura]
-
-**Semana 3 — Conversão:**
-[mesma estrutura]
-
-**Semana 4 — Relacionamento:**
-[mesma estrutura]
+- **Hoje:** [1 ação concreta e específica]
+- **Esta semana:** [2 posts para publicar — tema + formato + gancho em 1 linha cada]
+- **Meta em 30 dias:** [1 métrica realista baseada nos dados atuais]
 
 ---
 
 ## 10. PLANO DE ATAQUE — 90 DIAS
 
 ### 🔴 URGENTE (Esta semana):
-1. [Ação específica] → Impacto esperado: [resultado mensurável]
-2. [Ação específica] → Impacto esperado: [resultado mensurável]
-3. [Ação específica] → Impacto esperado: [resultado mensurável]
+1. [Ação específica] → Impacto: [resultado mensurável]
+2. [Ação específica] → Impacto: [resultado mensurável]
 
-### 🟡 IMPORTANTE (Próximo mês):
+### 🟡 PRÓXIMO MÊS:
 1. [Estratégia específica para o nicho]
 2. [Estratégia específica]
-3. [Estratégia específica]
 
-### 🟢 ESTRATÉGICO (90 dias):
-1. [Meta de crescimento realista baseada nos dados atuais]
-2. [Estratégia de monetização para o nicho]
+### 🟢 90 DIAS:
+1. [Meta de crescimento realista] | [Estratégia de monetização para o nicho]
 
 ---
 
@@ -1092,7 +1081,7 @@ ${squadResultado.conteudosVirais ? `\nCONTEÚDOS VIRAIS DO NICHO "${nicho}" (col
     const response = await anthropic.messages.create({
       model: 'claude-haiku-4-5',
       max_tokens: 5000,
-      system: PROMPT_ANALYST,
+      system: [{ type: 'text', text: PROMPT_ANALYST, cache_control: { type: 'ephemeral' } }],
       messages: [{
         role: 'user',
         content: [
@@ -1100,7 +1089,8 @@ ${squadResultado.conteudosVirais ? `\nCONTEÚDOS VIRAIS DO NICHO "${nicho}" (col
           ...imagensConteudo,
           { type: 'text', text: '\nCom base em TODOS esses dados reais (perfil coletado automaticamente + prints + transcrição + virais do nicho), faça o diagnóstico completo conforme estrutura. Seja CIRÚRGICO e ESPECÍFICO — cite os números reais fornecidos.' }
         ]
-      }]
+      }],
+      betas: ['prompt-caching-2024-07-31']
     });
 
     const relatorio = response.content?.[0]?.text ?? 'Análise não disponível — tente novamente.';
@@ -1227,14 +1217,15 @@ NOTA: Dados coletados manualmente pelo usuário durante o evento. Use exatamente
     const response = await anthropic.messages.create({
       model: 'claude-haiku-4-5',
       max_tokens: 5000,
-      system: PROMPT_ANALYST,
+      system: [{ type: 'text', text: PROMPT_ANALYST, cache_control: { type: 'ephemeral' } }],
       messages: [{
         role: 'user',
         content: [
           { type: 'text', text: contextoFinal },
           { type: 'text', text: '\nCom base nos dados informados, faça o diagnóstico completo conforme estrutura. Use EXATAMENTE os números fornecidos. Seja CIRÚRGICO e ESPECÍFICO para o nicho.' }
         ]
-      }]
+      }],
+      betas: ['prompt-caching-2024-07-31']
     });
 
     const relatorio = response.content?.[0]?.text ?? 'Análise não disponível.';
