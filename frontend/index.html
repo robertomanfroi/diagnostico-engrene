@@ -8,6 +8,60 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Calistoga:ital@0;1&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script>
+  /* ── Browser Fingerprint ───────────────────────────────────
+     Gera ID único por dispositivo sem cookies/login.
+     Armazena em localStorage para persistir entre sessões.
+  ──────────────────────────────────────────────────────────── */
+  (function() {
+    async function gerarFingerprint() {
+      const components = [
+        navigator.userAgent,
+        navigator.language,
+        screen.width + 'x' + screen.height,
+        screen.colorDepth,
+        new Date().getTimezoneOffset(),
+        navigator.hardwareConcurrency || '',
+        navigator.deviceMemory || '',
+        navigator.platform || '',
+        Intl.DateTimeFormat().resolvedOptions().timeZone || '',
+      ];
+
+      // Canvas fingerprint (rendering único por GPU/driver)
+      try {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        ctx.textBaseline = 'top';
+        ctx.font = '14px Arial';
+        ctx.fillStyle = '#FC4C04';
+        ctx.fillText('diagnostico-engrene-fp', 2, 2);
+        ctx.fillStyle = 'rgba(252,76,4,0.5)';
+        ctx.fillRect(10, 10, 100, 30);
+        components.push(canvas.toDataURL());
+      } catch(e) {}
+
+      // Hash simples (djb2)
+      const str = components.join('|');
+      let hash = 5381;
+      for (let i = 0; i < str.length; i++) {
+        hash = ((hash << 5) + hash) + str.charCodeAt(i);
+        hash = hash & hash; // 32-bit
+      }
+      return Math.abs(hash).toString(36);
+    }
+
+    async function initFingerprint() {
+      let fp = localStorage.getItem('_dfp');
+      if (!fp) {
+        fp = await gerarFingerprint();
+        localStorage.setItem('_dfp', fp);
+      }
+      window._deviceFingerprint = fp;
+    }
+
+    initFingerprint();
+  })();
+  </script>
   <style>
     /* ── Tokens ───────────────────────────────────────────── */
     :root {
@@ -1524,7 +1578,7 @@
       fd.append('seguidores', document.getElementById('f-seguidores').value || '');
       fd.append('frequencia', document.getElementById('f-frequencia').value || '');
       fd.append('descricao',  document.getElementById('f-desc').value || '');
-
+      fd.append('_dfp',       window._deviceFingerprint || '');
 
       const res  = await fetch('/api/analisar', { method:'POST', body:fd });
       const data = await res.json();

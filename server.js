@@ -19,13 +19,14 @@ const PORT = process.env.PORT || 3000;
 let analiseEmCurso = 0;
 const MAX_ANALISES = 5;
 
-// ── Rate Limiting: 1 análise por @ por semana + 2 por IP por semana ──
+// ── Rate Limiting: 1 análise por @ por semana + 2 por IP/fingerprint por semana ──
 const RATE_LIMIT_SEMANAS_MS = 7 * 24 * 60 * 60 * 1000; // 7 dias
 const RATE_LIMIT_IP_MAX     = 2; // análises por IP por semana
+const RATE_LIMIT_FP_MAX     = 2; // análises por fingerprint por semana
 const RATE_LIMIT_FILE       = path.join('/app/data', 'rate-limits.json');
 const RATE_LIMIT_FILE_LOCAL = path.join(__dirname, 'data', 'rate-limits.json');
 
-let rateLimits = { usernames: {}, ips: {} };
+let rateLimits = { usernames: {}, ips: {}, fps: {} };
 
 function getRateLimitFile() {
   // Usa volume do Railway se disponível, senão pasta local
@@ -44,7 +45,8 @@ function loadRateLimits() {
   if (!file) return;
   try {
     if (fs.existsSync(file)) {
-      rateLimits = JSON.parse(fs.readFileSync(file, 'utf8'));
+      const loaded = JSON.parse(fs.readFileSync(file, 'utf8'));
+      rateLimits = { usernames: {}, ips: {}, fps: {}, ...loaded };
     }
   } catch(e) {}
 }
@@ -66,9 +68,14 @@ function limparExpirados() {
     rateLimits.ips[ip] = (rateLimits.ips[ip] || []).filter(t => agora - t < RATE_LIMIT_SEMANAS_MS);
     if (rateLimits.ips[ip].length === 0) delete rateLimits.ips[ip];
   }
+  if (!rateLimits.fps) rateLimits.fps = {};
+  for (const fp of Object.keys(rateLimits.fps)) {
+    rateLimits.fps[fp] = (rateLimits.fps[fp] || []).filter(t => agora - t < RATE_LIMIT_SEMANAS_MS);
+    if (rateLimits.fps[fp].length === 0) delete rateLimits.fps[fp];
+  }
 }
 
-function checkRateLimit(arroba, ip) {
+function checkRateLimit(arroba, ip, fp) {
   limparExpirados();
   const agora = Date.now();
   const username = arroba.toLowerCase().replace('@', '');
@@ -89,14 +96,29 @@ function checkRateLimit(arroba, ip) {
     return { bloqueado: true, motivo: `Limite de ${RATE_LIMIT_IP_MAX} análises por semana atingido. Tente novamente em ${diasRestantes} dia${diasRestantes > 1 ? 's' : ''}.` };
   }
 
+  // Verifica limite por fingerprint (dispositivo)
+  if (fp && fp.length > 3) {
+    if (!rateLimits.fps) rateLimits.fps = {};
+    const fpRegistros = rateLimits.fps[fp] || [];
+    if (fpRegistros.length >= RATE_LIMIT_FP_MAX) {
+      const diasRestantes = Math.ceil((RATE_LIMIT_SEMANAS_MS - (agora - fpRegistros[0])) / (24 * 60 * 60 * 1000));
+      return { bloqueado: true, motivo: `Limite de ${RATE_LIMIT_FP_MAX} análises por semana atingido. Tente novamente em ${diasRestantes} dia${diasRestantes > 1 ? 's' : ''}.` };
+    }
+  }
+
   return { bloqueado: false };
 }
 
-function registrarAnalise(arroba, ip) {
+function registrarAnalise(arroba, ip, fp) {
   const username = arroba.toLowerCase().replace('@', '');
   rateLimits.usernames[username] = Date.now();
   if (!rateLimits.ips[ip]) rateLimits.ips[ip] = [];
   rateLimits.ips[ip].push(Date.now());
+  if (fp && fp.length > 3) {
+    if (!rateLimits.fps) rateLimits.fps = {};
+    if (!rateLimits.fps[fp]) rateLimits.fps[fp] = [];
+    rateLimits.fps[fp].push(Date.now());
+  }
   saveRateLimits();
 }
 
@@ -950,7 +972,8 @@ app.post('/api/analisar', upload.fields([
     const clienteIP = req.headers['x-forwarded-for']?.split(',')[0]?.trim()
                    || req.socket?.remoteAddress
                    || 'unknown';
-    const rl = checkRateLimit(arroba.trim(), clienteIP);
+    const clienteFP = (req.body._dfp || '').toString().trim().slice(0, 20);
+    const rl = checkRateLimit(arroba.trim(), clienteIP, clienteFP);
     if (rl.bloqueado) {
       clearInterval(keepAlive);
       analiseEmCurso--;
@@ -1089,7 +1112,7 @@ ${squadResultado.conteudosVirais ? `\nCONTEÚDOS VIRAIS DO NICHO "${nicho}" (col
     uploadedFiles.forEach(f => { try { fs.unlinkSync(f); } catch(e) {} });
 
     // Registra análise concluída no rate limiter
-    registrarAnalise(arroba.trim(), clienteIP);
+    registrarAnalise(arroba.trim(), clienteIP, clienteFP);
 
     clearInterval(keepAlive);
     res.end(JSON.stringify({
@@ -1149,7 +1172,8 @@ app.post('/api/analisar-manual', async (req, res) => {
     const clienteIP = req.headers['x-forwarded-for']?.split(',')[0]?.trim()
                    || req.socket?.remoteAddress
                    || 'unknown';
-    const rl = checkRateLimit(arroba.trim(), clienteIP);
+    const clienteFP = (req.body._dfp || '').toString().trim().slice(0, 20);
+    const rl = checkRateLimit(arroba.trim(), clienteIP, clienteFP);
     if (rl.bloqueado) {
       analiseEmCurso--;
       return res.status(429).json({ sucesso: false, erro: rl.motivo });
@@ -1218,7 +1242,7 @@ NOTA: Dados coletados manualmente pelo usuário durante o evento. Use exatamente
 
     sv.info('analyst', `✅ Análise manual concluída — ${tokens} tokens`);
 
-    registrarAnalise(arroba.trim(), clienteIP);
+    registrarAnalise(arroba.trim(), clienteIP, clienteFP);
 
     res.json({
       sucesso: true,
