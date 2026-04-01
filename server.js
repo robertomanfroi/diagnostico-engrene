@@ -126,18 +126,34 @@ function registrarAnalise(arroba, ip, fp) {
 loadRateLimits();
 
 // ── Cache de virais por nicho (24h) ──────────────────────────
-const viraisCache = {};
-const VIRAIS_CACHE_TTL = 24 * 60 * 60 * 1000; // 24 horas
+const VIRAIS_CACHE_TTL = 72 * 60 * 60 * 1000; // 72 horas (era 24h)
+const VIRAIS_CACHE_FILE = path.join('/tmp', 'virais-cache.json');
+
+// Cache em arquivo — sobrevive a restarts normais do Railway
+let viraisCache = {};
+try {
+  if (fs.existsSync(VIRAIS_CACHE_FILE)) {
+    viraisCache = JSON.parse(fs.readFileSync(VIRAIS_CACHE_FILE, 'utf8'));
+  }
+} catch(e) { viraisCache = {}; }
+
+function normalizarNicho(nicho) {
+  return nicho.toLowerCase().trim()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // remove acentos
+    .replace(/\s+/g, '_');
+}
 
 function getViraisCache(nicho) {
-  const key = nicho.toLowerCase().trim();
+  const key = normalizarNicho(nicho);
   const entry = viraisCache[key];
   if (entry && Date.now() - entry.ts < VIRAIS_CACHE_TTL) return entry.data;
   return null;
 }
 
 function setViraisCache(nicho, data) {
-  viraisCache[nicho.toLowerCase().trim()] = { data, ts: Date.now() };
+  const key = normalizarNicho(nicho);
+  viraisCache[key] = { data, ts: Date.now() };
+  try { fs.writeFileSync(VIRAIS_CACHE_FILE, JSON.stringify(viraisCache)); } catch(e) {}
 }
 
 app.use(cors({ origin: '*' }));
@@ -735,7 +751,7 @@ async function agentHashtag(nicho, sv) {
   const resp = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ hashtags: hashtags.slice(0, 2), resultsLimit: 6, proxy: { useApifyProxy: true } }),
+    body: JSON.stringify({ hashtags: hashtags.slice(0, 1), resultsLimit: 5, proxy: { useApifyProxy: true } }),
     timeout: 55000
   });
 
