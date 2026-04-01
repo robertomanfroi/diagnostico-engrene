@@ -223,8 +223,13 @@ class Supervisor {
 
     // Fallback para Instaloader se Scout falhou
     if (!results.perfilApify?.ok) {
-      this.warn('supervisor', 'Scout falhou — usando Instaloader como fallback');
-      results.perfilFallback = await agentInstaloader(arroba, this);
+      if (results.perfilApify?.erroTipo === 'private') {
+        // Perfil detectado como privado — não tenta fallback
+        this.warn('supervisor', `@${arroba} é privado — abortando análise`);
+      } else {
+        this.warn('supervisor', 'Scout falhou — usando Instaloader como fallback');
+        results.perfilFallback = await agentInstaloader(arroba, this);
+      }
     }
 
     // ── Imager: baixa imagens dos posts (depende do Scout) ───
@@ -253,6 +258,7 @@ class Supervisor {
 // ══════════════════════════════════════════════════════════════
 async function agentScout(username, sv) {
   sv.info('scout', `Buscando perfil @${username}...`);
+  let erroTipo = null;
 
   // ── Tentativa 1: Apify ─────────────────────────────────────
   if (process.env.APIFY_TOKEN) {
@@ -271,6 +277,10 @@ async function agentScout(username, sv) {
         const items = await resp.json();
         if (Array.isArray(items) && items.length > 0) {
           const p = items[0];
+          if (p.isPrivate) {
+            sv.warn('scout', `@${p.username} é privado (Apify) — não é possível analisar`);
+            erroTipo = 'private';
+          } else {
           sv.info('scout', `✅ Apify — @${p.username} | ${p.followersCount} seguidores`);
           return normalizarPerfil('apify', p, (p.latestPosts || []).slice(0, 9).map(post => ({
             tipo:        post.type || 'GraphImage',
@@ -283,6 +293,7 @@ async function agentScout(username, sv) {
             imagem_url:  post.displayUrl || '',
             video_url:   post.videoUrl   || ''
           })));
+          }
         }
       } else {
         const body = await resp.json().catch(() => ({}));
@@ -316,6 +327,7 @@ async function agentScout(username, sv) {
       if (u && u.id) {
         if (u.is_private) {
           sv.warn('scout', `@${username} é privado — não é possível analisar`);
+          erroTipo = 'private';
         } else {
           sv.info('scout', `✅ Instagram Web API — @${u.username} | ${u.edge_followed_by?.count} seguidores`);
 
@@ -367,7 +379,7 @@ async function agentScout(username, sv) {
   }
 
   sv.err('scout', 'Todas as fontes falharam.');
-  return null;
+  return erroTipo ? { ok: false, erroTipo } : null;
 }
 
 function normalizarPerfil(fonte, p, posts) {
@@ -1008,10 +1020,11 @@ app.post('/api/analisar', upload.fields([
     // ── Sem dados reais: erro claro ──────────────────────────
     if (!perfilData) {
       clearInterval(keepAlive);
-      return res.end(JSON.stringify({
-        sucesso: false,
-        erro: `Estamos com alta demanda agora e o serviço de coleta de dados atingiu o limite. Tente novamente em alguns minutos ou entre em contato com o suporte.`
-      }));
+      const isPrivate = squadResultado.perfilApify?.erroTipo === 'private';
+      const erroMsg = isPrivate
+        ? `O perfil @${arroba} está configurado como privado. Para analisar, deixe o perfil público e tente novamente.`
+        : `Não conseguimos coletar os dados do perfil @${arroba}. Verifique se o @ está correto e se a conta é pública, depois tente novamente.`;
+      return res.end(JSON.stringify({ sucesso: false, erro: erroMsg }));
     }
 
     // ── Prepara imagens para o Analyst (Claude) ─────────────
@@ -1111,7 +1124,6 @@ ${squadResultado.conteudosVirais ? `\nCONTEÚDOS VIRAIS DO NICHO "${nicho}" (col
           { type: 'text', text: '\nCom base em TODOS esses dados reais (perfil coletado automaticamente + prints + transcrição + virais do nicho), faça o diagnóstico completo conforme estrutura. Seja CIRÚRGICO e ESPECÍFICO — cite os números reais fornecidos.' }
         ]
       }],
-      betas: ['prompt-caching-2024-07-31']
     });
 
     const relatorio = response.content?.[0]?.text ?? 'Análise não disponível — tente novamente.';
@@ -1246,7 +1258,6 @@ NOTA: Dados coletados manualmente pelo usuário durante o evento. Use exatamente
           { type: 'text', text: '\nCom base nos dados informados, faça o diagnóstico completo conforme estrutura. Use EXATAMENTE os números fornecidos. Seja CIRÚRGICO e ESPECÍFICO para o nicho.' }
         ]
       }],
-      betas: ['prompt-caching-2024-07-31']
     });
 
     const relatorio = response.content?.[0]?.text ?? 'Análise não disponível.';
