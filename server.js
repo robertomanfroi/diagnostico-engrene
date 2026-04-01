@@ -735,7 +735,7 @@ async function agentHashtag(nicho, sv) {
         ? new Date(typeof i.timestamp === 'number' ? i.timestamp * 1000 : i.timestamp)
             .toLocaleDateString('pt-BR', { month: 'short', year: 'numeric' })
         : '';
-      return `- "${(i.caption || 'sem legenda').substring(0, 120)}..." | ❤️ ${i.likesCount} | 💬 ${i.commentsCount} | Tipo: ${i.type}${dataPost ? ` | 📅 ${dataPost}` : ''}`;
+      return `- "${(i.caption || 'sem legenda').substring(0, 80)}..." | ❤️ ${i.likesCount} | 💬 ${i.commentsCount} | Tipo: ${i.type}${dataPost ? ` | 📅 ${dataPost}` : ''}`;
     })
     .join('\n');
 
@@ -1091,7 +1091,7 @@ ${squadResultado.conteudosVirais ? `\nCONTEÚDOS VIRAIS DO NICHO "${nicho}" (col
 
     const response = await anthropic.messages.create({
       model: 'claude-haiku-4-5',
-      max_tokens: 8000,
+      max_tokens: 5000,
       system: PROMPT_ANALYST,
       messages: [{
         role: 'user',
@@ -1226,7 +1226,7 @@ NOTA: Dados coletados manualmente pelo usuário durante o evento. Use exatamente
 
     const response = await anthropic.messages.create({
       model: 'claude-haiku-4-5',
-      max_tokens: 8000,
+      max_tokens: 5000,
       system: PROMPT_ANALYST,
       messages: [{
         role: 'user',
