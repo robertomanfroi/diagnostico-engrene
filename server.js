@@ -125,6 +125,21 @@ function registrarAnalise(arroba, ip, fp) {
 // Carrega limites ao iniciar
 loadRateLimits();
 
+// ── Cache de virais por nicho (24h) ──────────────────────────
+const viraisCache = {};
+const VIRAIS_CACHE_TTL = 24 * 60 * 60 * 1000; // 24 horas
+
+function getViraisCache(nicho) {
+  const key = nicho.toLowerCase().trim();
+  const entry = viraisCache[key];
+  if (entry && Date.now() - entry.ts < VIRAIS_CACHE_TTL) return entry.data;
+  return null;
+}
+
+function setViraisCache(nicho, data) {
+  viraisCache[nicho.toLowerCase().trim()] = { data, ts: Date.now() };
+}
+
 app.use(cors({ origin: '*' }));
 app.use(express.json({ limit: '50mb' }));
 app.use(express.static(path.join(__dirname, 'frontend')));
@@ -243,12 +258,12 @@ async function agentScout(username, sv) {
   if (process.env.APIFY_TOKEN) {
     try {
       const url = `https://api.apify.com/v2/acts/apify~instagram-profile-scraper/run-sync-get-dataset-items` +
-                  `?token=${process.env.APIFY_TOKEN}&timeout=60&memory=256`;
+                  `?token=${process.env.APIFY_TOKEN}&timeout=60&memory=128`;
 
       const resp = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ usernames: [username], resultsLimit: 12, proxy: { useApifyProxy: true } }),
+        body: JSON.stringify({ usernames: [username], resultsLimit: 9, proxy: { useApifyProxy: true } }),
         timeout: 70000
       });
 
@@ -693,15 +708,22 @@ async function agentHashtag(nicho, sv) {
     if (nichoLower.includes(key)) { hashtags = tags; break; }
   }
 
+  // Verifica cache antes de chamar Apify
+  const cached = getViraisCache(nicho);
+  if (cached) {
+    sv.info('hashtag', `✅ Virais do nicho "${nicho}" servidos do cache (24h)`);
+    return cached;
+  }
+
   sv.info('hashtag', `Buscando virais para #${hashtags[0]}...`);
 
   const url = `https://api.apify.com/v2/acts/apify~instagram-hashtag-scraper/run-sync-get-dataset-items` +
-              `?token=${process.env.APIFY_TOKEN}&timeout=45&memory=256`;
+              `?token=${process.env.APIFY_TOKEN}&timeout=45&memory=128`;
 
   const resp = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ hashtags: hashtags.slice(0, 2), resultsLimit: 15, proxy: { useApifyProxy: true } }),
+    body: JSON.stringify({ hashtags: hashtags.slice(0, 2), resultsLimit: 6, proxy: { useApifyProxy: true } }),
     timeout: 55000
   });
 
@@ -716,15 +738,13 @@ async function agentHashtag(nicho, sv) {
   const resultado = items
     .filter(i => {
       if ((i.likesCount || 0) <= 50) return false;
-      // Aceita timestamp em segundos (Unix) ou string ISO
       const ts = i.timestamp
         ? (typeof i.timestamp === 'number' ? i.timestamp * 1000 : new Date(i.timestamp).getTime())
         : null;
-      if (ts && !isNaN(ts) && ts < corte90dias) return false; // descarta antigos
+      if (ts && !isNaN(ts) && ts < corte90dias) return false;
       return true;
     })
     .sort((a, b) => {
-      // Mais recentes primeiro
       const ta = a.timestamp ? (typeof a.timestamp === 'number' ? a.timestamp : new Date(a.timestamp).getTime() / 1000) : 0;
       const tb = b.timestamp ? (typeof b.timestamp === 'number' ? b.timestamp : new Date(b.timestamp).getTime() / 1000) : 0;
       return tb - ta;
@@ -739,7 +759,8 @@ async function agentHashtag(nicho, sv) {
     })
     .join('\n');
 
-  sv.info('hashtag', `✅ ${items.length} posts virais encontrados para o nicho`);
+  setViraisCache(nicho, resultado);
+  sv.info('hashtag', `✅ ${items.length} posts virais encontrados para o nicho (cacheado por 24h)`);
   return resultado;
 }
 
