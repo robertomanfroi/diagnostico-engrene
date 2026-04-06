@@ -1246,7 +1246,7 @@ ${squadResultado.conteudosVirais ? `\nCONTEÚDOS VIRAIS DO NICHO "${nicho}" (col
 
     const response = await anthropic.messages.create({
       model: 'claude-haiku-4-5',
-      max_tokens: 5000,
+      max_tokens: 6000,
       system: [{ type: 'text', text: PROMPT_ANALYST, cache_control: { type: 'ephemeral' } }],
       messages: [{
         role: 'user',
@@ -1393,7 +1393,7 @@ NOTA: Dados coletados manualmente pelo usuário durante o evento. Use exatamente
 
     const response = await anthropic.messages.create({
       model: 'claude-haiku-4-5',
-      max_tokens: 5000,
+      max_tokens: 6000,
       system: [{ type: 'text', text: PROMPT_ANALYST, cache_control: { type: 'ephemeral' } }],
       messages: [{
         role: 'user',
