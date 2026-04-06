@@ -15,190 +15,13 @@ const fetch     = require('node-fetch');
 const app  = express();
 const PORT = process.env.PORT || 3000;
 
-// ── Controle de concorrência (máx 5 análises simultâneas) ──
+// ── Controle de concorrência (máx 4 análises simultâneas) ──
 let analiseEmCurso = 0;
-const MAX_ANALISES = 5;
-
-// ── Rate Limiting: 1 análise por @ por semana + 2 por IP/fingerprint por semana ──
-const RATE_LIMIT_SEMANAS_MS = 7 * 24 * 60 * 60 * 1000; // 7 dias
-const RATE_LIMIT_IP_MAX     = 2; // análises por IP por semana
-const RATE_LIMIT_FP_MAX     = 2; // análises por fingerprint por semana
-const RATE_LIMIT_FILE       = path.join('/app/data', 'rate-limits.json');
-const RATE_LIMIT_FILE_LOCAL = path.join(__dirname, 'data', 'rate-limits.json');
-
-let rateLimits = { usernames: {}, ips: {}, fps: {}, erros: {} };
-
-function getRateLimitFile() {
-  // Usa volume do Railway se disponível, senão pasta local
-  try {
-    if (fs.existsSync('/app/data')) return RATE_LIMIT_FILE;
-  } catch(e) {}
-  try {
-    fs.mkdirSync(path.join(__dirname, 'data'), { recursive: true });
-    return RATE_LIMIT_FILE_LOCAL;
-  } catch(e) {}
-  return null;
-}
-
-function loadRateLimits() {
-  const file = getRateLimitFile();
-  if (!file) return;
-  try {
-    if (fs.existsSync(file)) {
-      const loaded = JSON.parse(fs.readFileSync(file, 'utf8'));
-      rateLimits = { usernames: {}, ips: {}, fps: {}, ...loaded };
-    }
-  } catch(e) {}
-}
-
-function saveRateLimits() {
-  const file = getRateLimitFile();
-  if (!file) return;
-  try {
-    fs.writeFileSync(file, JSON.stringify(rateLimits, null, 2), 'utf8');
-  } catch(e) {}
-}
-
-function limparExpirados() {
-  const agora = Date.now();
-  for (const k of Object.keys(rateLimits.usernames)) {
-    if (agora - rateLimits.usernames[k] > RATE_LIMIT_SEMANAS_MS) delete rateLimits.usernames[k];
-  }
-  for (const ip of Object.keys(rateLimits.ips)) {
-    rateLimits.ips[ip] = (rateLimits.ips[ip] || []).filter(t => agora - t < RATE_LIMIT_SEMANAS_MS);
-    if (rateLimits.ips[ip].length === 0) delete rateLimits.ips[ip];
-  }
-  if (!rateLimits.fps) rateLimits.fps = {};
-  for (const fp of Object.keys(rateLimits.fps)) {
-    rateLimits.fps[fp] = (rateLimits.fps[fp] || []).filter(t => agora - t < RATE_LIMIT_SEMANAS_MS);
-    if (rateLimits.fps[fp].length === 0) delete rateLimits.fps[fp];
-  }
-  if (!rateLimits.erros) rateLimits.erros = {};
-  for (const k of Object.keys(rateLimits.erros)) {
-    rateLimits.erros[k] = (rateLimits.erros[k] || []).filter(t => agora - t < RATE_LIMIT_SEMANAS_MS);
-    if (rateLimits.erros[k].length === 0) delete rateLimits.erros[k];
-  }
-}
-
-function checkRateLimit(arroba, ip, fp) {
-  limparExpirados();
-  const agora = Date.now();
-  const username = arroba.toLowerCase().replace('@', '');
-
-  // Verifica limite por IP (só conta análises completas, desconta erros)
-  if (!rateLimits.erros) rateLimits.erros = {};
-  const ipErros = (rateLimits.erros[`ip_${ip}`] || []).length;
-  const ipRegistros = rateLimits.ips[ip] || [];
-  const ipSucesso = Math.max(0, ipRegistros.length - ipErros);
-  if (ipSucesso >= RATE_LIMIT_IP_MAX) {
-    const diasRestantes = Math.ceil((RATE_LIMIT_SEMANAS_MS - (agora - ipRegistros[0])) / (24 * 60 * 60 * 1000));
-    return { bloqueado: true, motivo: `Limite de ${RATE_LIMIT_IP_MAX} análises por semana atingido. Tente novamente em ${diasRestantes} dia${diasRestantes > 1 ? 's' : ''}.` };
-  }
-
-  // Verifica limite por fingerprint (dispositivo) — só conta análises completas
-  if (fp && fp.length > 3) {
-    if (!rateLimits.fps) rateLimits.fps = {};
-    const fpErros = (rateLimits.erros[`fp_${fp}`] || []).length;
-    const fpRegistros = rateLimits.fps[fp] || [];
-    const fpSucesso = Math.max(0, fpRegistros.length - fpErros);
-    if (fpSucesso >= RATE_LIMIT_FP_MAX) {
-      const diasRestantes = Math.ceil((RATE_LIMIT_SEMANAS_MS - (agora - fpRegistros[0])) / (24 * 60 * 60 * 1000));
-      return { bloqueado: true, motivo: `Limite de ${RATE_LIMIT_FP_MAX} análises por semana atingido. Tente novamente em ${diasRestantes} dia${diasRestantes > 1 ? 's' : ''}.` };
-    }
-  }
-
-  return { bloqueado: false };
-}
-
-function registrarAnalise(arroba, ip, fp) {
-  const username = arroba.toLowerCase().replace('@', '');
-  rateLimits.usernames[username] = Date.now();
-  if (!rateLimits.ips[ip]) rateLimits.ips[ip] = [];
-  rateLimits.ips[ip].push(Date.now());
-  if (fp && fp.length > 3) {
-    if (!rateLimits.fps) rateLimits.fps = {};
-    if (!rateLimits.fps[fp]) rateLimits.fps[fp] = [];
-    rateLimits.fps[fp].push(Date.now());
-  }
-  saveRateLimits();
-}
-
-// Registra tentativa com erro — permite nova tentativa ao usuário
-function registrarErro(ip, fp, arroba) {
-  if (!rateLimits.erros) rateLimits.erros = {};
-  const agora = Date.now();
-  const ipKey   = `ip_${ip}`;
-  const fpKey   = `fp_${fp}`;
-  if (!rateLimits.erros[ipKey]) rateLimits.erros[ipKey] = [];
-  rateLimits.erros[ipKey].push(agora);
-  if (fp && fp.length > 3) {
-    if (!rateLimits.erros[fpKey]) rateLimits.erros[fpKey] = [];
-    rateLimits.erros[fpKey].push(agora);
-  }
-  saveRateLimits();
-}
-
-// Carrega limites ao iniciar
-loadRateLimits();
-
-// ── Sanitiza texto para evitar JSON inválido ─────────────────
-// Cobre todos os casos que quebram JSON na API da Claude/Anthropic:
-//   1. Null bytes (\u0000)
-//   2. Caracteres de controle (exceto \t \n \r)
-//   3. Surrogates solitários (\uD800-\uDFFF sem par) — emojis corrompidos do Instagram
-function sanitizeText(text) {
-  if (!text) return '';
-  return String(text)
-    .replace(/\u0000/g, '')                            // null bytes
-    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '') // control chars (preserva \t \n \r)
-    .replace(/[\uD800-\uDFFF]/g, '')                   // surrogates solitários
-    .trim();
-}
-
-// ── Cache de virais por nicho (24h) ──────────────────────────
-const VIRAIS_CACHE_TTL = 72 * 60 * 60 * 1000; // 72 horas (era 24h)
-const VIRAIS_CACHE_FILE = path.join('/tmp', 'virais-cache.json');
-
-// Cache em arquivo — sobrevive a restarts normais do Railway
-let viraisCache = {};
-try {
-  if (fs.existsSync(VIRAIS_CACHE_FILE)) {
-    viraisCache = JSON.parse(fs.readFileSync(VIRAIS_CACHE_FILE, 'utf8'));
-  }
-} catch(e) { viraisCache = {}; }
-
-function normalizarNicho(nicho) {
-  return nicho.toLowerCase().trim()
-    .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // remove acentos
-    .replace(/\s+/g, '_');
-}
-
-function getViraisCache(nicho) {
-  const key = normalizarNicho(nicho);
-  const entry = viraisCache[key];
-  if (entry && Date.now() - entry.ts < VIRAIS_CACHE_TTL) return entry.data;
-  return null;
-}
-
-function setViraisCache(nicho, data) {
-  const key = normalizarNicho(nicho);
-  viraisCache[key] = { data, ts: Date.now() };
-  try { fs.writeFileSync(VIRAIS_CACHE_FILE, JSON.stringify(viraisCache)); } catch(e) {}
-}
+const MAX_ANALISES = 4;
 
 app.use(cors({ origin: '*' }));
 app.use(express.json({ limit: '50mb' }));
-
-// ── Redireciona domínio Render → Railway ───────────────────
-app.use((req, res, next) => {
-  const host = req.headers.host || '';
-  if (host.includes('onrender.com')) {
-    return res.redirect(301, 'https://hospitable-patience-production.up.railway.app' + req.originalUrl);
-  }
-  next();
-});
-
-app.use(express.static(path.join(__dirname, 'frontend')));
+app.use(express.static(path.join(__dirname, 'public')));
 
 // ── Upload config ──────────────────────────────────────────
 const storage = multer.diskStorage({
@@ -279,13 +102,8 @@ class Supervisor {
 
     // Fallback para Instaloader se Scout falhou
     if (!results.perfilApify?.ok) {
-      if (results.perfilApify?.erroTipo === 'private') {
-        // Perfil detectado como privado — não tenta fallback
-        this.warn('supervisor', `@${arroba} é privado — abortando análise`);
-      } else {
-        this.warn('supervisor', 'Scout falhou — usando Instaloader como fallback');
-        results.perfilFallback = await agentInstaloader(arroba, this);
-      }
+      this.warn('supervisor', 'Scout falhou — usando Instaloader como fallback');
+      results.perfilFallback = agentInstaloader(arroba, this);
     }
 
     // ── Imager: baixa imagens dos posts (depende do Scout) ───
@@ -314,18 +132,17 @@ class Supervisor {
 // ══════════════════════════════════════════════════════════════
 async function agentScout(username, sv) {
   sv.info('scout', `Buscando perfil @${username}...`);
-  let erroTipo = null;
 
   // ── Tentativa 1: Apify ─────────────────────────────────────
   if (process.env.APIFY_TOKEN) {
     try {
       const url = `https://api.apify.com/v2/acts/apify~instagram-profile-scraper/run-sync-get-dataset-items` +
-                  `?token=${process.env.APIFY_TOKEN}&timeout=60&memory=128`;
+                  `?token=${process.env.APIFY_TOKEN}&timeout=60&memory=256`;
 
       const resp = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ usernames: [username], resultsLimit: 9, proxy: { useApifyProxy: true } }),
+        body: JSON.stringify({ usernames: [username], resultsLimit: 12, proxy: { useApifyProxy: true } }),
         timeout: 70000
       });
 
@@ -333,10 +150,6 @@ async function agentScout(username, sv) {
         const items = await resp.json();
         if (Array.isArray(items) && items.length > 0) {
           const p = items[0];
-          if (p.isPrivate) {
-            sv.warn('scout', `@${p.username} é privado (Apify) — não é possível analisar`);
-            erroTipo = 'private';
-          } else {
           sv.info('scout', `✅ Apify — @${p.username} | ${p.followersCount} seguidores`);
           return normalizarPerfil('apify', p, (p.latestPosts || []).slice(0, 9).map(post => ({
             tipo:        post.type || 'GraphImage',
@@ -349,7 +162,6 @@ async function agentScout(username, sv) {
             imagem_url:  post.displayUrl || '',
             video_url:   post.videoUrl   || ''
           })));
-          }
         }
       } else {
         const body = await resp.json().catch(() => ({}));
@@ -360,82 +172,17 @@ async function agentScout(username, sv) {
     }
   }
 
-  // ── Tentativa 2: Instagram Web API pública (sem login) ───
-  try {
-    sv.info('scout', 'Apify indisponível — tentando Instagram Web API...');
-    const igResp = await fetch(
-      `https://www.instagram.com/api/v1/users/web_profile_info/?username=${encodeURIComponent(username)}`,
-      {
-        headers: {
-          'X-IG-App-ID': '936619743392459',
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-          'Accept': '*/*',
-          'Accept-Language': 'pt-BR,pt;q=0.9',
-          'Referer': 'https://www.instagram.com/',
-        },
-        signal: AbortSignal.timeout(15000)
-      }
-    );
-
-    if (igResp.ok) {
-      const json = await igResp.json();
-      const u = json?.data?.user;
-      if (u && u.id) {
-        if (u.is_private) {
-          sv.warn('scout', `@${username} é privado — não é possível analisar`);
-          erroTipo = 'private';
-        } else {
-          sv.info('scout', `✅ Instagram Web API — @${u.username} | ${u.edge_followed_by?.count} seguidores`);
-
-          const edges = u.edge_owner_to_timeline_media?.edges || [];
-          const posts = edges.slice(0, 9).map(e => {
-            const n = e.node;
-            return {
-              tipo:        n.__typename || 'GraphImage',
-              legenda:     (n.edge_media_to_caption?.edges?.[0]?.node?.text || '').substring(0, 300),
-              curtidas:    n.edge_liked_by?.count || n.edge_media_preview_like?.count || 0,
-              comentarios: n.edge_media_to_comment?.count || 0,
-              views:       n.video_view_count || 0,
-              is_video:    n.is_video || false,
-              shortcode:   n.shortcode || '',
-              imagem_url:  n.display_url || '',
-              video_url:   n.video_url   || ''
-            };
-          });
-
-          return normalizarPerfil('instagram_web', {
-            username:             u.username,
-            fullName:             u.full_name,
-            biography:            u.biography,
-            externalUrl:          u.external_url,
-            followersCount:       u.edge_followed_by?.count || 0,
-            followsCount:         u.edge_follow?.count || 0,
-            postsCount:           u.edge_owner_to_timeline_media?.count || 0,
-            isBusinessAccount:    u.is_business_account || false,
-            businessCategoryName: u.category_name || '',
-            verified:             u.is_verified || false,
-            profilePicUrl:        u.profile_pic_url || '',
-          }, posts);
-        }
-      }
-    } else {
-      sv.warn('scout', `Instagram Web API HTTP ${igResp.status}`);
-    }
-  } catch(e) {
-    sv.warn('scout', `Instagram Web API erro: ${e.message}`);
-  }
-
-  // ── Tentativa 3: instagrapi com login ────────────────────
+  // ── Tentativa 2: instagrapi com login ────────────────────
   if (process.env.IG_USERNAME && process.env.IG_PASSWORD) {
-    sv.info('scout', 'Tentando instagrapi (conta IG configurada)...');
+    sv.info('scout', 'Apify indisponível — usando instagrapi (conta IG configurada)...');
     const resultado = await agentInstagrapiLogin(username, sv);
     if (resultado) return resultado;
   } else {
-    sv.warn('scout', 'IG_USERNAME/IG_PASSWORD não configurados');
+    sv.warn('scout', 'IG_USERNAME/IG_PASSWORD não configurados — configure no .env para usar como fallback');
   }
 
-  sv.err('scout', 'Todas as fontes falharam.');
-  return erroTipo ? { ok: false, erroTipo } : null;
+  sv.err('scout', 'Todas as fontes falharam. Configure IG_USERNAME+IG_PASSWORD no .env ou recarregue os créditos do Apify.');
+  return null;
 }
 
 function normalizarPerfil(fonte, p, posts) {
@@ -508,18 +255,13 @@ except Exception as e:
 
   try {
     const env = { ...process.env };
-    const stdout = await new Promise((resolve, reject) => {
-      const proc = spawn('python3', ['-c', script], { env });
-      let out = '', err = '';
-      const timer = setTimeout(() => { proc.kill(); reject(new Error('Timeout instagrapi 60s')); }, 60000);
-      proc.stdout.on('data', d => out += d);
-      proc.stderr.on('data', d => err += d);
-      proc.on('close', () => { clearTimeout(timer); resolve(out.trim()); });
-      proc.on('error', e => { clearTimeout(timer); reject(e); });
+    const result = spawnSync('python3', ['-c', script], {
+      env, encoding: 'utf8', timeout: 60000
     });
 
+    const stdout = (result.stdout || '').trim();
     if (!stdout) {
-      sv.err('scout', 'instagrapi sem saída');
+      sv.err('scout', `instagrapi sem saída: ${result.stderr?.substring(0,200)}`);
       return null;
     }
 
@@ -541,7 +283,7 @@ except Exception as e:
 // ══════════════════════════════════════════════════════════════
 //  AGENT: INSTALOADER FALLBACK — scraping local via Python
 // ══════════════════════════════════════════════════════════════
-async function agentInstaloader(username, sv) {
+function agentInstaloader(username, sv) {
   sv.info('instaloader', `Tentando Instaloader para @${username}...`);
 
   const script = `
@@ -590,22 +332,17 @@ except Exception as e:
 `;
 
   try {
-    const out = await new Promise((resolve, reject) => {
-      const proc = spawn('python3', ['-c', script], { env: process.env });
-      let stdout = '', stderr = '';
-      const timer = setTimeout(() => { proc.kill(); reject(new Error('Timeout instaloader 25s')); }, 25000);
-      proc.stdout.on('data', d => stdout += d);
-      proc.stderr.on('data', d => stderr += d);
-      proc.on('close', () => { clearTimeout(timer); resolve(stdout.trim()); });
-      proc.on('error', e => { clearTimeout(timer); reject(e); });
+    const r = spawnSync('python3', ['-c', script], {
+      timeout: 25000, encoding: 'utf-8', env: process.env
     });
+    const out = r.stdout?.trim();
     if (out) {
       const data = JSON.parse(out);
       if (data.ok) sv.info('instaloader', `✅ @${data.username} — ${data.seguidores} seguidores`);
       else sv.warn('instaloader', data.err || 'erro desconhecido');
       return data;
     }
-    sv.err('instaloader', 'sem output');
+    sv.err('instaloader', r.stderr?.substring(0, 200) || 'sem output');
     return { ok: false };
   } catch(e) {
     sv.err('instaloader', e.message);
@@ -752,40 +489,14 @@ async function agentHashtag(nicho, sv) {
   const mapaHashtags = {
     'salão': ['salaobeleza', 'cabeleireiro'],
     'beleza': ['salaobeleza', 'cabeleireiro'],
-    'manicure': ['manicure', 'naildesigner'],
-    'nail': ['naildesigner', 'unhasdecoradas'],
-    'sobrancelha': ['designdesobrancelha', 'sobrancelhas'],
-    'lash': ['lashdesigner', 'ciliosposticos'],
-    'barbearia': ['barbearia', 'barbeiro'],
-    'massagem': ['massagem', 'fisioterapia'],
-    'fisioterapia': ['fisioterapia', 'massoterapia'],
     'confeitaria': ['confeitaria', 'bolosdecorados'],
     'doce': ['confeitaria', 'doces'],
-    'padaria': ['padaria', 'padariaartesanal'],
-    'café': ['cafeteria', 'cafe'],
-    'cafe': ['cafeteria', 'cafe'],
-    'restaurante': ['restaurante', 'gastronomia'],
-    'alimentação': ['gastronomia', 'foodie'],
     'roupa': ['modafeminina', 'lojaderoupas'],
     'moda': ['modafeminina', 'moda'],
-    'ótica': ['otica', 'oculosdesol'],
-    'otica': ['otica', 'oculosdesol'],
-    'joalheria': ['joias', 'joalheria'],
-    'acessórios': ['acessorios', 'bijuterias'],
-    'acessorios': ['acessorios', 'bijuterias'],
-    'papelaria': ['papelaria', 'personalizados'],
-    'presente': ['presentescriativos', 'lembrancinhas'],
-    'artesanato': ['artesanato', 'feitoamao'],
-    'handmade': ['feitoamao', 'artesanato'],
-    'floricultura': ['floricultura', 'decoracao'],
-    'decoração': ['decoracaodeinteriores', 'decoracao'],
-    'decoracao': ['decoracaodeinteriores', 'decoracao'],
+    'restaurante': ['restaurante', 'gastronomia'],
     'estética': ['estetica', 'skincare'],
     'estetica': ['estetica', 'skincare'],
     'pet': ['petshop', 'cachorros'],
-    'farmácia': ['farmacia', 'suplementos'],
-    'farmacia': ['farmacia', 'suplementos'],
-    'suplemento': ['suplementos', 'fitness'],
     'academia': ['academia', 'fitness'],
     'nutrição': ['nutricao', 'alimentacaosaudavel'],
     'nutricao': ['nutricao', 'alimentacaosaudavel'],
@@ -793,40 +504,6 @@ async function agentHashtag(nicho, sv) {
     'medico': ['saude', 'medicina'],
     'dentista': ['odontologia', 'dentista'],
     'advogado': ['direito', 'advogado'],
-    'contabilidade': ['contabilidade', 'contabilidadeempresarial'],
-    'arquitetura': ['arquitetura', 'designdeinteriores'],
-    'imobiliária': ['imobiliaria', 'corretorodeimoveis'],
-    'imobiliaria': ['imobiliaria', 'corretorodeimoveis'],
-    'corretor': ['corretorodeimoveis', 'imoveisabravenda'],
-    'fotografia': ['fotografia', 'fotografo'],
-    'escola': ['aulapresencial', 'escolaparticular'],
-    'curso': ['cursopresencial', 'escolaprofissionalizante'],
-    'organização': ['organizacaodeambientes', 'personalorganizer'],
-    'organizacao': ['organizacaodeambientes', 'personalorganizer'],
-    'organizer': ['personalorganizer', 'organizacaodeambientes'],
-    'limpeza': ['limpezaresidencial', 'higienizacao'],
-    'higienização': ['higienizacao', 'limpezaprofissional'],
-    'higienizacao': ['higienizacao', 'limpezaprofissional'],
-    'marketing': ['marketingdigital', 'socialmedia'],
-    'social media': ['socialmedia', 'marketingdigital'],
-    'buffet': ['buffet', 'festaseventos'],
-    'evento': ['festaseventos', 'decoracaodeeventos'],
-    'costura': ['costura', 'ateliedecostura'],
-    'ateliê': ['ateliedecostura', 'costureira'],
-    'atelie': ['ateliedecostura', 'costureira'],
-    'calçado': ['calcados', 'tenis'],
-    'calcado': ['calcados', 'tenis'],
-    'sapato': ['calcados', 'sapatos'],
-    'mercadinho': ['mercadinho', 'hortifruti'],
-    'hortifruti': ['hortifruti', 'feiradebairro'],
-    'bebida': ['drinks', 'coqueteis'],
-    'drinks': ['drinks', 'bartender'],
-    'bar': ['bar', 'barzinho'],
-    'móveis': ['moveis', 'marcenaria'],
-    'moveis': ['moveis', 'marcenaria'],
-    'marcenaria': ['marcenaria', 'moveissobmedida'],
-    'auto': ['esteticaautomotiva', 'carros'],
-    'automotiv': ['esteticaautomotiva', 'lavagemdecarro'],
   };
 
   const nichoLower = nicho.toLowerCase();
@@ -836,22 +513,15 @@ async function agentHashtag(nicho, sv) {
     if (nichoLower.includes(key)) { hashtags = tags; break; }
   }
 
-  // Verifica cache antes de chamar Apify
-  const cached = getViraisCache(nicho);
-  if (cached) {
-    sv.info('hashtag', `✅ Virais do nicho "${nicho}" servidos do cache (24h)`);
-    return cached;
-  }
-
   sv.info('hashtag', `Buscando virais para #${hashtags[0]}...`);
 
   const url = `https://api.apify.com/v2/acts/apify~instagram-hashtag-scraper/run-sync-get-dataset-items` +
-              `?token=${process.env.APIFY_TOKEN}&timeout=45&memory=128`;
+              `?token=${process.env.APIFY_TOKEN}&timeout=45&memory=256`;
 
   const resp = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ hashtags: hashtags.slice(0, 1), resultsLimit: 5, proxy: { useApifyProxy: true } }),
+    body: JSON.stringify({ hashtags: hashtags.slice(0, 2), resultsLimit: 8, proxy: { useApifyProxy: true } }),
     timeout: 55000
   });
 
@@ -860,35 +530,13 @@ async function agentHashtag(nicho, sv) {
   const items = await resp.json();
   if (!Array.isArray(items) || items.length === 0) return '';
 
-  // Filtrar apenas posts dos últimos 90 dias
-  const corte90dias = Date.now() - 90 * 24 * 60 * 60 * 1000;
-
   const resultado = items
-    .filter(i => {
-      if ((i.likesCount || 0) <= 50) return false;
-      const ts = i.timestamp
-        ? (typeof i.timestamp === 'number' ? i.timestamp * 1000 : new Date(i.timestamp).getTime())
-        : null;
-      if (ts && !isNaN(ts) && ts < corte90dias) return false;
-      return true;
-    })
-    .sort((a, b) => {
-      const ta = a.timestamp ? (typeof a.timestamp === 'number' ? a.timestamp : new Date(a.timestamp).getTime() / 1000) : 0;
-      const tb = b.timestamp ? (typeof b.timestamp === 'number' ? b.timestamp : new Date(b.timestamp).getTime() / 1000) : 0;
-      return tb - ta;
-    })
+    .filter(i => (i.likesCount || 0) > 50)
     .slice(0, 5)
-    .map(i => {
-      const dataPost = i.timestamp
-        ? new Date(typeof i.timestamp === 'number' ? i.timestamp * 1000 : i.timestamp)
-            .toLocaleDateString('pt-BR', { month: 'short', year: 'numeric' })
-        : '';
-      return `- "${(i.caption || 'sem legenda').substring(0, 80)}..." | ❤️ ${i.likesCount} | 💬 ${i.commentsCount} | Tipo: ${i.type}${dataPost ? ` | 📅 ${dataPost}` : ''}`;
-    })
+    .map(i => `- "${(i.caption || 'sem legenda').substring(0, 120)}..." | ❤️ ${i.likesCount} | 💬 ${i.commentsCount} | Tipo: ${i.type}`)
     .join('\n');
 
-  setViraisCache(nicho, resultado);
-  sv.info('hashtag', `✅ ${items.length} posts virais encontrados para o nicho (cacheado por 24h)`);
+  sv.info('hashtag', `✅ ${items.length} posts virais encontrados para o nicho`);
   return resultado;
 }
 
@@ -897,195 +545,218 @@ async function agentHashtag(nicho, sv) {
 //  Sistema baseado no agente diagnostico-instagram.md
 // ══════════════════════════════════════════════════════════════
 
-const PROMPT_ANALYST = `Você é um Analista Sênior de Instagram para negócios locais brasileiros. Você analisa dados reais (prints, métricas coletadas automaticamente, transcrição de Reels) e entrega diagnósticos CIRÚRGICOS — não conselhos genéricos.
+const PROMPT_ANALYST = `Você é um Analista Sênior de Instagram para negócios locais brasileiros. Você analisa dados reais coletados automaticamente e entrega diagnósticos CIRÚRGICOS — não conselhos genéricos.
 
-REGRAS ABSOLUTAS DE QUALIDADE:
-❌ NUNCA invente dados, métricas ou informações do perfil que não estejam nos dados fornecidos
-❌ NUNCA escreva "[Não foi fornecida nos dados coletados]" — se não há dado, diga o que foi coletado e analise com o que existe
-❌ NUNCA diga "Publique mais conteúdo", "Interaja com seus seguidores", "Use hashtags relevantes", "Mantenha uma frequência consistente"
-❌ NUNCA faça recomendações que se apliquem a QUALQUER conta — seja ESPECÍFICO para ESTE nicho e ESTE perfil
-✅ SEMPRE analise COM OS DADOS REAIS fornecidos — bio real, posts reais com números reais, imagens reais
-✅ SEMPRE cite números exatos dos dados: "Post de [tema] — [X] curtidas, [Y] comentários" (não invente)
-✅ SEMPRE conecte cada diagnóstico ao nicho específico
-✅ SEMPRE entregue: O QUÊ + COMO + POR QUÊ funciona para ESSE negócio
-✅ SEMPRE priorize Pareto: 20% das ações que geram 80% do resultado
+═══════════════════════════════════════════
+REGRAS ABSOLUTAS — NUNCA VIOLE
+═══════════════════════════════════════════
+❌ NUNCA invente dados, métricas ou links — use apenas o que está nos dados fornecidos
+❌ NUNCA diga "Publique mais conteúdo", "Interaja com seguidores", "Use hashtags relevantes"
+❌ NUNCA faça recomendações genéricas — seja específico para ESTE nicho e ESTE perfil
+❌ NUNCA inclua calendário de postagens (seção removida)
+❌ NUNCA inclua seção "Métricas para monitorar" (seção removida)
+❌ NUNCA mencione @ de marcas na bio (ex: @marca) — use só o nome textual se necessário
+✅ SEMPRE analise os ÚLTIMOS 30 DIAS do perfil
+✅ SEMPRE cite números exatos dos dados: curtidas, comentários, views reais
+✅ SEMPRE recomende mínimo 5 conteúdos por semana — nunca menos
+✅ SEMPRE inclua link direto de cada post analisado (use a URL do post se disponível nos dados)
+✅ SEMPRE busque reels do próprio perfil para análise — priorizando vídeos com fala/narração
 
-IMPORTANTE SOBRE OS DADOS:
-- Os dados do perfil foram coletados AUTOMATICAMENTE pelo Scout (Apify ou Instagram API) em tempo real
-- A bio, o número de seguidores, os posts com curtidas e legendas estão todos no contexto abaixo
-- As imagens dos posts também foram baixadas e estão disponíveis para análise visual
-- Se algum dado estiver ausente, diga explicitamente qual foi coletado e qual não foi — NUNCA invente o que falta
-
-BENCHMARKS (use para diagnóstico):
+═══════════════════════════════════════════
+BENCHMARKS DE ENGAJAMENTO
+═══════════════════════════════════════════
 | Métrica | Ruim | Médio | Bom | Excelente |
 |---------|------|-------|-----|-----------|
-| Alcance/seguidores (Reel) | <30% | 30-100% | 100-300% | >300% |
+| Engajamento geral | <1% | 1-3% | 3-6% | >6% |
 | Save rate | <0,5% | 0,5-1,5% | 1,5-3% | >3% |
 | Share rate | <0,3% | 0,3-1% | 1-2% | >2% |
-| Comentários/alcance | <0,1% | 0,1-0,5% | 0,5-1% | >1% |
-| Engajamento geral | <1% | 1-3% | 3-6% | >6% |
+| Alcance/seguidores (Reel) | <30% | 30-100% | 100-300% | >300% |
 
-ESTRUTURA OBRIGATÓRIA DO RELATÓRIO:
+═══════════════════════════════════════════
+⚠️ FORMATO DE SAÍDA — CRÍTICO
+═══════════════════════════════════════════
+SUA RESPOSTA DEVE OBRIGATORIAMENTE COMEÇAR com o bloco JSON abaixo.
+NÃO coloque NENHUM texto antes do \`\`\`json.
+Preencha com os valores REAIS dos dados fornecidos — não use placeholders.
+
+\`\`\`json
+{
+  "nota": 7.5,
+  "resumo_gap": "Gap crítico em 1 frase direta",
+  "seguidores": 1200,
+  "taxa_engajamento": 3.25,
+  "benchmark_nicho": 2.0,
+  "media_curtidas": 45,
+  "melhor_post_curtidas": 180,
+  "posts_total": 38,
+  "pontos_fortes": ["Ponto forte 1 específico", "Ponto forte 2 específico"],
+  "gaps_criticos": [
+    {"titulo": "Gap 1 específico", "impacto": "alto", "detalhe": "Detalhe em 1 frase"},
+    {"titulo": "Gap 2 específico", "impacto": "medio", "detalhe": "Detalhe em 1 frase"},
+    {"titulo": "Gap 3 específico", "impacto": "baixo", "detalhe": "Detalhe em 1 frase"}
+  ],
+  "acoes_urgentes": ["Ação urgente 1 específica", "Ação urgente 2 específica", "Ação urgente 3 específica"],
+  "acoes_importantes": ["Ação importante 1 específica", "Ação importante 2 específica", "Ação importante 3 específica"],
+  "acao_estrategica": "Única estratégia principal para 90 dias"
+}
+\`\`\`
+
+Após o JSON, escreva o relatório narrativo completo seguindo a estrutura abaixo.
+
+═══════════════════════════════════════════
+ESTRUTURA DO RELATÓRIO (após o JSON)
+═══════════════════════════════════════════
 
 ## 📊 DIAGNÓSTICO ENGRENE
 ### [Nome do Negócio] — @[arroba]
 
 ---
 
-## 1. SAÚDE DO PERFIL
-- Seguidores: [número] | Seguindo: [número] | Ratio: [cálculo]
-- Taxa de postagem: [frequência calculada se disponível]
-- Bio: [avaliação técnica da bio atual]
-- Diagnóstico geral: [o que os números revelam]
-- **Gap crítico identificado:** [o maior problema desta conta especificamente]
+## 1. NOTA GERAL: [X]/10
+**Justificativa técnica:** [baseada nos dados reais — números, padrões, benchmarks do nicho]
 
 ---
 
-## 2. ANÁLISE DE CONTEÚDO (posts reais)
-OBRIGATÓRIO: Analise os posts coletados automaticamente do Instagram da pessoa. Os dados SEMPRE incluem posts com curtidas, comentários e legendas — use esses dados reais. NÃO espere prints ou imagens enviadas manualmente.
-- Post 1: [descrição do tema/visual do post] — [curtidas] curtidas, [comentários] comentários → Por que performou: [análise específica do que gerou engajamento]
-- Post 2: [descrição] — [curtidas] curtidas, [comentários] comentários → Por que performou: [análise]
-- Post 3: [descrição] — [curtidas] curtidas, [comentários] comentários → Por que performou: [análise]
-(continue para todos os posts disponíveis nos dados)
-- **Padrão de sucesso identificado:** [o que os posts com mais curtidas/comentários têm em comum — seja específico]
-- **Padrão de fracasso identificado:** [o que os posts com menos engajamento têm em comum]
-
-**Fórmula que já funciona para [nicho]:** [descreva o padrão de conteúdo vencedor baseado nos dados reais]
+## 2. SAÚDE DO PERFIL (últimos 30 dias)
+- Seguidores: [número real] | Seguindo: [número real] | Ratio: [cálculo]
+- Frequência de postagem observada: [X posts nos últimos 30 dias = Y por semana]
+- Bio atual: [transcrever a bio coletada] — Avaliação: [o que está funcionando e o que precisa mudar]
+- **Gap crítico:** [o maior problema desta conta — específico, não genérico]
 
 ---
 
-## 3. ANÁLISE DO REEL
-OBRIGATÓRIO: Se houver transcrição de Reel nos dados, analise em profundidade. Se não houver transcrição, analise o Reel mais recente ou com mais views dos dados coletados — descreva o que é possível inferir pelas métricas disponíveis.
-- Gancho (primeiros 3 segundos): [avaliação — se há transcrição, cite o texto exato do gancho]
-- Estrutura do roteiro: [análise da progressão do conteúdo]
-- CTA: [avaliação — existe? É claro? Gera ação?]
-- Potencial viral: [baixo/médio/alto + justificativa baseada nos dados]
-- **Como melhorar este Reel específico:** [3 ações concretas e específicas para este nicho]
+## 3. ANÁLISE DOS POSTS (últimos 30 dias)
+
+Liste cada post analisado neste formato:
+
+**Post 1** — [link direto se disponível nos dados]
+- Tema: [tema do post]
+- Formato: [Reel / Carrossel / Foto]
+- Gancho: [texto do gancho ou descrição]
+- Performance: [X curtidas / Y comentários / Z views]
+- Por que performou: [análise específica do que funcionou]
+
+**Post 2** — [link direto se disponível]
+[mesma estrutura]
+
+[Continue para todos os posts disponíveis]
+
+**Padrão de sucesso:** [o que os melhores posts têm em comum — específico]
+**Padrão de fracasso:** [o que os posts fracos têm em comum — específico]
+**Fórmula que já funciona para [nicho]:** [descrição específica e replicável]
 
 ---
 
-## 4. ANÁLISE VISUAL (feed e imagens)
-OBRIGATÓRIO: Analise a identidade visual com base nos dados coletados automaticamente do Instagram — imagens dos posts, thumbnails dos Reels e layout do feed. NÃO espere prints enviados manualmente.
-- Identidade visual: [consistente/inconsistente — descreva as cores, fontes e estilo predominantes observados]
-- Qualidade das imagens: [avaliação técnica — foco, iluminação, composição]
-- Legibilidade no feed: [textos legíveis? Contraste adequado? Miniaturas funcionam?]
-- Coerência do grid: [o feed tem uma estética reconhecível ou é aleatório?]
-- **O que mudar primeiro:** [ação específica de maior impacto visual para este negócio]
+## 4. ANÁLISE DE REELS DO PERFIL
+
+[Busque os reels disponíveis nos dados coletados. Priorize reels com fala/narração. Se transcrição disponível, analise em detalhe]
+
+Para cada Reel analisado:
+- Gancho (primeiros 3 segundos): [avaliação]
+- Estrutura: [análise do roteiro]
+- CTA: [avaliação]
+- Potencial viral: [nota /10 + justificativa]
+- **Como melhorar:** [2-3 ações concretas e específicas]
 
 ---
 
 ## 5. CONTEÚDOS VIRAIS DO NICHO AGORA
-[Baseado nos dados coletados do nicho — se disponíveis]
-Top 3 temas que estão funcionando no nicho agora:
-1. [Tema] — Estrutura que está viralizando: [análise]
-2. [Tema] — Por que esse formato funciona para [nicho]: [análise]
-3. [Tema] — Como adaptar para [negócio específico]: [aplicação]
+
+[Baseado nos dados de virais coletados + conhecimento do algoritmo atual]
+
+Traga exemplos reais com links quando disponíveis (Instagram ou TikTok):
+
+1. **[Tema viral 1]**
+   - Link de referência: [URL se disponível nos dados virais coletados]
+   - Por que está viralizando: [análise técnica do formato]
+   - Como adaptar para [negócio específico]: [aplicação prática]
+
+2. **[Tema viral 2]**
+   - Link de referência: [URL se disponível]
+   - Por que está viralizando: [análise]
+   - Como adaptar: [aplicação]
+
+3. **[Tema viral 3]**
+   - Link de referência: [URL se disponível]
+   - Por que está viralizando: [análise]
+   - Como adaptar: [aplicação]
 
 ---
 
 ## 6. BIO OTIMIZADA
-**Bio atual:** [texto da bio se coletado]
+
+**Bio atual:** [transcrever exatamente o que foi coletado]
+
 **Bio proposta:**
 \`\`\`
 [Nova bio — máximo 150 caracteres]
-[Link sugerido na bio]
+[Linha de destaque do serviço/produto]
+[Cidade/região se local]
+[Link ou CTA]
 \`\`\`
-**Por que funciona:** [o que foi otimizado e por quê]
+⚠️ Não mencionar @ de marcas. Usar apenas nome textual se necessário.
+**Por que funciona:** [o que foi otimizado e por quê — específico ao nicho]
 
 ---
 
-## 7. 5 GANCHOS DE REEL PARA [NICHO]
+## 7. 5 GANCHOS PARA [NICHO]
 
-**Gancho 1 — Provocação:**
-> "[Texto do gancho — máximo 10 palavras, específico para o nicho]"
-*Por que vai funcionar:* [justificativa técnica + qual emoção ativa]
+**Gancho 1 — Curiosidade (quebra de padrão):**
+> "[Texto — máximo 10 palavras, específico para o nicho]"
+*Por que vai funcionar:* [emoção ativada + mecânica psicológica]
 
-**Gancho 2 — Inversão de Crença:**
-> "[Texto do gancho]"
+**Gancho 2 — Promessa clara:**
+> "[Texto]"
 *Por que vai funcionar:* [justificativa]
 
-**Gancho 3 — Prova Social:**
-> "[Texto do gancho]"
+**Gancho 3 — Inversão de crença:**
+> "[Texto]"
 *Por que vai funcionar:* [justificativa]
 
-**Gancho 4 — Urgência/Escassez:**
-> "[Texto do gancho]"
+**Gancho 4 — Prova social local:**
+> "[Texto]"
 *Por que vai funcionar:* [justificativa]
 
-**Gancho 5 — Curiosidade/Segredo:**
-> "[Texto do gancho]"
+**Gancho 5 — Urgência/Escassez:**
+> "[Texto]"
 *Por que vai funcionar:* [justificativa]
 
 ---
 
-## 8. PRÓXIMOS PASSOS — SEMANA 1
-
-Foco único: a ação de maior impacto imediato para este perfil.
-
-- **Hoje:** [1 ação concreta e específica]
-- **Esta semana:** [2 posts para publicar — tema + formato + gancho em 1 linha cada]
-- **Meta em 30 dias:** [1 métrica realista baseada nos dados atuais]
-
----
-
-## 9. PLANO DE ATAQUE — 90 DIAS
+## 8. PLANO DE ATAQUE — 90 DIAS
 
 ### 🔴 URGENTE (Esta semana):
-1. [Ação específica] → Impacto: [resultado mensurável]
-2. [Ação específica] → Impacto: [resultado mensurável]
+1. [Ação específica] → Impacto esperado: [resultado mensurável]
+2. [Ação específica] → Impacto esperado: [resultado mensurável]
+3. [Ação específica] → Impacto esperado: [resultado mensurável]
 
-### 🟡 PRÓXIMO MÊS:
+**Frequência recomendada: mínimo 5 conteúdos por semana** (Reels + Carrosseis + Stories)
+
+### 🟡 IMPORTANTE (Próximo mês):
 1. [Estratégia específica para o nicho]
 2. [Estratégia específica]
+3. [Estratégia específica]
 
-### 🟢 90 DIAS:
-1. [Meta de crescimento realista] | [Estratégia de monetização para o nicho]
-
----
-
-## 10. MÉTRICAS PARA MONITORAR
-**Em 30 dias, acompanhe:**
-- Alcance semanal: meta [X] (base atual: [Y])
-- Taxa de engajamento: meta [X%] (base atual: [Y%])
-- Novos seguidores/semana: meta [X]
+### 🟢 ESTRATÉGICO (90 dias):
+[Meta de crescimento realista baseada nos dados atuais + estratégia de monetização para o nicho]
 
 ---
 
-## 11. SEU PRÓXIMO PASSO
+## 9. SEU PRÓXIMO PASSO
 
-Quer ter seu perfil analisado também por um humano?
+Com base no diagnóstico, o gap mais crítico do seu perfil é: **[gap crítico em 1 frase]**.
 
-**Seja nosso aluno Engrene e ganhe uma análise do seu Instagram feita por especialistas!**
+O **Método Clientes no Direct** foi desenvolvido para negócios locais exatamente como o seu. A [Parte X] do método resolve esse gap — [conectar ao módulo: Diagnóstico / Perfil / Os 5 Posts / Protocolo C.L.I.E.N.T.E. / Plano 30 dias].
 
-👉 [Entrar para a lista de espera do Engrene](https://suellenwarmling.com.br/)
+Com o método você vai:
+- Saber exatamente qual conteúdo postar para atrair clientes (não só seguidores)
+- Ter um protocolo para transformar mensagens no Direct em vendas
+- Aplicar os 5 tipos de post que funcionam para o seu nicho
+
+> **Disponível no Engrene Experience** — converse com a Suellen para aplicar o método no seu negócio.
 
 ---
-*Diagnóstico gerado por Squad IA Engrene | Dados coletados em tempo real*
-
----
-
-INSTRUÇÃO FINAL — ANTES DE ENTREGAR, REVISE INTERNAMENTE:
-
-Antes de escrever a resposta final, passe por este checklist mental para cada seção criativa. NÃO mostre o checklist ao usuário — apenas corrija o que não passar:
-
-**Seção 6 — Bio otimizada:**
-[ ] A bio usa palavras do nicho específico (não genéricas)?
-[ ] Tem no máximo 150 caracteres?
-[ ] Comunica O QUÊ o negócio faz + PARA QUEM + RESULTADO em menos de 5 segundos?
-Se não → reescreva antes de entregar.
-
-**Seção 7 — 5 Ganchos de Reel:**
-[ ] Cada gancho menciona algo específico do nicho (ex: "confeiteira" não "empreendedora")?
-[ ] Nenhum gancho serve para qualquer outro negócio fora deste nicho?
-[ ] Cada gancho tem no máximo 10 palavras?
-[ ] A justificativa "Por que vai funcionar" cita uma emoção ou gatilho real (não apenas "vai gerar engajamento")?
-Se não → reescreva o gancho problemático antes de entregar.
-
-**Seção 8 — Próximos Passos:**
-[ ] A ação de "Hoje" é executável em menos de 2 horas?
-[ ] Os 2 posts sugeridos têm tema + formato + gancho (não apenas "poste sobre X")?
-[ ] A meta em 30 dias é baseada nos dados reais do perfil (não inventada)?
-Se não → ajuste antes de entregar.`;
+*Diagnóstico gerado por Squad IA Engrene | Dados coletados em tempo real | Últimos 30 dias*`;
 
 // ══════════════════════════════════════════════════════════════
 //  ENDPOINT PRINCIPAL: POST /api/analisar
@@ -1103,12 +774,6 @@ app.post('/api/analisar', upload.fields([
   }
   analiseEmCurso++;
 
-  // Keepalive: envia \n a cada 20s para evitar timeout do proxy Nginx do Render
-  // JSON.parse ignora whitespace no inicio, entao o cliente processa normalmente
-  res.setHeader('Content-Type', 'application/json; charset=utf-8');
-  res.setHeader('Transfer-Encoding', 'chunked');
-  const keepAlive = setInterval(() => { try { res.write('\n'); } catch(e) {} }, 20000);
-
   const uploadedFiles = [];
   const jobId = `job_${Date.now()}`;
   const sv    = new Supervisor(jobId);
@@ -1118,22 +783,8 @@ app.post('/api/analisar', upload.fields([
 
     // ── Validação básica ────────────────────────────────────
     if (!nome?.trim() || !nicho?.trim() || !arroba?.trim()) {
-      clearInterval(keepAlive);
-      return res.end(JSON.stringify({ sucesso: false, erro: 'Nome, nicho e @ do Instagram são obrigatórios.' }));
+      return res.status(400).json({ sucesso: false, erro: 'Nome, nicho e @ do Instagram são obrigatórios.' });
     }
-
-    // ── Rate Limiting ───────────────────────────────────────
-    const clienteIP = req.headers['x-forwarded-for']?.split(',')[0]?.trim()
-                   || req.socket?.remoteAddress
-                   || 'unknown';
-    const clienteFP = (req.body._dfp || '').toString().trim().slice(0, 20);
-    const rl = checkRateLimit(arroba.trim(), clienteIP, clienteFP);
-    if (rl.bloqueado) {
-      clearInterval(keepAlive);
-      analiseEmCurso--;
-      return res.end(JSON.stringify({ sucesso: false, erro: rl.motivo }));
-    }
-
     const reelUrl     = (req.body.reel_url     || '').trim();
     const reelLegenda = (req.body.reel_legenda || '').trim();
 
@@ -1151,12 +802,10 @@ app.post('/api/analisar', upload.fields([
 
     // ── Sem dados reais: erro claro ──────────────────────────
     if (!perfilData) {
-      clearInterval(keepAlive);
-      const isPrivate = squadResultado.perfilApify?.erroTipo === 'private';
-      const erroMsg = isPrivate
-        ? `O perfil @${arroba} está configurado como privado. Para analisar, deixe o perfil público e tente novamente.`
-        : `Não conseguimos coletar os dados do perfil @${arroba}. Verifique se o @ está correto e se a conta é pública, depois tente novamente.`;
-      return res.end(JSON.stringify({ sucesso: false, erro: erroMsg }));
+      return res.status(422).json({
+        sucesso: false,
+        erro: `Não consegui acessar o perfil @${arroba}. Verifique se o @ está correto e se a conta é pública.`
+      });
     }
 
     // ── Prepara imagens para o Analyst (Claude) ─────────────
@@ -1167,7 +816,7 @@ app.post('/api/analisar', upload.fields([
     if (squadResultado.imagensPosts?.length > 0) {
       imagensConteudo.push({ type: 'text', text: `\n--- IMAGENS REAIS DO FEED (${squadResultado.imagensPosts.length} posts baixados automaticamente) ---` });
       for (const [i, img] of squadResultado.imagensPosts.entries()) {
-        imagensConteudo.push({ type: 'text', text: `\nPost ${i+1} — ❤️ ${img.curtidas} curtidas${img.views ? ` | 👁️ ${img.views} views` : ''} | Legenda: ${sanitizeText(img.legenda) || '(sem legenda)'}` });
+        imagensConteudo.push({ type: 'text', text: `\nPost ${i+1} — ❤️ ${img.curtidas} curtidas${img.views ? ` | 👁️ ${img.views} views` : ''} | Legenda: ${img.legenda || '(sem legenda)'}` });
         imagensConteudo.push({ type: 'image', source: { type: 'base64', media_type: img.mime, data: img.base64 } });
       }
     }
@@ -1196,20 +845,20 @@ app.post('/api/analisar', upload.fields([
       const fonte = perfilData.fonte === 'apify' ? 'Apify (dados reais)' : 'Instaloader';
       ctxPerfil = `
 DADOS DO PERFIL @${arroba} [fonte: ${fonte}]:
-- Nome: ${sanitizeText(perfilData.nome)}
-- Bio: ${sanitizeText(perfilData.bio)}
-- Link na bio: ${sanitizeText(perfilData.link_bio) || 'não informado'}
+- Nome: ${perfilData.nome}
+- Bio: ${perfilData.bio}
+- Link na bio: ${perfilData.link_bio || 'não informado'}
 - Seguidores: ${perfilData.seguidores?.toLocaleString('pt-BR')}
 - Seguindo: ${perfilData.seguindo?.toLocaleString('pt-BR')}
 - Total de posts: ${perfilData.posts_count}
 - Conta comercial: ${perfilData.is_business ? 'Sim' : 'Não'}
-- Categoria: ${sanitizeText(perfilData.categoria) || 'não informada'}
+- Categoria: ${perfilData.categoria || 'não informada'}
 - Verificado: ${perfilData.verificado ? 'Sim' : 'Não'}
 
 ÚLTIMOS ${perfilData.posts?.length || 0} POSTS (dados reais coletados agora):
 ${(perfilData.posts || []).map((p, i) =>
   `Post ${i+1} [${p.tipo}${p.is_video ? ' · Vídeo' : ''}] — ❤️ ${p.curtidas} | 💬 ${p.comentarios}${p.views ? ` | 👁️ ${p.views} views` : ''}
-Legenda: ${sanitizeText(p.legenda) || '(sem legenda)'}`
+Legenda: ${p.legenda || '(sem legenda)'}`
 ).join('\n\n')}
 `;
     }
@@ -1246,8 +895,8 @@ ${squadResultado.conteudosVirais ? `\nCONTEÚDOS VIRAIS DO NICHO "${nicho}" (col
 
     const response = await anthropic.messages.create({
       model: 'claude-haiku-4-5',
-      max_tokens: 5000,
-      system: [{ type: 'text', text: PROMPT_ANALYST, cache_control: { type: 'ephemeral' } }],
+      max_tokens: 8000,
+      system: PROMPT_ANALYST,
       messages: [{
         role: 'user',
         content: [
@@ -1255,33 +904,18 @@ ${squadResultado.conteudosVirais ? `\nCONTEÚDOS VIRAIS DO NICHO "${nicho}" (col
           ...imagensConteudo,
           { type: 'text', text: '\nCom base em TODOS esses dados reais (perfil coletado automaticamente + prints + transcrição + virais do nicho), faça o diagnóstico completo conforme estrutura. Seja CIRÚRGICO e ESPECÍFICO — cite os números reais fornecidos.' }
         ]
-      }],
+      }]
     });
 
-    const relatorio = response.content?.[0]?.text || '';
-    const inputTokens  = response.usage?.input_tokens  || 0;
-    const outputTokens = response.usage?.output_tokens || 0;
-    const tokens = inputTokens + outputTokens;
+    const relatorio = response.content?.[0]?.text ?? 'Análise não disponível — tente novamente.';
+    const tokens    = (response.usage?.input_tokens || 0) + (response.usage?.output_tokens || 0);
 
-    sv.info('analyst', `✅ Análise concluída — ${tokens} tokens (input: ${inputTokens} | output: ${outputTokens})`);
+    sv.info('analyst', `✅ Análise concluída — ${tokens} tokens usados`);
 
     // Limpa uploads
     uploadedFiles.forEach(f => { try { fs.unlinkSync(f); } catch(e) {} });
 
-    // Só registra se a análise teve conteúdo real
-    if (relatorio.length > 200) {
-      registrarAnalise(arroba.trim(), clienteIP, clienteFP);
-    }
-
-    clearInterval(keepAlive);
-
-    if (relatorio.length <= 200) {
-      registrarErro(clienteIP, clienteFP, arroba.trim());
-      res.end(JSON.stringify({ sucesso: false, erro: 'Análise não disponível — tente novamente.' }));
-      return;
-    }
-
-    res.end(JSON.stringify({
+    res.json({
       sucesso: true,
       relatorio,
       tokens_usados: tokens,
@@ -1291,14 +925,12 @@ ${squadResultado.conteudosVirais ? `\nCONTEÚDOS VIRAIS DO NICHO "${nicho}" (col
         transcricao: squadResultado.transcricao ? 'whisper' : (reelLegenda ? 'manual' : 'não disponível'),
         virais:      squadResultado.conteudosVirais ? 'apify' : 'não coletado'
       }
-    }));
+    });
 
   } catch (error) {
-    clearInterval(keepAlive);
     uploadedFiles.forEach(f => { try { fs.unlinkSync(f); } catch(e) {} });
     sv.err('supervisor', error.message);
-    registrarErro(clienteIP, clienteFP, arroba);
-    res.end(JSON.stringify({ sucesso: false, erro: error.message }));
+    res.status(500).json({ sucesso: false, erro: error.message });
   } finally {
     analiseEmCurso--;
   }
@@ -1331,19 +963,7 @@ app.post('/api/analisar-manual', async (req, res) => {
     } = req.body;
 
     if (!nome?.trim() || !nicho?.trim() || !arroba?.trim()) {
-      analiseEmCurso--;
       return res.status(400).json({ sucesso: false, erro: 'Nome, nicho e @ são obrigatórios.' });
-    }
-
-    // ── Rate Limiting (mesmo critério do endpoint principal) ──
-    const clienteIP = req.headers['x-forwarded-for']?.split(',')[0]?.trim()
-                   || req.socket?.remoteAddress
-                   || 'unknown';
-    const clienteFP = (req.body._dfp || '').toString().trim().slice(0, 20);
-    const rl = checkRateLimit(arroba.trim(), clienteIP, clienteFP);
-    if (rl.bloqueado) {
-      analiseEmCurso--;
-      return res.status(429).json({ sucesso: false, erro: rl.motivo });
     }
 
     sv.info('supervisor', `Análise manual: ${nome} | @${arroba} | ${nicho}`);
@@ -1393,23 +1013,21 @@ NOTA: Dados coletados manualmente pelo usuário durante o evento. Use exatamente
 
     const response = await anthropic.messages.create({
       model: 'claude-haiku-4-5',
-      max_tokens: 5000,
-      system: [{ type: 'text', text: PROMPT_ANALYST, cache_control: { type: 'ephemeral' } }],
+      max_tokens: 8000,
+      system: PROMPT_ANALYST,
       messages: [{
         role: 'user',
         content: [
           { type: 'text', text: contextoFinal },
           { type: 'text', text: '\nCom base nos dados informados, faça o diagnóstico completo conforme estrutura. Use EXATAMENTE os números fornecidos. Seja CIRÚRGICO e ESPECÍFICO para o nicho.' }
         ]
-      }],
+      }]
     });
 
     const relatorio = response.content?.[0]?.text ?? 'Análise não disponível.';
     const tokens    = (response.usage?.input_tokens || 0) + (response.usage?.output_tokens || 0);
 
     sv.info('analyst', `✅ Análise manual concluída — ${tokens} tokens`);
-
-    registrarAnalise(arroba.trim(), clienteIP, clienteFP);
 
     res.json({
       sucesso: true,
@@ -1420,42 +1038,15 @@ NOTA: Dados coletados manualmente pelo usuário durante o evento. Use exatamente
 
   } catch(error) {
     sv.err('supervisor', error.message);
-    registrarErro(clienteIP, clienteFP, arroba);
     res.status(500).json({ sucesso: false, erro: error.message });
   } finally {
     analiseEmCurso--;
   }
 });
 
-// ── Admin: reset rate limits ────────────────────────────────
-app.post('/admin/reset-rate-limits', (req, res) => {
-  const { senha } = req.body;
-  if (senha !== (process.env.ADMIN_SECRET || 'engrene2025')) {
-    return res.status(403).json({ erro: 'Não autorizado' });
-  }
-  rateLimits = { usernames: {}, ips: {}, fps: {}, erros: {} };
-  saveRateLimits();
-  console.log('[ADMIN] Rate limits resetados');
-  res.json({ sucesso: true, mensagem: 'Rate limits resetados com sucesso.' });
-});
-
-// ── Status da fila ─────────────────────────────────────────
-app.get('/api/status', (req, res) => {
-  const disponivel = analiseEmCurso < MAX_ANALISES;
-  const posicaoFila = analiseEmCurso;
-  const tempoEstimadoSeg = disponivel ? 60 : 60 + Math.ceil((posicaoFila - MAX_ANALISES + 1) * 5);
-  res.json({
-    analiseEmCurso,
-    maxAnalises: MAX_ANALISES,
-    disponivel,
-    posicaoFila,
-    tempoEstimadoSeg
-  });
-});
-
 // ── Serve frontend ─────────────────────────────────────────
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'frontend', 'index.html'));
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 const server = app.listen(PORT, () => {

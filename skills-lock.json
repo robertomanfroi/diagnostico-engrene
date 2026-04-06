@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "skills": {
+    "analyze-test-run": {
+      "source": "microsoft/github-copilot-for-azure",
+      "sourceType": "github",
+      "computedHash": "bf4768faf6e68e506617f27c39ba7df0500321975a6dd562ff19d6106ff65106"
+    },
+    "file-test-bug": {
+      "source": "microsoft/github-copilot-for-azure",
+      "sourceType": "github",
+      "computedHash": "ea92ed8e22bd926cfa3f7054d08a5c312f01b309b3bb4c53c08be774a60c4132"
+    },
+    "markdown-token-optimizer": {
+      "source": "microsoft/github-copilot-for-azure",
+      "sourceType": "github",
+      "computedHash": "e5ef96faafd7eca72c156e25a0aac321a35cc4964d1c4448c73e3529962a190b"
+    },
+    "sensei": {
+      "source": "microsoft/github-copilot-for-azure",
+      "sourceType": "github",
+      "computedHash": "6e640c3b3e00f16e463877c1df1aa203a8f160a68d689e47900dd9aff096f05f"
+    },
+    "skill-authoring": {
+      "source": "microsoft/github-copilot-for-azure",
+      "sourceType": "github",
+      "computedHash": "68f6bcaf07cbc511c8d9f155ab596bd9545618987138d7e3143483d5e9f119f5"
+    }
+  }
+}

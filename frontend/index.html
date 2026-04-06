@@ -1380,39 +1380,6 @@
           <div class="resultado-eyebrow">Diagnóstico Engrene - Concluído</div>
           <div class="resultado-title" id="r-titulo">Análise pronta!</div>
           <div class="resultado-meta" id="r-meta"></div>
-          <!-- Nota circular -->
-          <div class="score-circle-wrap" id="score-circle-wrap" style="display:none">
-            <div class="score-circle">
-              <svg width="110" height="110" viewBox="0 0 110 110">
-                <circle cx="55" cy="55" r="46" fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="8"/>
-                <circle id="score-arc" cx="55" cy="55" r="46" fill="none" stroke="var(--orange)" stroke-width="8"
-                  stroke-linecap="round"
-                  stroke-dasharray="289" stroke-dashoffset="289"
-                  style="transition: stroke-dashoffset 1s cubic-bezier(0.16,1,0.3,1)"/>
-              </svg>
-              <div class="score-circle-inner">
-                <span class="score-circle-num" id="r-score">—</span>
-                <span class="score-circle-den">/10</span>
-              </div>
-            </div>
-            <span class="score-circle-title">Nota geral do perfil</span>
-            <span style="font-size:10px;color:rgba(255,255,255,0.35);margin-top:4px;text-align:center;">Meramente ilustrativa</span>
-          </div>
-
-          <!-- Fallback score (sem círculo) -->
-          <div class="resultado-score-row" id="score-row-fallback">
-            <div class="score-badge">
-              <span class="score-num" id="r-score-fb">—</span>
-              <span class="score-den">/10</span>
-            </div>
-            <div>
-              <span class="score-label">Nota geral<br>do perfil</span>
-              <div style="font-size:10px;color:rgba(255,255,255,0.35);margin-top:2px;">Meramente ilustrativa</div>
-            </div>
-          </div>
-
-          <!-- Cards de métricas -->
-          <div class="metrics-grid" id="metrics-grid" style="display:none"></div>
 
           <div class="fontes-row" id="r-fontes"></div>
         </div>
@@ -1661,58 +1628,6 @@
     document.getElementById('r-titulo').textContent = `Diagnóstico de @${arroba}`;
     document.getElementById('r-meta').textContent =
       `${nome} · ${new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'})} · IA Avançada`;
-
-    // Score — tenta múltiplos formatos que o Claude pode gerar
-    const scorePatterns = [
-      /NOTA GERAL\s*:\s*\*{0,2}(\d+)\*{0,2}\s*\/\s*10/i,  // NOTA GERAL: **7**/10
-      /NOTA GERAL\s*:\s*\*{0,2}(\d+)\*{0,2}/i,             // NOTA GERAL: 7
-      /##\s*1\.\s*NOTA GERAL\s*:\s*(\d+)/i,                 // ## 1. NOTA GERAL: 7
-      /nota geral[^:\n]*:\s*(\d+)/i,                         // nota geral do perfil: 7
-    ];
-    let scoreVal = null;
-    for (const pat of scorePatterns) {
-      const match = relatorio.match(pat);
-      if (match) { scoreVal = parseInt(match[1]); break; }
-    }
-
-    if (scoreVal !== null && scoreVal >= 1 && scoreVal <= 10) {
-      document.getElementById('score-circle-wrap').style.display = 'flex';
-      document.getElementById('score-row-fallback').style.display = 'none';
-      document.getElementById('r-score').textContent = scoreVal;
-      setTimeout(() => {
-        const offset = 289 - (289 * scoreVal / 10);
-        document.getElementById('score-arc').style.strokeDashoffset = offset;
-      }, 100);
-    } else {
-      // Fallback: tenta pegar qualquer X/10 no texto
-      const fallbackM = relatorio.match(/\b([1-9]|10)\/10\b/);
-      const fallbackVal = fallbackM ? parseInt(fallbackM[1]) : null;
-      document.getElementById('r-score-fb').textContent = fallbackVal ?? '—';
-    }
-
-    // Extrai métricas do texto do relatório
-    const metricas = [];
-    const segM   = relatorio.match(/Seguidores\s*:\s*([0-9.,]+\s*[kKmM]?)/i);
-    const engM   = relatorio.match(/engajamento[^:\n]{0,30}:\s*([0-9.,]+\s*%)/i);
-    const postsM = relatorio.match(/Total de posts\s*:\s*([0-9.,]+)/i)
-                || relatorio.match(/posts\s*:\s*([0-9.,]+)/i);
-    const ratioM = relatorio.match(/Ratio\s*:\s*([0-9.,]+)/i);
-
-    if (segM)   metricas.push({ label: 'Seguidores',   value: segM[1] });
-    if (engM)   metricas.push({ label: 'Engajamento',  value: engM[1] });
-    if (postsM) metricas.push({ label: 'Posts',        value: postsM[1] });
-    if (ratioM) metricas.push({ label: 'Ratio seg/seg', value: ratioM[1] });
-
-    if (metricas.length > 0) {
-      const grid = document.getElementById('metrics-grid');
-      grid.style.display = 'grid';
-      grid.innerHTML = metricas.map(c =>
-        `<div class="metric-card">
-          <div class="metric-card-value">${c.value}</div>
-          <div class="metric-card-label">${c.label}</div>
-        </div>`
-      ).join('');
-    }
 
     // Fontes badges
     const fontesEl = document.getElementById('r-fontes');
