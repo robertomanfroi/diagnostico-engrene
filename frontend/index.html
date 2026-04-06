@@ -972,6 +972,23 @@
     }
     .nova-analise-btn svg { width:16px; height:16px; }
 
+    .copiar-btn {
+      display:flex; align-items:center; justify-content:center; gap:10px;
+      width:100%; padding:16px;
+      background:var(--surface-md);
+      border:1px solid var(--border-hi);
+      border-radius:var(--r-md);
+      color:var(--white);
+      font-family:'Inter',sans-serif;
+      font-size:14px; font-weight:600;
+      cursor:pointer; margin-top:24px;
+      transition:all 200ms var(--ease);
+      touch-action:manipulation;
+    }
+    .copiar-btn:hover { background:#2a2a2a; }
+    .copiar-btn svg { width:16px; height:16px; }
+    .copiar-btn.copiado { border-color:#22c55e; color:#22c55e; }
+
     /* ── Footer ───────────────────────────────────────────── */
     .footer {
       text-align:center;
@@ -1125,16 +1142,38 @@
               <select class="field-input" id="f-nicho">
                 <option value="">Selecione...</option>
                 <option>Salão de beleza / Estética</option>
+                <option>Manicure / Nail designer</option>
+                <option>Sobrancelha / Lash designer</option>
+                <option>Barbearia</option>
+                <option>Massagem / Fisioterapia</option>
                 <option>Confeitaria / Doces</option>
-                <option>Loja de roupas / Moda</option>
+                <option>Padaria / Café</option>
                 <option>Restaurante / Alimentação</option>
+                <option>Loja de roupas / Moda</option>
+                <option>Ótica / Joalheria / Acessórios</option>
+                <option>Papelaria / Presentes</option>
+                <option>Artesanato / Handmade</option>
+                <option>Floricultura / Decoração</option>
                 <option>Pet shop / Veterinário</option>
+                <option>Farmácia / Suplementos</option>
                 <option>Academia / Personal</option>
                 <option>Nutrição / Saúde</option>
                 <option>Médico / Dentista</option>
                 <option>Advogado / Contabilidade</option>
                 <option>Arquitetura / Design</option>
+                <option>Imobiliária / Corretor</option>
                 <option>Fotografia</option>
+                <option>Escola / Curso presencial</option>
+                <option>Organização / Personal organizer</option>
+                <option>Limpeza / Higienização</option>
+                <option>Marketing / Social media</option>
+                <option>Buffet / Eventos</option>
+                <option>Costura / Ateliê de roupa</option>
+                <option>Loja de calçados</option>
+                <option>Mercadinho / Hortifruti</option>
+                <option>Bebidas / Drinks / Bar</option>
+                <option>Móveis / Marcenaria</option>
+                <option>Auto / Estética automotiva</option>
                 <option>Outro</option>
               </select>
             </div>
@@ -1357,6 +1396,7 @@
               </div>
             </div>
             <span class="score-circle-title">Nota geral do perfil</span>
+            <span style="font-size:10px;color:rgba(255,255,255,0.35);margin-top:4px;text-align:center;">Meramente ilustrativa</span>
           </div>
 
           <!-- Fallback score (sem círculo) -->
@@ -1365,7 +1405,10 @@
               <span class="score-num" id="r-score-fb">—</span>
               <span class="score-den">/10</span>
             </div>
-            <span class="score-label">Nota geral<br>do perfil</span>
+            <div>
+              <span class="score-label">Nota geral<br>do perfil</span>
+              <div style="font-size:10px;color:rgba(255,255,255,0.35);margin-top:2px;">Meramente ilustrativa</div>
+            </div>
           </div>
 
           <!-- Cards de métricas -->
@@ -1408,32 +1451,22 @@
 
         <div class="report-body" id="r-body"></div>
 
-        <!-- CTA: Método Clientes no Direct -->
+        <!-- CTA: Engrene Lista de Espera -->
         <div class="cta-metodo">
           <div class="cta-metodo-inner">
             <div class="cta-eyebrow">Próximo passo</div>
-            <h3 class="cta-title">Mentoria Sublime</h3>
-            <p class="cta-desc">Sublime seu caminho para vender mais e ser destaque no seu negócio. Fale com nosso time e descubra como aplicar esse diagnóstico na prática.</p>
-            <div class="cta-bullets">
-              <div class="cta-bullet">
-                <svg viewBox="0 0 16 16" fill="var(--orange)" width="14"><path fill-rule="evenodd" d="M12.416 3.376a.75.75 0 0 1 .208 1.04l-5 7.5a.75.75 0 0 1-1.154.114l-3-3a.75.75 0 0 1 1.06-1.06l2.353 2.353 4.493-6.74a.75.75 0 0 1 1.04-.207Z"/></svg>
-                Acompanhamento personalizado para o seu negócio
-              </div>
-              <div class="cta-bullet">
-                <svg viewBox="0 0 16 16" fill="var(--orange)" width="14"><path fill-rule="evenodd" d="M12.416 3.376a.75.75 0 0 1 .208 1.04l-5 7.5a.75.75 0 0 1-1.154.114l-3-3a.75.75 0 0 1 1.06-1.06l2.353 2.353 4.493-6.74a.75.75 0 0 1 1.04-.207Z"/></svg>
-                Estratégia aplicada direto ao seu Instagram
-              </div>
-              <div class="cta-bullet">
-                <svg viewBox="0 0 16 16" fill="var(--orange)" width="14"><path fill-rule="evenodd" d="M12.416 3.376a.75.75 0 0 1 .208 1.04l-5 7.5a.75.75 0 0 1-1.154.114l-3-3a.75.75 0 0 1 1.06-1.06l2.353 2.353 4.493-6.74a.75.75 0 0 1 1.04-.207Z"/></svg>
-                Resultados reais para negócios locais
-              </div>
-            </div>
-            <a href="https://wa.me/554631911158?text=Olá!%20Acabei%20de%20fazer%20o%20diagnóstico%20do%20meu%20perfil%20no%20Engrene%20Experience%20e%20quero%20saber%20mais%20sobre%20a%20Mentoria%20Sublime." class="cta-btn" target="_blank">
-              <svg viewBox="0 0 20 20" fill="currentColor" width="18"><path d="M10 2C5.58 2 2 5.58 2 10c0 1.57.43 3.04 1.18 4.3L2 18l3.8-1.16A7.96 7.96 0 0010 18c4.42 0 8-3.58 8-8s-3.58-8-8-8zm3.93 11.07c-.17.47-.99.9-1.36.96-.34.05-.77.07-1.24-.08a11.3 11.3 0 01-1.12-.42c-1.97-.85-3.25-2.84-3.35-2.97-.1-.13-.8-1.07-.8-2.04 0-.97.51-1.45.69-1.65.18-.2.39-.25.52-.25h.37c.12 0 .28-.05.44.33l.56 1.36c.05.12.08.26.02.4l-.2.38-.3.38c-.1.1-.21.21-.09.42.12.2.54.9 1.17 1.46.8.72 1.48.94 1.69 1.04.2.1.32.08.44-.05l.63-.74c.14-.17.27-.12.45-.07l1.27.6c.2.09.33.14.38.22.05.09.05.5-.12.97z"/></svg>
-              Falar com nosso time
+            <h3 class="cta-title">Quer ter seu perfil analisado por um humano?</h3>
+            <p class="cta-desc">Seja nosso aluno Engrene e ganhe uma análise do seu Instagram feita por especialistas!</p>
+            <a href="https://suellenwarmling.com.br/" class="cta-btn" target="_blank" rel="noopener">
+              Quero entrar na lista de espera →
             </a>
           </div>
         </div>
+
+        <button class="copiar-btn" id="btn-copiar" onclick="copiarAnalise()">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="7" y="7" width="10" height="12" rx="2"/><path d="M3 13V4a1 1 0 011-1h9" stroke-linecap="round"/></svg>
+          Copiar análise completa
+        </button>
 
         <button class="nova-analise-btn" onclick="novaAnalise()">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 10a6 6 0 116 6" stroke-linecap="round"/><path d="M4 6v4h4" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -1629,28 +1662,41 @@
     document.getElementById('r-meta').textContent =
       `${nome} · ${new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'})} · IA Avançada`;
 
-    // Score
-    const m = relatorio.match(/NOTA GERAL[:\s]*\**(\d+)/i) || relatorio.match(/(\d+)\/10/);
-    const scoreVal = m ? parseInt(m[1]) : null;
+    // Score — tenta múltiplos formatos que o Claude pode gerar
+    const scorePatterns = [
+      /NOTA GERAL\s*:\s*\*{0,2}(\d+)\*{0,2}\s*\/\s*10/i,  // NOTA GERAL: **7**/10
+      /NOTA GERAL\s*:\s*\*{0,2}(\d+)\*{0,2}/i,             // NOTA GERAL: 7
+      /##\s*1\.\s*NOTA GERAL\s*:\s*(\d+)/i,                 // ## 1. NOTA GERAL: 7
+      /nota geral[^:\n]*:\s*(\d+)/i,                         // nota geral do perfil: 7
+    ];
+    let scoreVal = null;
+    for (const pat of scorePatterns) {
+      const match = relatorio.match(pat);
+      if (match) { scoreVal = parseInt(match[1]); break; }
+    }
 
     if (scoreVal !== null && scoreVal >= 1 && scoreVal <= 10) {
-      // Mostra círculo animado
       document.getElementById('score-circle-wrap').style.display = 'flex';
       document.getElementById('score-row-fallback').style.display = 'none';
       document.getElementById('r-score').textContent = scoreVal;
-      // Anima arco: circunferência = 2*π*46 ≈ 289
       setTimeout(() => {
         const offset = 289 - (289 * scoreVal / 10);
         document.getElementById('score-arc').style.strokeDashoffset = offset;
       }, 100);
+    } else {
+      // Fallback: tenta pegar qualquer X/10 no texto
+      const fallbackM = relatorio.match(/\b([1-9]|10)\/10\b/);
+      const fallbackVal = fallbackM ? parseInt(fallbackM[1]) : null;
+      document.getElementById('r-score-fb').textContent = fallbackVal ?? '—';
     }
 
     // Extrai métricas do texto do relatório
     const metricas = [];
-    const segM   = relatorio.match(/Seguidores[:\s]*([0-9.,]+[kKmM]?)/i);
-    const engM   = relatorio.match(/engajamento[^:\n]*[:\s]*([0-9.,]+%)/i);
-    const postsM = relatorio.match(/Total de posts[:\s]*([0-9.,]+)/i) || relatorio.match(/posts[:\s]*([0-9]+)/i);
-    const ratioM = relatorio.match(/Ratio[:\s]*([0-9.,]+)/i);
+    const segM   = relatorio.match(/Seguidores\s*:\s*([0-9.,]+\s*[kKmM]?)/i);
+    const engM   = relatorio.match(/engajamento[^:\n]{0,30}:\s*([0-9.,]+\s*%)/i);
+    const postsM = relatorio.match(/Total de posts\s*:\s*([0-9.,]+)/i)
+                || relatorio.match(/posts\s*:\s*([0-9.,]+)/i);
+    const ratioM = relatorio.match(/Ratio\s*:\s*([0-9.,]+)/i);
 
     if (segM)   metricas.push({ label: 'Seguidores',   value: segM[1] });
     if (engM)   metricas.push({ label: 'Engajamento',  value: engM[1] });
@@ -1684,6 +1730,7 @@
     });
 
     document.getElementById('r-body').innerHTML = mdToHtml(relatorio);
+    window._relatorioTexto = relatorio;
 
     // ── Gráficos visuais ──────────────────────────────────
     renderCharts(relatorio);
@@ -1872,6 +1919,20 @@
   }
 
   /* ── Nova análise ───────────────────────────────────────── */
+  function copiarAnalise() {
+    const texto = window._relatorioTexto || '';
+    if (!texto) return;
+    navigator.clipboard.writeText(texto).then(() => {
+      const btn = document.getElementById('btn-copiar');
+      btn.classList.add('copiado');
+      btn.innerHTML = `<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 10l4 4 8-8" stroke-linecap="round" stroke-linejoin="round"/></svg> Copiado!`;
+      setTimeout(() => {
+        btn.classList.remove('copiado');
+        btn.innerHTML = `<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="7" y="7" width="10" height="12" rx="2"/><path d="M3 13V4a1 1 0 011-1h9" stroke-linecap="round"/></svg> Copiar análise completa`;
+      }, 2500);
+    });
+  }
+
   function novaAnalise() {
     ['eng','acoes','metas'].forEach(destroyChart);
     document.getElementById('charts-panel').style.display = 'none';
@@ -1898,6 +1959,7 @@
       .replace(/^### (.+)$/gm, '<h3>$1</h3>')
       .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
       .replace(/\*([^*\n]+)\*/g, '<em>$1</em>')
+      .replace(/\[([^\]]+)\]\((https?:\/\/[^\)]+)\)/g, '<a href="$2" target="_blank" rel="noopener" style="color:#FC4C04;font-weight:600;">$1</a>')
       .replace(/`([^`\n]+)`/g, '<code>$1</code>')
       .replace(/^```[\s\S]*?```/gm, m => `<pre>${m.replace(/^```\w*\n?/,'').replace(/\n?```$/,'')}</pre>`)
       .replace(/^> (.+)$/gm, '<blockquote>$1</blockquote>')

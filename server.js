@@ -26,7 +26,7 @@ const RATE_LIMIT_FP_MAX     = 2; // análises por fingerprint por semana
 const RATE_LIMIT_FILE       = path.join('/app/data', 'rate-limits.json');
 const RATE_LIMIT_FILE_LOCAL = path.join(__dirname, 'data', 'rate-limits.json');
 
-let rateLimits = { usernames: {}, ips: {}, fps: {} };
+let rateLimits = { usernames: {}, ips: {}, fps: {}, erros: {} };
 
 function getRateLimitFile() {
   // Usa volume do Railway se disponível, senão pasta local
@@ -73,6 +73,11 @@ function limparExpirados() {
     rateLimits.fps[fp] = (rateLimits.fps[fp] || []).filter(t => agora - t < RATE_LIMIT_SEMANAS_MS);
     if (rateLimits.fps[fp].length === 0) delete rateLimits.fps[fp];
   }
+  if (!rateLimits.erros) rateLimits.erros = {};
+  for (const k of Object.keys(rateLimits.erros)) {
+    rateLimits.erros[k] = (rateLimits.erros[k] || []).filter(t => agora - t < RATE_LIMIT_SEMANAS_MS);
+    if (rateLimits.erros[k].length === 0) delete rateLimits.erros[k];
+  }
 }
 
 function checkRateLimit(arroba, ip, fp) {
@@ -80,27 +85,23 @@ function checkRateLimit(arroba, ip, fp) {
   const agora = Date.now();
   const username = arroba.toLowerCase().replace('@', '');
 
-  // Verifica limite por @
-  if (rateLimits.usernames[username]) {
-    const diff = agora - rateLimits.usernames[username];
-    if (diff < RATE_LIMIT_SEMANAS_MS) {
-      const diasRestantes = Math.ceil((RATE_LIMIT_SEMANAS_MS - diff) / (24 * 60 * 60 * 1000));
-      return { bloqueado: true, motivo: `O perfil @${arroba} já foi analisado esta semana. Tente novamente em ${diasRestantes} dia${diasRestantes > 1 ? 's' : ''}.` };
-    }
-  }
-
-  // Verifica limite por IP
+  // Verifica limite por IP (só conta análises completas, desconta erros)
+  if (!rateLimits.erros) rateLimits.erros = {};
+  const ipErros = (rateLimits.erros[`ip_${ip}`] || []).length;
   const ipRegistros = rateLimits.ips[ip] || [];
-  if (ipRegistros.length >= RATE_LIMIT_IP_MAX) {
+  const ipSucesso = Math.max(0, ipRegistros.length - ipErros);
+  if (ipSucesso >= RATE_LIMIT_IP_MAX) {
     const diasRestantes = Math.ceil((RATE_LIMIT_SEMANAS_MS - (agora - ipRegistros[0])) / (24 * 60 * 60 * 1000));
     return { bloqueado: true, motivo: `Limite de ${RATE_LIMIT_IP_MAX} análises por semana atingido. Tente novamente em ${diasRestantes} dia${diasRestantes > 1 ? 's' : ''}.` };
   }
 
-  // Verifica limite por fingerprint (dispositivo)
+  // Verifica limite por fingerprint (dispositivo) — só conta análises completas
   if (fp && fp.length > 3) {
     if (!rateLimits.fps) rateLimits.fps = {};
+    const fpErros = (rateLimits.erros[`fp_${fp}`] || []).length;
     const fpRegistros = rateLimits.fps[fp] || [];
-    if (fpRegistros.length >= RATE_LIMIT_FP_MAX) {
+    const fpSucesso = Math.max(0, fpRegistros.length - fpErros);
+    if (fpSucesso >= RATE_LIMIT_FP_MAX) {
       const diasRestantes = Math.ceil((RATE_LIMIT_SEMANAS_MS - (agora - fpRegistros[0])) / (24 * 60 * 60 * 1000));
       return { bloqueado: true, motivo: `Limite de ${RATE_LIMIT_FP_MAX} análises por semana atingido. Tente novamente em ${diasRestantes} dia${diasRestantes > 1 ? 's' : ''}.` };
     }
@@ -122,8 +123,37 @@ function registrarAnalise(arroba, ip, fp) {
   saveRateLimits();
 }
 
+// Registra tentativa com erro — permite nova tentativa ao usuário
+function registrarErro(ip, fp, arroba) {
+  if (!rateLimits.erros) rateLimits.erros = {};
+  const agora = Date.now();
+  const ipKey   = `ip_${ip}`;
+  const fpKey   = `fp_${fp}`;
+  if (!rateLimits.erros[ipKey]) rateLimits.erros[ipKey] = [];
+  rateLimits.erros[ipKey].push(agora);
+  if (fp && fp.length > 3) {
+    if (!rateLimits.erros[fpKey]) rateLimits.erros[fpKey] = [];
+    rateLimits.erros[fpKey].push(agora);
+  }
+  saveRateLimits();
+}
+
 // Carrega limites ao iniciar
 loadRateLimits();
+
+// ── Sanitiza texto para evitar JSON inválido ─────────────────
+// Cobre todos os casos que quebram JSON na API da Claude/Anthropic:
+//   1. Null bytes (\u0000)
+//   2. Caracteres de controle (exceto \t \n \r)
+//   3. Surrogates solitários (\uD800-\uDFFF sem par) — emojis corrompidos do Instagram
+function sanitizeText(text) {
+  if (!text) return '';
+  return String(text)
+    .replace(/\u0000/g, '')                            // null bytes
+    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '') // control chars (preserva \t \n \r)
+    .replace(/[\uD800-\uDFFF]/g, '')                   // surrogates solitários
+    .trim();
+}
 
 // ── Cache de virais por nicho (24h) ──────────────────────────
 const VIRAIS_CACHE_TTL = 72 * 60 * 60 * 1000; // 72 horas (era 24h)
@@ -158,6 +188,16 @@ function setViraisCache(nicho, data) {
 
 app.use(cors({ origin: '*' }));
 app.use(express.json({ limit: '50mb' }));
+
+// ── Redireciona domínio Render → Railway ───────────────────
+app.use((req, res, next) => {
+  const host = req.headers.host || '';
+  if (host.includes('onrender.com')) {
+    return res.redirect(301, 'https://hospitable-patience-production.up.railway.app' + req.originalUrl);
+  }
+  next();
+});
+
 app.use(express.static(path.join(__dirname, 'frontend')));
 
 // ── Upload config ──────────────────────────────────────────
@@ -712,14 +752,40 @@ async function agentHashtag(nicho, sv) {
   const mapaHashtags = {
     'salão': ['salaobeleza', 'cabeleireiro'],
     'beleza': ['salaobeleza', 'cabeleireiro'],
+    'manicure': ['manicure', 'naildesigner'],
+    'nail': ['naildesigner', 'unhasdecoradas'],
+    'sobrancelha': ['designdesobrancelha', 'sobrancelhas'],
+    'lash': ['lashdesigner', 'ciliosposticos'],
+    'barbearia': ['barbearia', 'barbeiro'],
+    'massagem': ['massagem', 'fisioterapia'],
+    'fisioterapia': ['fisioterapia', 'massoterapia'],
     'confeitaria': ['confeitaria', 'bolosdecorados'],
     'doce': ['confeitaria', 'doces'],
+    'padaria': ['padaria', 'padariaartesanal'],
+    'café': ['cafeteria', 'cafe'],
+    'cafe': ['cafeteria', 'cafe'],
+    'restaurante': ['restaurante', 'gastronomia'],
+    'alimentação': ['gastronomia', 'foodie'],
     'roupa': ['modafeminina', 'lojaderoupas'],
     'moda': ['modafeminina', 'moda'],
-    'restaurante': ['restaurante', 'gastronomia'],
+    'ótica': ['otica', 'oculosdesol'],
+    'otica': ['otica', 'oculosdesol'],
+    'joalheria': ['joias', 'joalheria'],
+    'acessórios': ['acessorios', 'bijuterias'],
+    'acessorios': ['acessorios', 'bijuterias'],
+    'papelaria': ['papelaria', 'personalizados'],
+    'presente': ['presentescriativos', 'lembrancinhas'],
+    'artesanato': ['artesanato', 'feitoamao'],
+    'handmade': ['feitoamao', 'artesanato'],
+    'floricultura': ['floricultura', 'decoracao'],
+    'decoração': ['decoracaodeinteriores', 'decoracao'],
+    'decoracao': ['decoracaodeinteriores', 'decoracao'],
     'estética': ['estetica', 'skincare'],
     'estetica': ['estetica', 'skincare'],
     'pet': ['petshop', 'cachorros'],
+    'farmácia': ['farmacia', 'suplementos'],
+    'farmacia': ['farmacia', 'suplementos'],
+    'suplemento': ['suplementos', 'fitness'],
     'academia': ['academia', 'fitness'],
     'nutrição': ['nutricao', 'alimentacaosaudavel'],
     'nutricao': ['nutricao', 'alimentacaosaudavel'],
@@ -727,6 +793,40 @@ async function agentHashtag(nicho, sv) {
     'medico': ['saude', 'medicina'],
     'dentista': ['odontologia', 'dentista'],
     'advogado': ['direito', 'advogado'],
+    'contabilidade': ['contabilidade', 'contabilidadeempresarial'],
+    'arquitetura': ['arquitetura', 'designdeinteriores'],
+    'imobiliária': ['imobiliaria', 'corretorodeimoveis'],
+    'imobiliaria': ['imobiliaria', 'corretorodeimoveis'],
+    'corretor': ['corretorodeimoveis', 'imoveisabravenda'],
+    'fotografia': ['fotografia', 'fotografo'],
+    'escola': ['aulapresencial', 'escolaparticular'],
+    'curso': ['cursopresencial', 'escolaprofissionalizante'],
+    'organização': ['organizacaodeambientes', 'personalorganizer'],
+    'organizacao': ['organizacaodeambientes', 'personalorganizer'],
+    'organizer': ['personalorganizer', 'organizacaodeambientes'],
+    'limpeza': ['limpezaresidencial', 'higienizacao'],
+    'higienização': ['higienizacao', 'limpezaprofissional'],
+    'higienizacao': ['higienizacao', 'limpezaprofissional'],
+    'marketing': ['marketingdigital', 'socialmedia'],
+    'social media': ['socialmedia', 'marketingdigital'],
+    'buffet': ['buffet', 'festaseventos'],
+    'evento': ['festaseventos', 'decoracaodeeventos'],
+    'costura': ['costura', 'ateliedecostura'],
+    'ateliê': ['ateliedecostura', 'costureira'],
+    'atelie': ['ateliedecostura', 'costureira'],
+    'calçado': ['calcados', 'tenis'],
+    'calcado': ['calcados', 'tenis'],
+    'sapato': ['calcados', 'sapatos'],
+    'mercadinho': ['mercadinho', 'hortifruti'],
+    'hortifruti': ['hortifruti', 'feiradebairro'],
+    'bebida': ['drinks', 'coqueteis'],
+    'drinks': ['drinks', 'bartender'],
+    'bar': ['bar', 'barzinho'],
+    'móveis': ['moveis', 'marcenaria'],
+    'moveis': ['moveis', 'marcenaria'],
+    'marcenaria': ['marcenaria', 'moveissobmedida'],
+    'auto': ['esteticaautomotiva', 'carros'],
+    'automotiv': ['esteticaautomotiva', 'lavagemdecarro'],
   };
 
   const nichoLower = nicho.toLowerCase();
@@ -957,19 +1057,39 @@ Foco único: a ação de maior impacto imediato para este perfil.
 
 ## 12. SEU PRÓXIMO PASSO
 
-Com base no diagnóstico acima, o gap mais crítico identificado no seu perfil é: **[resumir em 1 frase o gap crítico da seção 2]**.
+Quer ter seu perfil analisado também por um humano?
 
-O **Método Clientes no Direct** foi desenvolvido especificamente para negócios locais como o seu. A [Parte X] do método resolve exatamente esse gap — [conectar o gap ao módulo específico do método: Diagnóstico / Perfil / Os 5 Posts / Sequência de Venda / Plano 30 dias].
+**Seja nosso aluno Engrene e ganhe uma análise do seu Instagram feita por especialistas!**
 
-Com o método você vai:
-- Saber exatamente qual conteúdo postar para atrair clientes (não só seguidores)
-- Ter um Protocolo C.L.I.E.N.T.E. para transformar mensagens no Direct em vendas
-- Aplicar os 5 tipos de post que funcionam para o seu nicho específico
-
-> **Disponível no Engrene Experience** — converse com a Suellen para saber como aplicar o método no seu negócio.
+👉 [Entrar para a lista de espera do Engrene](https://suellenwarmling.com.br/)
 
 ---
-*Diagnóstico gerado por Squad IA Engrene | Dados coletados em tempo real*`;
+*Diagnóstico gerado por Squad IA Engrene | Dados coletados em tempo real*
+
+---
+
+INSTRUÇÃO FINAL — ANTES DE ENTREGAR, REVISE INTERNAMENTE:
+
+Antes de escrever a resposta final, passe por este checklist mental para cada seção criativa. NÃO mostre o checklist ao usuário — apenas corrija o que não passar:
+
+**Seção 7 — Bio otimizada:**
+[ ] A bio usa palavras do nicho específico (não genéricas)?
+[ ] Tem no máximo 150 caracteres?
+[ ] Comunica O QUÊ o negócio faz + PARA QUEM + RESULTADO em menos de 5 segundos?
+Se não → reescreva antes de entregar.
+
+**Seção 8 — 5 Ganchos de Reel:**
+[ ] Cada gancho menciona algo específico do nicho (ex: "confeiteira" não "empreendedora")?
+[ ] Nenhum gancho serve para qualquer outro negócio fora deste nicho?
+[ ] Cada gancho tem no máximo 10 palavras?
+[ ] A justificativa "Por que vai funcionar" cita uma emoção ou gatilho real (não apenas "vai gerar engajamento")?
+Se não → reescreva o gancho problemático antes de entregar.
+
+**Seção 9 — Próximos Passos:**
+[ ] A ação de "Hoje" é executável em menos de 2 horas?
+[ ] Os 2 posts sugeridos têm tema + formato + gancho (não apenas "poste sobre X")?
+[ ] A meta em 30 dias é baseada nos dados reais do perfil (não inventada)?
+Se não → ajuste antes de entregar.`;
 
 // ══════════════════════════════════════════════════════════════
 //  ENDPOINT PRINCIPAL: POST /api/analisar
@@ -1051,7 +1171,7 @@ app.post('/api/analisar', upload.fields([
     if (squadResultado.imagensPosts?.length > 0) {
       imagensConteudo.push({ type: 'text', text: `\n--- IMAGENS REAIS DO FEED (${squadResultado.imagensPosts.length} posts baixados automaticamente) ---` });
       for (const [i, img] of squadResultado.imagensPosts.entries()) {
-        imagensConteudo.push({ type: 'text', text: `\nPost ${i+1} — ❤️ ${img.curtidas} curtidas${img.views ? ` | 👁️ ${img.views} views` : ''} | Legenda: ${img.legenda || '(sem legenda)'}` });
+        imagensConteudo.push({ type: 'text', text: `\nPost ${i+1} — ❤️ ${img.curtidas} curtidas${img.views ? ` | 👁️ ${img.views} views` : ''} | Legenda: ${sanitizeText(img.legenda) || '(sem legenda)'}` });
         imagensConteudo.push({ type: 'image', source: { type: 'base64', media_type: img.mime, data: img.base64 } });
       }
     }
@@ -1080,20 +1200,20 @@ app.post('/api/analisar', upload.fields([
       const fonte = perfilData.fonte === 'apify' ? 'Apify (dados reais)' : 'Instaloader';
       ctxPerfil = `
 DADOS DO PERFIL @${arroba} [fonte: ${fonte}]:
-- Nome: ${perfilData.nome}
-- Bio: ${perfilData.bio}
-- Link na bio: ${perfilData.link_bio || 'não informado'}
+- Nome: ${sanitizeText(perfilData.nome)}
+- Bio: ${sanitizeText(perfilData.bio)}
+- Link na bio: ${sanitizeText(perfilData.link_bio) || 'não informado'}
 - Seguidores: ${perfilData.seguidores?.toLocaleString('pt-BR')}
 - Seguindo: ${perfilData.seguindo?.toLocaleString('pt-BR')}
 - Total de posts: ${perfilData.posts_count}
 - Conta comercial: ${perfilData.is_business ? 'Sim' : 'Não'}
-- Categoria: ${perfilData.categoria || 'não informada'}
+- Categoria: ${sanitizeText(perfilData.categoria) || 'não informada'}
 - Verificado: ${perfilData.verificado ? 'Sim' : 'Não'}
 
 ÚLTIMOS ${perfilData.posts?.length || 0} POSTS (dados reais coletados agora):
 ${(perfilData.posts || []).map((p, i) =>
   `Post ${i+1} [${p.tipo}${p.is_video ? ' · Vídeo' : ''}] — ❤️ ${p.curtidas} | 💬 ${p.comentarios}${p.views ? ` | 👁️ ${p.views} views` : ''}
-Legenda: ${p.legenda || '(sem legenda)'}`
+Legenda: ${sanitizeText(p.legenda) || '(sem legenda)'}`
 ).join('\n\n')}
 `;
     }
@@ -1142,18 +1262,29 @@ ${squadResultado.conteudosVirais ? `\nCONTEÚDOS VIRAIS DO NICHO "${nicho}" (col
       }],
     });
 
-    const relatorio = response.content?.[0]?.text ?? 'Análise não disponível — tente novamente.';
-    const tokens    = (response.usage?.input_tokens || 0) + (response.usage?.output_tokens || 0);
+    const relatorio = response.content?.[0]?.text || '';
+    const inputTokens  = response.usage?.input_tokens  || 0;
+    const outputTokens = response.usage?.output_tokens || 0;
+    const tokens = inputTokens + outputTokens;
 
-    sv.info('analyst', `✅ Análise concluída — ${tokens} tokens usados`);
+    sv.info('analyst', `✅ Análise concluída — ${tokens} tokens (input: ${inputTokens} | output: ${outputTokens})`);
 
     // Limpa uploads
     uploadedFiles.forEach(f => { try { fs.unlinkSync(f); } catch(e) {} });
 
-    // Registra análise concluída no rate limiter
-    registrarAnalise(arroba.trim(), clienteIP, clienteFP);
+    // Só registra se a análise teve conteúdo real
+    if (relatorio.length > 200) {
+      registrarAnalise(arroba.trim(), clienteIP, clienteFP);
+    }
 
     clearInterval(keepAlive);
+
+    if (relatorio.length <= 200) {
+      registrarErro(clienteIP, clienteFP, arroba.trim());
+      res.end(JSON.stringify({ sucesso: false, erro: 'Análise não disponível — tente novamente.' }));
+      return;
+    }
+
     res.end(JSON.stringify({
       sucesso: true,
       relatorio,
@@ -1170,6 +1301,7 @@ ${squadResultado.conteudosVirais ? `\nCONTEÚDOS VIRAIS DO NICHO "${nicho}" (col
     clearInterval(keepAlive);
     uploadedFiles.forEach(f => { try { fs.unlinkSync(f); } catch(e) {} });
     sv.err('supervisor', error.message);
+    registrarErro(clienteIP, clienteFP, arroba);
     res.end(JSON.stringify({ sucesso: false, erro: error.message }));
   } finally {
     analiseEmCurso--;
@@ -1292,10 +1424,23 @@ NOTA: Dados coletados manualmente pelo usuário durante o evento. Use exatamente
 
   } catch(error) {
     sv.err('supervisor', error.message);
+    registrarErro(clienteIP, clienteFP, arroba);
     res.status(500).json({ sucesso: false, erro: error.message });
   } finally {
     analiseEmCurso--;
   }
+});
+
+// ── Admin: reset rate limits ────────────────────────────────
+app.post('/admin/reset-rate-limits', (req, res) => {
+  const { senha } = req.body;
+  if (senha !== (process.env.ADMIN_SECRET || 'engrene2025')) {
+    return res.status(403).json({ erro: 'Não autorizado' });
+  }
+  rateLimits = { usernames: {}, ips: {}, fps: {}, erros: {} };
+  saveRateLimits();
+  console.log('[ADMIN] Rate limits resetados');
+  res.json({ sucesso: true, mensagem: 'Rate limits resetados com sucesso.' });
 });
 
 // ── Status da fila ─────────────────────────────────────────
