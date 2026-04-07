@@ -62,7 +62,11 @@ function saveRateLimits() {
 function limparExpirados() {
   const agora = Date.now();
   for (const k of Object.keys(rateLimits.usernames)) {
-    if (agora - rateLimits.usernames[k] > RATE_LIMIT_SEMANAS_MS) delete rateLimits.usernames[k];
+    if (agora - rateLimits.usernames[k] > RATE_LIMIT_SEMANAS_MS) {
+      delete rateLimits.usernames[k];
+      if (rateLimits.usernameCount) delete rateLimits.usernameCount[k];
+      if (rateLimits.erros) delete rateLimits.erros[`user_${k}`];
+    }
   }
   for (const ip of Object.keys(rateLimits.ips)) {
     rateLimits.ips[ip] = (rateLimits.ips[ip] || []).filter(t => agora - t < RATE_LIMIT_SEMANAS_MS);
@@ -87,29 +91,16 @@ function checkRateLimit(arroba, ip, fp) {
 
   if (!rateLimits.erros) rateLimits.erros = {};
 
-  const ipErros = (rateLimits.erros[`ip_${ip}`] || []).length;
-  const ipRegistros = rateLimits.ips[ip] || [];
-  const ipSucesso = Math.max(0, ipRegistros.length - ipErros);
-  const ipBloqueado = ipSucesso >= RATE_LIMIT_IP_MAX;
-
-  if (!rateLimits.fps) rateLimits.fps = {};
-  const fpErros = fp && fp.length > 3 ? (rateLimits.erros[`fp_${fp}`] || []).length : 0;
-  const fpRegistros = fp && fp.length > 3 ? (rateLimits.fps[fp] || []) : [];
-  const fpSucesso = Math.max(0, fpRegistros.length - fpErros);
-  const fpBloqueado = fp && fp.length > 3 && fpSucesso >= RATE_LIMIT_FP_MAX;
-
-  // Bloqueia apenas se AMBOS ip E fingerprint atingiram o limite
-  // Isso evita falso positivo em IPs compartilhados (CGNAT, evento, empresa)
-  if (ipBloqueado && fpBloqueado) {
-    const ref = fpRegistros.length > 0 ? fpRegistros[0] : ipRegistros[0];
-    const diasRestantes = Math.ceil((RATE_LIMIT_SEMANAS_MS - (agora - ref)) / (24 * 60 * 60 * 1000));
-    return { bloqueado: true, motivo: `Limite de ${RATE_LIMIT_FP_MAX} análises por semana atingido. Tente novamente em ${diasRestantes} dia${diasRestantes > 1 ? 's' : ''}.` };
-  }
-
-  // Bloqueia só por fingerprint se IP não está bloqueado mas dispositivo sim
-  if (!ipBloqueado && fpBloqueado) {
-    const diasRestantes = Math.ceil((RATE_LIMIT_SEMANAS_MS - (agora - fpRegistros[0])) / (24 * 60 * 60 * 1000));
-    return { bloqueado: true, motivo: `Limite de ${RATE_LIMIT_FP_MAX} análises por semana atingido. Tente novamente em ${diasRestantes} dia${diasRestantes > 1 ? 's' : ''}.` };
+  // Limita apenas pelo @arroba — cada perfil do Instagram pode ser analisado 2x por semana
+  const usernameUltima = rateLimits.usernames[username];
+  if (usernameUltima) {
+    const usernameErros = (rateLimits.erros[`user_${username}`] || []).length;
+    const usernameTotal = (rateLimits.usernameCount?.[username] || 1);
+    const usernameSucesso = Math.max(0, usernameTotal - usernameErros);
+    if (usernameSucesso >= RATE_LIMIT_IP_MAX) {
+      const diasRestantes = Math.ceil((RATE_LIMIT_SEMANAS_MS - (agora - usernameUltima)) / (24 * 60 * 60 * 1000));
+      return { bloqueado: true, motivo: `O perfil @${username} já foi analisado ${RATE_LIMIT_IP_MAX}x esta semana. Tente novamente em ${diasRestantes} dia${diasRestantes > 1 ? 's' : ''}.` };
+    }
   }
 
   return { bloqueado: false };
@@ -118,27 +109,19 @@ function checkRateLimit(arroba, ip, fp) {
 function registrarAnalise(arroba, ip, fp) {
   const username = arroba.toLowerCase().replace('@', '');
   rateLimits.usernames[username] = Date.now();
-  if (!rateLimits.ips[ip]) rateLimits.ips[ip] = [];
-  rateLimits.ips[ip].push(Date.now());
-  if (fp && fp.length > 3) {
-    if (!rateLimits.fps) rateLimits.fps = {};
-    if (!rateLimits.fps[fp]) rateLimits.fps[fp] = [];
-    rateLimits.fps[fp].push(Date.now());
-  }
+  if (!rateLimits.usernameCount) rateLimits.usernameCount = {};
+  rateLimits.usernameCount[username] = (rateLimits.usernameCount[username] || 0) + 1;
   saveRateLimits();
 }
 
-// Registra tentativa com erro — permite nova tentativa ao usuário
+// Registra tentativa com erro — desconta do contador do username
 function registrarErro(ip, fp, arroba) {
   if (!rateLimits.erros) rateLimits.erros = {};
-  const agora = Date.now();
-  const ipKey   = `ip_${ip}`;
-  const fpKey   = `fp_${fp}`;
-  if (!rateLimits.erros[ipKey]) rateLimits.erros[ipKey] = [];
-  rateLimits.erros[ipKey].push(agora);
-  if (fp && fp.length > 3) {
-    if (!rateLimits.erros[fpKey]) rateLimits.erros[fpKey] = [];
-    rateLimits.erros[fpKey].push(agora);
+  const username = arroba ? arroba.toLowerCase().replace('@', '') : null;
+  if (username) {
+    const key = `user_${username}`;
+    if (!rateLimits.erros[key]) rateLimits.erros[key] = [];
+    rateLimits.erros[key].push(Date.now());
   }
   saveRateLimits();
 }
