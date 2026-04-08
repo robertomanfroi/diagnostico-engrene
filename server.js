@@ -1415,7 +1415,7 @@ NOTA: Dados coletados manualmente pelo usuário durante o evento. Use exatamente
   }
 });
 
-// ── Admin: reset rate limits ────────────────────────────────
+// ── Admin: reset rate limits (todos) ───────────────────────
 app.post('/admin/reset-rate-limits', (req, res) => {
   const { senha } = req.body;
   if (senha !== (process.env.ADMIN_SECRET || 'engrene2025')) {
@@ -1425,6 +1425,42 @@ app.post('/admin/reset-rate-limits', (req, res) => {
   saveRateLimits();
   console.log('[ADMIN] Rate limits resetados');
   res.json({ sucesso: true, mensagem: 'Rate limits resetados com sucesso.' });
+});
+
+// ── Admin: reset rate limit de um @username específico ─────
+app.post('/admin/reset-username', (req, res) => {
+  const { senha, username } = req.body;
+  if (senha !== (process.env.ADMIN_SECRET || 'engrene2025')) {
+    return res.status(403).json({ erro: 'Não autorizado' });
+  }
+  if (!username?.trim()) {
+    return res.status(400).json({ erro: 'username é obrigatório.' });
+  }
+  const user = username.toLowerCase().replace('@', '').trim();
+  delete rateLimits.usernames[user];
+  if (rateLimits.usernameCount) delete rateLimits.usernameCount[user];
+  if (rateLimits.erros) delete rateLimits.erros[`user_${user}`];
+  saveRateLimits();
+  console.log(`[ADMIN] Rate limit resetado para @${user}`);
+  res.json({ sucesso: true, mensagem: `Rate limit de @${user} removido com sucesso.` });
+});
+
+// ── Admin: status dos rate limits ──────────────────────────
+app.get('/admin/status-rate-limits', (req, res) => {
+  const senha = req.query.senha;
+  if (senha !== (process.env.ADMIN_SECRET || 'engrene2025')) {
+    return res.status(403).json({ erro: 'Não autorizado' });
+  }
+  limparExpirados();
+  const agora = Date.now();
+  const usuarios = Object.entries(rateLimits.usernames).map(([user, ultima]) => {
+    const total   = rateLimits.usernameCount?.[user] || 1;
+    const erros   = (rateLimits.erros?.[`user_${user}`] || []).length;
+    const sucesso = Math.max(0, total - erros);
+    const expiraEm = Math.ceil((RATE_LIMIT_SEMANAS_MS - (agora - ultima)) / (24 * 60 * 60 * 1000));
+    return { username: user, analises_sucesso: sucesso, analises_erro: erros, expira_em_dias: expiraEm, bloqueado: sucesso >= RATE_LIMIT_IP_MAX };
+  });
+  res.json({ total_usuarios: usuarios.length, usuarios });
 });
 
 // ── Status da fila ─────────────────────────────────────────

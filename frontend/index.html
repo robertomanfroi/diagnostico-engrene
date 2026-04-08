@@ -1609,6 +1609,8 @@
         msgErro = 'Verifique o link do Reel. Ele deve começar com https://';
       } else if (msgErro.includes('Failed to fetch') || msgErro.includes('NetworkError')) {
         msgErro = 'Sem conexão com o servidor. Tente novamente.';
+      } else if (msgErro.includes('já foi analisado') || msgErro.includes('esta semana')) {
+        msgErro = msgErro; // Usa a mensagem exata do servidor (já clara e específica)
       }
       const errSubmit = document.getElementById('err-submit');
       errSubmit.innerHTML = '❌ ' + msgErro;
