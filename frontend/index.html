@@ -1015,6 +1015,12 @@
     }
     .chart-canvas-box { position: relative; }
 
+    /* ── Field hint ──────────────────────────────────────── */
+    .field-hint {
+      display: block; margin-top: 5px;
+      font-size: 11px; color: var(--subtle);
+    }
+
     /* ── Reduced motion ───────────────────────────────────── */
     @media(prefers-reduced-motion:reduce){
       *,*::before,*::after { animation-duration:.01ms !important; transition-duration:.01ms !important; }
@@ -1063,7 +1069,7 @@
       </span>
       <span class="hero-chip">
         <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="12" height="10" rx="2"/><path d="M5 7h6M5 10h4" stroke-linecap="round"/></svg>
-        Relatório com 11 seções
+        Método Engrene — 12 passos
       </span>
     </div>
 
@@ -1213,6 +1219,39 @@
             <label class="field-label" for="f-desc">O que você vende / oferece <span class="opt">(opcional)</span></label>
             <textarea class="field-input" id="f-desc"
               placeholder="Ex: Faço bolos personalizados para festas. Atendo em Francisco Beltrão/PR. Preço médio R$280..."></textarea>
+          </div>
+
+          <div class="field">
+            <label class="field-label" for="f-nome-destaque">Nome de destaque do Instagram <span class="opt">(opcional)</span></label>
+            <input class="field-input" type="text" id="f-nome-destaque"
+              placeholder="Ex: Mari Confeitaria | Bolos SP">
+            <span class="field-hint">É o nome em negrito logo abaixo do @arroba no perfil</span>
+          </div>
+
+          <div class="fields-row">
+            <div class="field">
+              <label class="field-label" for="f-pessoa-marca">Tipo de perfil <span class="opt">(opcional)</span></label>
+              <select class="field-input" id="f-pessoa-marca">
+                <option value="">Não sei</option>
+                <option value="Pessoa é a marca">Eu sou a marca (profissional liberal, prestador de serviço)</option>
+                <option value="Marca/Loja com identidade própria">Tenho marca/loja com identidade própria</option>
+              </select>
+            </div>
+            <div class="field">
+              <label class="field-label" for="f-loja-fisica">Tem loja física? <span class="opt">(opcional)</span></label>
+              <select class="field-input" id="f-loja-fisica">
+                <option value="">Não informar</option>
+                <option value="Sim">Sim</option>
+                <option value="Não">Não — atendo online ou a domicílio</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="field">
+            <label class="field-label" for="f-estrutura">Stories, destaques e posts fixados <span class="opt">(opcional)</span></label>
+            <textarea class="field-input" id="f-estrutura"
+              placeholder="Ex: Tenho 5 destaques (Cardápio, Locais, Feedbacks, Promoções, Sobre mim). Fixei 2 posts. Stories ativos diariamente com fotos dos produtos..."></textarea>
+            <span class="field-hint">Descreva o que você tem — ajuda a analisar a estrutura completa do perfil</span>
           </div>
 
           <div class="btn-row">
@@ -1571,14 +1610,18 @@
 
     try {
       const fd = new FormData();
-      fd.append('nome',       document.getElementById('f-nome').value);
-      fd.append('nicho',      document.getElementById('f-nicho').value);
-      fd.append('arroba',     document.getElementById('f-arroba').value.trim().replace('@',''));
-      fd.append('objetivo',   objetivoSelecionado);
-      fd.append('seguidores', document.getElementById('f-seguidores').value || '');
-      fd.append('frequencia', document.getElementById('f-frequencia').value || '');
-      fd.append('descricao',  document.getElementById('f-desc').value || '');
-      fd.append('_dfp',       window._deviceFingerprint || '');
+      fd.append('nome',             document.getElementById('f-nome').value);
+      fd.append('nicho',            document.getElementById('f-nicho').value);
+      fd.append('arroba',           document.getElementById('f-arroba').value.trim().replace('@',''));
+      fd.append('objetivo',         objetivoSelecionado);
+      fd.append('seguidores',       document.getElementById('f-seguidores').value || '');
+      fd.append('frequencia',       document.getElementById('f-frequencia').value || '');
+      fd.append('descricao',        document.getElementById('f-desc').value || '');
+      fd.append('nome_destaque',    document.getElementById('f-nome-destaque').value || '');
+      fd.append('pessoa_e_a_marca', document.getElementById('f-pessoa-marca').value || '');
+      fd.append('tem_loja_fisica',  document.getElementById('f-loja-fisica').value || '');
+      fd.append('estrutura_perfil', document.getElementById('f-estrutura').value || '');
+      fd.append('_dfp',             window._deviceFingerprint || '');
 
       const res  = await fetch('/api/analisar', { method:'POST', body:fd });
       const data = await res.json();
