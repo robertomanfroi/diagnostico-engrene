@@ -902,22 +902,27 @@
     }
     .report-body li { margin-bottom:6px; }
     .report-body table {
-      width:100%; border-collapse:collapse; margin:16px 0;
-      font-size:13px;
+      width:100%; border-collapse:collapse; margin:20px 0;
+      font-size:13px; border-radius:10px; overflow:hidden;
+      border:1px solid rgba(255,255,255,0.08);
     }
+    .report-body thead { background:rgba(252,76,4,0.10); }
     .report-body th {
-      padding:10px 14px; text-align:left;
-      background:rgba(255,255,255,0.05);
-      border:1px solid var(--border);
+      padding:11px 16px; text-align:left;
       font-size:11px; font-weight:700; text-transform:uppercase;
-      letter-spacing:.05em; color:var(--muted);
+      letter-spacing:.06em; color:rgba(252,76,4,0.9);
+      border-bottom:1px solid rgba(255,255,255,0.10);
+      white-space:nowrap;
     }
     .report-body td {
-      padding:10px 14px;
-      border:1px solid var(--border);
-      color:rgba(237,237,239,0.8);
+      padding:10px 16px;
+      border-bottom:1px solid rgba(255,255,255,0.05);
+      color:rgba(237,237,239,0.85);
+      vertical-align:top;
     }
-    .report-body tr:hover td { background:rgba(255,255,255,0.03); }
+    .report-body tbody tr:last-child td { border-bottom:none; }
+    .report-body tbody tr:nth-child(even) td { background:rgba(255,255,255,0.02); }
+    .report-body tr:hover td { background:rgba(252,76,4,0.04); }
     /* ── Botão nova análise ─────────────────────────────────── */
     /* ── CTA Método ───────────────────────────────────────── */
     .cta-metodo {
@@ -1926,9 +1931,42 @@
 
   /* ── Markdown → HTML ────────────────────────────────────── */
   function mdToHtml(md) {
-    return md
+    // Remove travessões que escaparem do prompt antes de renderizar
+    md = md.replace(/\s*—\s*/g, ': ').replace(/\s*–\s*/g, ': ');
+
+    // Processa tabelas markdown com thead/tbody corretos
+    function processTable(block) {
+      const rows = block.trim().split('\n').filter(r => r.trim().startsWith('|'));
+      if (rows.length < 2) return block;
+      const isSep = r => /^\|[\s|:-]+\|$/.test(r.trim());
+      let html = '<table>';
+      let inBody = false;
+      let isFirstDataRow = true;
+      for (const row of rows) {
+        if (isSep(row)) { html += '<tbody>'; inBody = true; isFirstDataRow = false; continue; }
+        const cells = row.split('|').slice(1, -1).map(c => c.trim());
+        if (isFirstDataRow) {
+          html += '<thead><tr>' + cells.map(c => `<th>${c}</th>`).join('') + '</tr></thead>';
+          isFirstDataRow = false;
+        } else {
+          html += '<tr>' + cells.map(c => `<td>${c}</td>`).join('') + '</tr>';
+        }
+      }
+      if (inBody) html += '</tbody>';
+      html += '</table>';
+      return html;
+    }
+
+    // Extrai blocos de tabela antes de processar o resto
+    md = md.replace(/((?:^\|.+\|$\n?)+)/gm, m => '\x00TABLE\x00' + btoa(encodeURIComponent(m)) + '\x00ENDTABLE\x00');
+
+    let html = md
       .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
-      .replace(/^---+$/gm, '<hr style="border:none;border-top:1px solid rgba(255,255,255,0.08);margin:24px 0">')
+      // Restaura tabelas (antes dos outros replaces que poderiam interferir)
+      .replace(/\x00TABLE\x00([^\x00]+)\x00ENDTABLE\x00/g, (_, b64) => {
+        try { return processTable(decodeURIComponent(atob(b64))); } catch(e) { return b64; }
+      })
+      .replace(/^---+$/gm, '<hr>')
       .replace(/^## (.+)$/gm, '<h2>$1</h2>')
       .replace(/^### (.+)$/gm, '<h3>$1</h3>')
       .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
@@ -1937,18 +1975,12 @@
       .replace(/`([^`\n]+)`/g, '<code>$1</code>')
       .replace(/^```[\s\S]*?```/gm, m => `<pre>${m.replace(/^```\w*\n?/,'').replace(/\n?```$/,'')}</pre>`)
       .replace(/^> (.+)$/gm, '<blockquote>$1</blockquote>')
-      .replace(/^\| (.+) \|$/gm, m => {
-        const cells = m.split('|').filter(c => c.trim() && !c.trim().match(/^[-:]+$/));
-        const tag = m.includes('---') ? '' : cells.map(c => `<td>${c.trim()}</td>`).join('');
-        return tag ? `<tr>${tag}</tr>` : '';
-      })
-      .replace(/(<tr>[\s\S]+?<\/tr>)+/g, t => `<table>${t}</table>`)
-      .replace(/^[-*] (.+)$/gm, '<li>$1</li>')
+      .replace(/^[•\*\-] (.+)$/gm, '<li>$1</li>')
       .replace(/(<li>[\s\S]+?<\/li>)(?!\s*<li>)/g, '<ul>$&</ul>')
       .replace(/^\d+\. (.+)$/gm, '<li>$1</li>')
       .replace(/\n{2,}/g, '</p><p>')
-      .replace(/^(?!<[h|u|o|l|b|p|t|h])/gm, '')
       .replace(/<p><\/p>/g, '');
+    return html;
   }
 
 </script>
