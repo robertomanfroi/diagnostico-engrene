@@ -946,7 +946,7 @@ async function agentHashtag(nicho, sv) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ hashtags: hashtags.slice(0, 1), resultsLimit: 5, proxy: { useApifyProxy: true } }),
-    timeout: 55000
+    signal: AbortSignal.timeout(55000)
   });
 
   if (!resp.ok) return '';
@@ -1004,10 +1004,10 @@ REGRAS ABSOLUTAS DE QUALIDADE:
 ✅ Se um dado não foi coletado, analise com o que existe — nunca invente
 
 TOM OBRIGATÓRIO:
-- Direto mas acolhedor. Use "a gente" (coletivo com a equipe Engrene).
-- Simule a perspectiva do cliente: "Se eu tô chegando aqui agora..."
-- Elogie antes de criticar. Seja específico, nunca vago.
-- Frases de calibração: "A foto atrai, a legenda vende." | "O óbvio precisa ser dito." | "Vocês estão deixando dinheiro em cima da mesa." | "Pode fazer tudo maravilhosamente bem, mas se você fica 20 semanas sem postar, não adianta de nada."
+Direto mas acolhedor. Use "a gente" (coletivo com a equipe Engrene).
+Simule a perspectiva do cliente: "Se eu tô chegando aqui agora..."
+Elogie antes de criticar. Seja específico, nunca vago.
+Frases de calibração: "A foto atrai, a legenda vende." | "O óbvio precisa ser dito." | "Vocês estão deixando dinheiro em cima da mesa." | "Pode fazer tudo maravilhosamente bem, mas se você fica 20 semanas sem postar, não adianta de nada."
 
 BENCHMARKS DE REFERÊNCIA:
 - Frequência mínima: 3 posts/semana (abaixo = algoritmo para de distribuir)
@@ -1111,60 +1111,71 @@ Regras de status por nota: 8-10=APROVADO ✅ | 4-7=ATENÇÃO ⚠️ | 0-3=URGENT
 
 OUTPUT — Gere o relatório NESTE FORMATO EXATO:
 
+REGRAS DE FORMATAÇÃO DO RELATÓRIO (OBRIGATÓRIO):
+❌ NUNCA use travessão (— ou -) em nenhuma parte do relatório
+❌ NUNCA use hífens como marcadores de lista
+❌ NUNCA trunque ou abrevie títulos de seção
+✅ Use dois pontos (:) onde precisar separar ideias
+✅ Use ponto final para encerrar frases
+✅ Marcadores de lista: use somente bullet (•) quando necessário
+✅ Títulos de seção SEMPRE escritos por extenso e completos
+
 ## 📊 DIAGNÓSTICO ENGRENE
-### [Nome do Negócio] — @[arroba]
+### [Nome do Negócio] | @[arroba]
 **Nicho:** [nicho] | **Seguidores:** [número coletado] | **Data:** [data de hoje]
 
 ---
 
 ## Resumo Executivo
-[3-4 frases: estado geral do perfil, pontos mais críticos, potencial de melhoria]
+[3 a 4 frases: estado geral do perfil, pontos mais críticos, potencial de melhoria. Sem travessões.]
 
 ---
 
 ## Análise por Elemento
 
-IMPORTANTE para formatação: mantenha as colunas alinhadas e curtas. A coluna "Diagnóstico" deve ter no máximo 60 caracteres. Use os emojis de status exatamente como definido.
+FORMATAÇÃO DA TABELA: colunas alinhadas, diagnóstico com no máximo 55 caracteres, sem travessões, sem hífens.
 
-| Nº | Elemento            | Nota  | Status    | Diagnóstico rápido                              |
-|----|---------------------|-------|-----------|------------------------------------------------|
-|  1 | Primeira impressão  |  X/10 | ✅ ÓTIMO  | [máx 60 caracteres]                            |
-|  2 | Nome de usuário     |  X/10 | ⚠️ ATENÇÃO | [máx 60 caracteres]                            |
-|  3 | Nome de destaque    |  X/10 | 🔴 URGENTE | [máx 60 caracteres]                           |
-|  4 | Bio                 |  X/10 | [status]  | [máx 60 caracteres]                            |
-|  5 | Link da bio         |  X/10 | [status]  | [máx 60 caracteres]                            |
-|  6 | Foto de perfil      |  X/10 | [status]  | [máx 60 caracteres]                            |
-|  7 | Stories             |  X/10 | [status]  | [máx 60 caracteres — se estimativa: ⚠️ Est.]  |
-|  8 | Destaques           |  X/10 | [status]  | [máx 60 caracteres — se estimativa: ⚠️ Est.]  |
-|  9 | Posts fixados       |  X/10 | [status]  | [máx 60 caracteres — se estimativa: ⚠️ Est.]  |
-| 10 | Constância          |  X/10 | [status]  | [máx 60 caracteres]                            |
-| 11 | Legendas            |  X/10 | [status]  | [máx 60 caracteres]                            |
-| 12 | Humanização         |  X/10 | [status]  | [máx 60 caracteres]                            |
+| Nº | Elemento           | Nota  | Status     | Diagnóstico rápido                         |
+|----|--------------------|-------|------------|--------------------------------------------|
+|  1 | Primeira impressão | X/10  | ✅ ÓTIMO   | [máx 55 chars, sem travessão]              |
+|  2 | Nome de usuário    | X/10  | ⚠️ ATENÇÃO  | [máx 55 chars, sem travessão]              |
+|  3 | Nome de destaque   | X/10  | 🔴 URGENTE | [máx 55 chars, sem travessão]              |
+|  4 | Bio                | X/10  | [status]   | [máx 55 chars, sem travessão]              |
+|  5 | Link da bio        | X/10  | [status]   | [máx 55 chars, sem travessão]              |
+|  6 | Foto de perfil     | X/10  | [status]   | [máx 55 chars, sem travessão]              |
+|  7 | Stories            | X/10  | [status]   | [máx 55 chars, sem travessão]              |
+|  8 | Destaques          | X/10  | [status]   | [máx 55 chars, sem travessão]              |
+|  9 | Posts fixados      | X/10  | [status]   | [máx 55 chars, sem travessão]              |
+| 10 | Constância         | X/10  | [status]   | [máx 55 chars, sem travessão]              |
+| 11 | Legendas           | X/10  | [status]   | [máx 55 chars, sem travessão]              |
+| 12 | Humanização        | X/10  | [status]   | [máx 55 chars, sem travessão]              |
 
-Status possíveis: ✅ ÓTIMO (8-10) | ⚠️ ATENÇÃO (5-7) | 🔴 URGENTE (0-4)
-
----
-
-## Detalhamento — Elementos com ATENÇÃO ou URGENTE
-[Para cada elemento que não passou: o que está errado, o que fazer, referência concreta do nicho]
-[Aplique também as regras específicas do nicho informado, diagnosticando o que falta para ESTE negócio]
+Status: ✅ ÓTIMO (8 a 10) | ⚠️ ATENÇÃO (5 a 7) | 🔴 URGENTE (0 a 4)
 
 ---
 
-## 🔴 Top 3 Ações Prioritárias
-1. **[Ação mais urgente]** — [o que fazer, como fazer, por que é o mais importante]
-2. **[Segunda ação]** — [o que fazer, impacto esperado]
-3. **[Melhoria de médio prazo]** — [o que fazer, resultado esperado]
+## Detalhamento dos Elementos com ATENÇÃO ou URGENTE
+[Para cada elemento que não passou: o que está errado, o que fazer, referência concreta do nicho. Sem travessões. Use ponto final para separar ideias.]
 
 ---
 
-## Bio Reescrita
+## Top 3 Ações Prioritárias
+
+1. **[Ação mais urgente]:** [o que fazer, como fazer, por que é o mais importante]
+2. **[Segunda ação]:** [o que fazer, impacto esperado]
+3. **[Melhoria de médio prazo]:** [o que fazer, resultado esperado]
+
+---
+
+## Bio Otimizada
 **Bio atual:** [texto da bio coletada]
+
 **Bio proposta:**
 \`\`\`
-[Nova bio: especialidade + promessa forte + prova social com número + CTA + link — máx 150 caracteres]
+[Nova bio: especialidade + promessa forte + prova social com número + CTA + link. Máximo 150 caracteres. Sem travessões.]
 \`\`\`
-*Por que funciona:* [o que foi otimizado]
+
+**Por que funciona:** [o que foi otimizado]
 
 ---
 
@@ -1175,36 +1186,36 @@ Status possíveis: ✅ ÓTIMO (8-10) | ⚠️ ATENÇÃO (5-7) | 🔴 URGENTE (0-
 
 ## Pontuação do Perfil
 
-| Elemento            | Nota | Peso | Pontos |
-|---------------------|------|------|--------|
-| Primeira impressão  |  X   |  ×1  |   X    |
-| Nome de usuário     |  X   |  ×1  |   X    |
-| Nome de destaque    |  X   |  ×1  |   X    |
-| Bio                 |  X   |  ×2  |   X    |
-| Link da bio         |  X   |  ×1  |   X    |
-| Foto de perfil      |  X   |  ×1  |   X    |
-| Stories             |  X   |  ×1  |   X    |
-| Destaques           |  X   |  ×1  |   X    |
-| Posts fixados       |  X   |  ×1  |   X    |
-| Constância          |  X   |  ×3  |   X    |
-| Legendas            |  X   |  ×2  |   X    |
-| Humanização         |  X   |  ×1  |   X    |
-| **TOTAL**           |      |      | **X/120** |
+| Elemento           | Nota | Peso | Pontos |
+|--------------------|------|------|--------|
+| Primeira impressão |  X   |  x1  |   X    |
+| Nome de usuário    |  X   |  x1  |   X    |
+| Nome de destaque   |  X   |  x1  |   X    |
+| Bio                |  X   |  x2  |   X    |
+| Link da bio        |  X   |  x1  |   X    |
+| Foto de perfil     |  X   |  x1  |   X    |
+| Stories            |  X   |  x1  |   X    |
+| Destaques          |  X   |  x1  |   X    |
+| Posts fixados      |  X   |  x1  |   X    |
+| Constância         |  X   |  x3  |   X    |
+| Legendas           |  X   |  x2  |   X    |
+| Humanização        |  X   |  x1  |   X    |
+| **TOTAL**          |      |      | **X/120** |
 
-**[soma]/120 pontos — [percentual]%**
-- 96-120 pts (80%+) = ✅ Perfil Otimizado
-- 54-95 pts (45-79%) = 🟡 Perfil em Construção
-- 0-53 pts (abaixo de 45%) = 🔴 Perfil Crítico
+**[soma]/120 pontos ([percentual]%)**
+96 a 120 pts (80% ou mais): ✅ Perfil Otimizado
+54 a 95 pts (45% a 79%): 🟡 Perfil em Construção
+0 a 53 pts (abaixo de 45%): 🔴 Perfil Crítico
 
 ---
 
-## Próximo Passo — Engrene
+## Próximo Passo
 Quer ter uma análise aprofundada feita por especialistas e aprender a aplicar cada melhoria?
-**Conheça o Método Engrene:** [https://suellenwarmling.com.br/](https://suellenwarmling.com.br/)
+**Conheça o Método Engrene:** https://suellenwarmling.com.br/
 
 ---
 
-CHECKLIST INTERNO (execute antes de entregar — NÃO mostre ao usuário):
+CHECKLIST INTERNO (execute antes de entregar, NÃO mostre ao usuário):
 [ ] A bio proposta tem no máximo 150 caracteres?
 [ ] As ações prioritárias são executáveis em menos de 2 horas cada?
 [ ] Os diagnósticos citam dados reais (números, bio real, posts reais)?
