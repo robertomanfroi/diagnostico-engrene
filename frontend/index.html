@@ -1858,12 +1858,22 @@
   function mdToHtml(md) {
     // Safety net: remove travessões que escaparem do prompt
     md = md.replace(/\s*[—–]\s*/g, ': ');
+    // Remove linhas com > sozinho (separadores de blockquote do AI)
+    md = md.replace(/^>\s*$/gm, '');
 
     function escHtml(s) {
       return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
     }
 
-    // Processa tabelas markdown (suporta emojis, sem btoa)
+    // Aplica formatação inline a texto já escapado em HTML
+    function inlineFmt(s) {
+      return s
+        .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\*([^*\n]+)\*/g, '<em>$1</em>')
+        .replace(/`([^`\n]+)`/g, '<code>$1</code>');
+    }
+
+    // Processa tabelas markdown (suporta emojis e bold nas células)
     function renderTable(block) {
       const rows = block.trim().split('\n').map(r => r.trim()).filter(r => r.startsWith('|'));
       if (rows.length < 2) return escHtml(block);
@@ -1877,12 +1887,14 @@
           bodyOpen = true;
           continue;
         }
-        const cells = row.split('|').slice(1, -1).map(c => c.trim());
+        // Trata \| escapado antes de dividir por |
+        const cells = row.replace(/\\\|/g, '\x00').split('|').slice(1, -1)
+          .map(c => inlineFmt(escHtml(c.trim().replace(/\x00/g, '|'))));
         if (firstData) {
-          html += '<thead><tr>' + cells.map(c => `<th>${escHtml(c)}</th>`).join('') + '</tr></thead>';
+          html += '<thead><tr>' + cells.map(c => `<th>${c}</th>`).join('') + '</tr></thead>';
           firstData = false;
         } else {
-          html += '<tr>' + cells.map(c => `<td>${escHtml(c)}</td>`).join('') + '</tr>';
+          html += '<tr>' + cells.map(c => `<td>${c}</td>`).join('') + '</tr>';
         }
       }
       if (bodyOpen) html += '</tbody>';
@@ -1904,13 +1916,13 @@
       if (p.type === 'table') return renderTable(p.content);
       return escHtml(p.content)
         .replace(/^---+$/gm, '<hr>')
-        .replace(/^## (.+)$/gm, '<h2>$1</h2>')
-        .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+        .replace(/^## (.+)$/gm, (_, t) => `<h2>${inlineFmt(t)}</h2>`)
+        .replace(/^### (.+)$/gm, (_, t) => `<h3>${inlineFmt(t)}</h3>`)
         .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
         .replace(/\*([^*\n]+)\*/g, '<em>$1</em>')
         .replace(/\[([^\]]+)\]\((https?:\/\/[^\)]+)\)/g, '<a href="$2" target="_blank" rel="noopener" style="color:#FC4C04;font-weight:600;">$1</a>')
         .replace(/`([^`\n]+)`/g, '<code>$1</code>')
-        .replace(/^```([\s\S]*?)```/gm, (_, c) => `<pre>${c.trim()}</pre>`)
+        .replace(/^```[\s\S]*?```/gm, b => `<pre>${b.replace(/^```\w*\n?/,'').replace(/\n?```$/,'').trim()}</pre>`)
         .replace(/^&gt; (.+)$/gm, '<blockquote>$1</blockquote>')
         .replace(/^[•\*] (.+)$/gm, '<li>$1</li>')
         .replace(/(<li>.*<\/li>\n?)+/g, s => `<ul>${s}</ul>`)
