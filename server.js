@@ -443,42 +443,49 @@ async function agentScout(username, sv) {
 }
 
 // ══════════════════════════════════════════════════════════════
-//  AGENT: DESTAQUES — coleta highlights do perfil via Apify
+//  AGENT: DESTAQUES — louisdeconinck~instagram-highlights-scraper (actor dedicado)
 // ══════════════════════════════════════════════════════════════
 async function agentDestaques(username, sv) {
   sv.info('destaques', `Coletando destaques de @${username}...`);
   try {
-    // Actor: apify~instagram-scraper suporta highlights via campo highlightedReels
-    // Usamos o profile scraper com campo específico para highlights
-    const url = `https://api.apify.com/v2/acts/apify~instagram-profile-scraper/run-sync-get-dataset-items` +
-                `?token=${process.env.APIFY_TOKEN}&timeout=90&memory=256`;
+    // Actor dedicado para highlights — não requer login, funciona com perfis públicos
+    const url = `https://api.apify.com/v2/acts/louisdeconinck~instagram-highlights-scraper/runs` +
+                `?token=${process.env.APIFY_TOKEN}&waitForFinish=90`;
     const resp = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         usernames: [username],
-        resultsLimit: 1,
-        scrapeHighlights: true,
         proxy: { useApifyProxy: true }
       }),
-      signal: AbortSignal.timeout(100000)
+      signal: AbortSignal.timeout(110000)
     });
     if (!resp.ok) {
-      sv.warn('destaques', `HTTP ${resp.status} — sem destaques coletados`);
+      sv.warn('destaques', `HTTP ${resp.status} no run — sem destaques coletados`);
       return null;
     }
-    const items = await resp.json();
-    // O profile scraper retorna array com o perfil; highlights estão em highlightedReels ou highlights
-    const perfil = Array.isArray(items) && items.length > 0 ? items[0] : null;
-    const highlights = perfil?.highlightedReels || perfil?.highlights || [];
-    if (!Array.isArray(highlights) || highlights.length === 0) {
+    const run = await resp.json();
+    const datasetId = run?.data?.defaultDatasetId;
+    if (!datasetId) {
+      sv.warn('destaques', 'Sem datasetId no run');
+      return null;
+    }
+    const dsResp = await fetch(
+      `https://api.apify.com/v2/datasets/${datasetId}/items?token=${process.env.APIFY_TOKEN}`,
+      { signal: AbortSignal.timeout(30000) }
+    );
+    if (!dsResp.ok) { sv.warn('destaques', `Dataset HTTP ${dsResp.status}`); return null; }
+    const items = await dsResp.json();
+
+    if (!Array.isArray(items) || items.length === 0) {
       sv.info('destaques', 'Nenhum destaque encontrado (perfil sem highlights)');
       return { temDestaques: false, total: 0, lista: [] };
     }
-    const lista = highlights.map(h => ({
-      titulo:        h.title || h.name || h.id || 'Sem título',
-      capinha_url:   h.coverUrl || h.coverImageUrl || h.thumbnail || '',
-      total_itens:   h.itemsCount || h.reelMediaCount || h.mediaCount || 0,
+    // Cada item é um highlight com título e mídias internas
+    const lista = items.map(h => ({
+      titulo:      h.title || h.name || h.id || 'Sem título',
+      capinha_url: h.coverUrl || h.coverImageUrl || h.thumbnailUrl || '',
+      total_itens: h.itemsCount ?? (Array.isArray(h.items) ? h.items.length : 0),
     }));
     sv.info('destaques', `✅ ${lista.length} destaques coletados`);
     return { temDestaques: true, total: lista.length, lista };
@@ -489,40 +496,50 @@ async function agentDestaques(username, sv) {
 }
 
 // ══════════════════════════════════════════════════════════════
-//  AGENT: STORIES — coleta stories ativos via Apify
+//  AGENT: STORIES — datavoyantlab~advanced-instagram-stories-scraper
+//  Actor dedicado, sem login, 116K runs, rating 4.4/5
 // ══════════════════════════════════════════════════════════════
 async function agentStories(username, sv) {
   sv.info('stories', `Coletando stories de @${username}...`);
   try {
-    // Actor correto para stories no Apify
-    const url = `https://api.apify.com/v2/acts/apify~instagram-scraper/run-sync-get-dataset-items` +
-                `?token=${process.env.APIFY_TOKEN}&timeout=90&memory=256`;
+    const url = `https://api.apify.com/v2/acts/datavoyantlab~advanced-instagram-stories-scraper/runs` +
+                `?token=${process.env.APIFY_TOKEN}&waitForFinish=90`;
     const resp = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        directUrls: [`https://www.instagram.com/${username}/`],
-        resultsType: 'stories',
-        resultsLimit: 20,
+        usernames: [username],
         proxy: { useApifyProxy: true }
       }),
-      signal: AbortSignal.timeout(100000)
+      signal: AbortSignal.timeout(110000)
     });
     if (!resp.ok) {
-      sv.warn('stories', `HTTP ${resp.status} — sem stories coletados`);
+      sv.warn('stories', `HTTP ${resp.status} no run — sem stories coletados`);
       return null;
     }
-    const items = await resp.json();
+    const run = await resp.json();
+    const datasetId = run?.data?.defaultDatasetId;
+    if (!datasetId) {
+      sv.warn('stories', 'Sem datasetId no run');
+      return null;
+    }
+    const dsResp = await fetch(
+      `https://api.apify.com/v2/datasets/${datasetId}/items?token=${process.env.APIFY_TOKEN}`,
+      { signal: AbortSignal.timeout(30000) }
+    );
+    if (!dsResp.ok) { sv.warn('stories', `Dataset HTTP ${dsResp.status}`); return null; }
+    const items = await dsResp.json();
+
     if (!Array.isArray(items) || items.length === 0) {
       sv.info('stories', 'Nenhum story ativo encontrado (últimas 24h)');
       return { temStories: false, total: 0, lista: [] };
     }
     const lista = items.map(s => ({
       tipo:       s.type || (s.isVideo ? 'video' : 'imagem'),
-      timestamp:  s.timestamp || s.takenAt || null,
-      tem_texto:  !!(s.storyContent || s.text || ''),
-      tem_link:   !!(s.linkUrl || s.externalLink || ''),
-      imagem_url: s.displayUrl || s.url || '',
+      timestamp:  s.timestamp || s.takenAt || s.createdAt || null,
+      tem_texto:  !!(s.caption || s.text || s.storyContent || ''),
+      tem_link:   !!(s.linkUrl || s.externalLink || s.swipeUpUrl || ''),
+      imagem_url: s.displayUrl || s.imageUrl || s.url || '',
     }));
     sv.info('stories', `✅ ${lista.length} stories ativos (últimas 24h)`);
     return { temStories: true, total: lista.length, lista };
