@@ -335,7 +335,8 @@ async function agentScout(username, sv) {
             is_video:    post.type === 'Video' || post.type === 'GraphVideo',
             shortcode:   post.shortCode  || '',
             imagem_url:  post.displayUrl || '',
-            video_url:   post.videoUrl   || ''
+            video_url:   post.videoUrl   || '',
+            timestamp:   post.timestamp  || post.takenAt || null
           })));
           }
         }
@@ -387,7 +388,8 @@ async function agentScout(username, sv) {
               is_video:    n.is_video || false,
               shortcode:   n.shortcode || '',
               imagem_url:  n.display_url || '',
-              video_url:   n.video_url   || ''
+              video_url:   n.video_url   || '',
+              timestamp:   n.taken_at_timestamp ? new Date(n.taken_at_timestamp * 1000).toISOString() : null
             };
           });
 
@@ -1158,9 +1160,46 @@ app.post('/api/analisar', upload.fields([
       return res.end(JSON.stringify({ sucesso: false, erro: erroMsg }));
     }
 
+    // ── GAP D: nome_destaque automático via fullName do Apify ──
+    const nomeDestaqueEfetivo = nome_destaque || perfilData?.nome || '';
+
+    // ── GAP C: calcular frequência real via timestamps dos posts ─
+    let frequenciaCalculada = '';
+    const postsComData = (perfilData?.posts || []).filter(p => p.timestamp);
+    if (postsComData.length >= 2) {
+      const datas = postsComData.map(p => new Date(p.timestamp)).sort((a, b) => b - a);
+      const diasEntrePosts = [];
+      for (let i = 0; i < datas.length - 1; i++) {
+        diasEntrePosts.push((datas[i] - datas[i+1]) / (1000 * 60 * 60 * 24));
+      }
+      const mediaIntervaloDias = diasEntrePosts.reduce((a, b) => a + b, 0) / diasEntrePosts.length;
+      const diasDesdeUltimo = (Date.now() - datas[0]) / (1000 * 60 * 60 * 24);
+      const postsUltimos30 = datas.filter(d => (Date.now() - d) / (1000 * 60 * 60 * 24) <= 30).length;
+      frequenciaCalculada = `Intervalo médio entre posts: ${mediaIntervaloDias.toFixed(1)} dias | Posts nos últimos 30 dias: ${postsUltimos30} | Último post: há ${diasDesdeUltimo.toFixed(0)} dias`;
+    }
+
     // ── Prepara imagens para o Analyst (Claude) ─────────────
     sv.info('analyst', 'Preparando contexto visual...');
     const imagensConteudo = [];
+
+    // GAP B: foto de perfil — baixar e enviar ao Claude Vision
+    if (perfilData?.foto_perfil) {
+      try {
+        const fotoPerfResp = await fetch(perfilData.foto_perfil, {
+          timeout: 10000,
+          headers: { 'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15' }
+        });
+        if (fotoPerfResp.ok) {
+          const buf = await fotoPerfResp.buffer();
+          const mime = fotoPerfResp.headers.get('content-type') || 'image/jpeg';
+          imagensConteudo.push({ type: 'text', text: '\n--- FOTO DE PERFIL (coletada automaticamente — use para avaliar enquadramento, expressão, profissionalismo) ---' });
+          imagensConteudo.push({ type: 'image', source: { type: 'base64', media_type: mime, data: buf.toString('base64') } });
+          sv.info('analyst', '✅ Foto de perfil incluída na análise visual');
+        }
+      } catch(e) {
+        sv.warn('analyst', `Foto de perfil não carregada: ${e.message?.substring(0, 60)}`);
+      }
+    }
 
     // 1. Imagens automáticas baixadas do Apify (posts reais do perfil)
     if (squadResultado.imagensPosts?.length > 0) {
@@ -1206,10 +1245,10 @@ DADOS DO PERFIL @${arroba} [fonte: ${fonte}]:
 - Verificado: ${perfilData.verificado ? 'Sim' : 'Não'}
 
 ÚLTIMOS ${perfilData.posts?.length || 0} POSTS (dados reais coletados agora):
-${(perfilData.posts || []).map((p, i) =>
-  `Post ${i+1} [${p.tipo}${p.is_video ? ' · Vídeo' : ''}] — ❤️ ${p.curtidas} | 💬 ${p.comentarios}${p.views ? ` | 👁️ ${p.views} views` : ''}
-Legenda: ${sanitizeText(p.legenda) || '(sem legenda)'}`
-).join('\n\n')}
+${(perfilData.posts || []).map((p, i) => {
+  const dataStr = p.timestamp ? ` | 📅 ${new Date(p.timestamp).toLocaleDateString('pt-BR')}` : '';
+  return `Post ${i+1} [${p.tipo}${p.is_video ? ' · Vídeo' : ''}] — ❤️ ${p.curtidas} | 💬 ${p.comentarios}${p.views ? ` | 👁️ ${p.views} views` : ''}${dataStr}\nLegenda: ${sanitizeText(p.legenda) || '(sem legenda)'}`;
+}).join('\n\n')}
 `;
     }
 
@@ -1235,12 +1274,13 @@ DADOS DO NEGÓCIO:
 - Frequência de postagem declarada: ${frequencia || 'não informada'}
 - Descrição do negócio: ${descricao || ''}
 
-INFORMAÇÕES ESTRUTURAIS DO PERFIL (informadas pelo usuário):
-- Nome de destaque (campo em negrito abaixo do @): ${nome_destaque || 'não informado'}
+INFORMAÇÕES ESTRUTURAIS DO PERFIL:
+- Nome de destaque (campo em negrito abaixo do @): ${nomeDestaqueEfetivo || 'não informado'}${!nome_destaque && perfilData?.nome ? ' [coletado automaticamente via fullName do perfil]' : ''}
 - A pessoa É a marca (profissional liberal/prestador) ou tem marca/loja com identidade própria?: ${pessoa_e_a_marca || 'não informado'}
 - Tem loja física?: ${tem_loja_fisica || 'não informado'}
 - Qualidade técnica geral do conteúdo: ${qualidade_tecnica || 'não informada'}
-${estrutura_perfil ? `- Descrição de stories, destaques e fixados: ${estrutura_perfil}` : ''}
+${frequenciaCalculada ? `- Frequência real calculada via timestamps: ${frequenciaCalculada}` : ''}
+${estrutura_perfil ? `- Stories, destaques e fixados (informado pelo usuário): ${estrutura_perfil}` : '- Stories, destaques e fixados: não informados pelo usuário — classifique como "Não verificado" e oriente a verificar manualmente'}
 
 ${ctxPerfil}
 ${ctxReel}
