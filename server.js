@@ -1276,8 +1276,7 @@ app.post('/api/analisar', upload.fields([
   const sv    = new Supervisor(jobId);
 
   try {
-    const { nome, nicho, arroba, objetivo, seguidores, frequencia, descricao,
-            nome_destaque, pessoa_e_a_marca, tem_loja_fisica, estrutura_perfil, qualidade_tecnica } = req.body;
+    const { nome, nicho, arroba, objetivo, descricao } = req.body;
 
     // ── Validação básica ────────────────────────────────────
     if (!nome?.trim() || !nicho?.trim() || !arroba?.trim()) {
@@ -1322,8 +1321,7 @@ app.post('/api/analisar', upload.fields([
       return res.end(JSON.stringify({ sucesso: false, erro: erroMsg }));
     }
 
-    // ── GAP D: nome_destaque automático via fullName do Apify ──
-    const nomeDestaqueEfetivo = nome_destaque || perfilData?.nome || '';
+    const nomeDestaqueEfetivo = perfilData?.nome || '';
 
     // ── GAP C: calcular frequência real via timestamps dos posts ─
     let frequenciaCalculada = '';
@@ -1437,17 +1435,8 @@ DADOS DO NEGÓCIO:
 - Nicho: ${nicho}
 - Instagram: @${arroba}
 - Objetivo principal: ${objetivo || 'não informado'}
-- Seguidores declarados pelo usuário: ${seguidores || 'não informado'}
-- Frequência de postagem declarada: ${frequencia || 'não informada'}
 - Descrição do negócio: ${descricao || ''}
-
-INFORMAÇÕES ESTRUTURAIS DO PERFIL:
-- Nome de destaque (campo em negrito abaixo do @): ${nomeDestaqueEfetivo || 'não informado'}${!nome_destaque && perfilData?.nome ? ' [coletado automaticamente via fullName do perfil]' : ''}
-- A pessoa É a marca (profissional liberal/prestador) ou tem marca/loja com identidade própria?: ${pessoa_e_a_marca || 'não informado'}
-- Tem loja física?: ${tem_loja_fisica || 'não informado'}
-- Qualidade técnica geral do conteúdo: ${qualidade_tecnica || 'não informada'}
 ${frequenciaCalculada ? `- Frequência real calculada via timestamps: ${frequenciaCalculada}` : ''}
-${estrutura_perfil ? `- Estrutura informada pelo usuário: ${estrutura_perfil}` : ''}
 
 ${(() => {
   const d = squadResultado.destaques;
