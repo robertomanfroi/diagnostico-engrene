@@ -1245,7 +1245,7 @@ CHECKLIST INTERNO (execute antes de entregar, NÃO mostre ao usuário):
 [ ] A bio proposta tem no máximo 150 caracteres?
 [ ] As ações prioritárias são executáveis em menos de 2 horas cada?
 [ ] Os diagnósticos citam dados reais (números, bio real, posts reais)?
-[ ] Nenhuma recomendação é genérica — todas são específicas para ESTE nicho?
+[ ] Todas as recomendações são específicas para ESTE nicho (não genéricas)?
 [ ] A pontuação total (soma/120 e percentual) foi calculada corretamente?
 Se não → corrija antes de entregar.`;
 
@@ -1428,7 +1428,7 @@ ${(perfilData.posts || []).map((p, i) => {
     const dataColeta = new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
 
     const contextoCompleto = `
-DATA_COLETA: ${dataColeta} (use esta data no relatório — dados coletados hoje)
+DATA_COLETA: ${dataColeta} (use esta data no relatório, dados coletados hoje)
 
 DADOS DO NEGÓCIO:
 - Nome: ${nome}
@@ -1450,8 +1450,8 @@ ${(() => {
   } else if (!d.temDestaques) {
     ctx += '- DESTAQUES (coletado via Apify): perfil SEM destaques\n';
   } else {
-    ctx += `- DESTAQUES (coletado via Apify — dados reais): ${d.total} destaques encontrados\n`;
-    ctx += d.lista.map(h => `  • "${h.titulo}" — ${h.total_itens} itens`).join('\n') + '\n';
+    ctx += `- DESTAQUES (coletado via Apify, dados reais): ${d.total} destaques encontrados\n`;
+    ctx += d.lista.map(h => `  • "${h.titulo}" (${h.total_itens} itens)`).join('\n') + '\n';
   }
 
   // Stories
@@ -1460,7 +1460,7 @@ ${(() => {
   } else if (!s.temStories) {
     ctx += '- STORIES (coletado via Apify): sem stories ativos nas últimas 24h\n';
   } else {
-    ctx += `- STORIES (coletado via Apify — dados reais): ${s.total} stories ativos nas últimas 24h\n`;
+    ctx += `- STORIES (coletado via Apify, dados reais): ${s.total} stories ativos nas últimas 24h\n`;
     const tipos = s.lista.map(st => st.tipo).join(', ');
     const comTexto = s.lista.filter(st => st.tem_texto).length;
     const comLink  = s.lista.filter(st => st.tem_link).length;
@@ -1600,7 +1600,7 @@ app.post('/api/analisar-manual', async (req, res) => {
     const dataColeta = new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
 
     const contextoCompleto = `
-DATA_COLETA: ${dataColeta} (use esta data no relatório — dados coletados hoje)
+DATA_COLETA: ${dataColeta} (use esta data no relatório, dados coletados hoje)
 
 DADOS DO NEGÓCIO:
 - Nome: ${nome}
