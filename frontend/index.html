@@ -1931,56 +1931,69 @@
 
   /* ── Markdown → HTML ────────────────────────────────────── */
   function mdToHtml(md) {
-    // Remove travessões que escaparem do prompt antes de renderizar
-    md = md.replace(/\s*—\s*/g, ': ').replace(/\s*–\s*/g, ': ');
+    // Safety net: remove travessões que escaparem do prompt
+    md = md.replace(/\s*[—–]\s*/g, ': ');
 
-    // Processa tabelas markdown com thead/tbody corretos
-    function processTable(block) {
-      const rows = block.trim().split('\n').filter(r => r.trim().startsWith('|'));
-      if (rows.length < 2) return block;
-      const isSep = r => /^\|[\s|:-]+\|$/.test(r.trim());
-      let html = '<table>';
-      let inBody = false;
-      let isFirstDataRow = true;
-      for (const row of rows) {
-        if (isSep(row)) { html += '<tbody>'; inBody = true; isFirstDataRow = false; continue; }
-        const cells = row.split('|').slice(1, -1).map(c => c.trim());
-        if (isFirstDataRow) {
-          html += '<thead><tr>' + cells.map(c => `<th>${c}</th>`).join('') + '</tr></thead>';
-          isFirstDataRow = false;
-        } else {
-          html += '<tr>' + cells.map(c => `<td>${c}</td>`).join('') + '</tr>';
-        }
-      }
-      if (inBody) html += '</tbody>';
-      html += '</table>';
-      return html;
+    function escHtml(s) {
+      return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
     }
 
-    // Extrai blocos de tabela antes de processar o resto
-    md = md.replace(/((?:^\|.+\|$\n?)+)/gm, m => '\x00TABLE\x00' + btoa(encodeURIComponent(m)) + '\x00ENDTABLE\x00');
+    // Processa tabelas markdown (suporta emojis, sem btoa)
+    function renderTable(block) {
+      const rows = block.trim().split('\n').map(r => r.trim()).filter(r => r.startsWith('|'));
+      if (rows.length < 2) return escHtml(block);
+      const isSep = r => /^\|[\s|:=-]+\|$/.test(r);
+      let html = '<table>';
+      let firstData = true;
+      let bodyOpen = false;
+      for (const row of rows) {
+        if (isSep(row)) {
+          html += '<tbody>';
+          bodyOpen = true;
+          continue;
+        }
+        const cells = row.split('|').slice(1, -1).map(c => c.trim());
+        if (firstData) {
+          html += '<thead><tr>' + cells.map(c => `<th>${escHtml(c)}</th>`).join('') + '</tr></thead>';
+          firstData = false;
+        } else {
+          html += '<tr>' + cells.map(c => `<td>${escHtml(c)}</td>`).join('') + '</tr>';
+        }
+      }
+      if (bodyOpen) html += '</tbody>';
+      return html + '</table>';
+    }
 
-    let html = md
-      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
-      // Restaura tabelas (antes dos outros replaces que poderiam interferir)
-      .replace(/\x00TABLE\x00([^\x00]+)\x00ENDTABLE\x00/g, (_, b64) => {
-        try { return processTable(decodeURIComponent(atob(b64))); } catch(e) { return b64; }
-      })
-      .replace(/^---+$/gm, '<hr>')
-      .replace(/^## (.+)$/gm, '<h2>$1</h2>')
-      .replace(/^### (.+)$/gm, '<h3>$1</h3>')
-      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-      .replace(/\*([^*\n]+)\*/g, '<em>$1</em>')
-      .replace(/\[([^\]]+)\]\((https?:\/\/[^\)]+)\)/g, '<a href="$2" target="_blank" rel="noopener" style="color:#FC4C04;font-weight:600;">$1</a>')
-      .replace(/`([^`\n]+)`/g, '<code>$1</code>')
-      .replace(/^```[\s\S]*?```/gm, m => `<pre>${m.replace(/^```\w*\n?/,'').replace(/\n?```$/,'')}</pre>`)
-      .replace(/^> (.+)$/gm, '<blockquote>$1</blockquote>')
-      .replace(/^[•\*\-] (.+)$/gm, '<li>$1</li>')
-      .replace(/(<li>[\s\S]+?<\/li>)(?!\s*<li>)/g, '<ul>$&</ul>')
-      .replace(/^\d+\. (.+)$/gm, '<li>$1</li>')
-      .replace(/\n{2,}/g, '</p><p>')
-      .replace(/<p><\/p>/g, '');
-    return html;
+    // Divide o markdown em blocos de tabela e texto normal
+    const parts = [];
+    const tableRegex = /^(\|.+\|\n?)+/gm;
+    let last = 0, m;
+    while ((m = tableRegex.exec(md)) !== null) {
+      if (m.index > last) parts.push({ type: 'text', content: md.slice(last, m.index) });
+      parts.push({ type: 'table', content: m[0] });
+      last = m.index + m[0].length;
+    }
+    if (last < md.length) parts.push({ type: 'text', content: md.slice(last) });
+
+    return parts.map(p => {
+      if (p.type === 'table') return renderTable(p.content);
+      return escHtml(p.content)
+        .replace(/^---+$/gm, '<hr>')
+        .replace(/^## (.+)$/gm, '<h2>$1</h2>')
+        .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+        .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\*([^*\n]+)\*/g, '<em>$1</em>')
+        .replace(/\[([^\]]+)\]\((https?:\/\/[^\)]+)\)/g, '<a href="$2" target="_blank" rel="noopener" style="color:#FC4C04;font-weight:600;">$1</a>')
+        .replace(/`([^`\n]+)`/g, '<code>$1</code>')
+        .replace(/^```([\s\S]*?)```/gm, (_, c) => `<pre>${c.trim()}</pre>`)
+        .replace(/^&gt; (.+)$/gm, '<blockquote>$1</blockquote>')
+        .replace(/^[•\*] (.+)$/gm, '<li>$1</li>')
+        .replace(/(<li>.*<\/li>\n?)+/g, s => `<ul>${s}</ul>`)
+        .replace(/^\d+\. (.+)$/gm, '<li class="ol">$1</li>')
+        .replace(/(<li class="ol">.*<\/li>\n?)+/g, s => `<ol>${s.replace(/ class="ol"/g,'')}</ol>`)
+        .replace(/\n{2,}/g, '</p><p>')
+        .replace(/<p><\/p>/g, '');
+    }).join('');
   }
 
 </script>

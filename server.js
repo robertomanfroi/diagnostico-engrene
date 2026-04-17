@@ -1027,79 +1027,91 @@ Perfis médios ativos: 5.000 a 8.000 views por vídeo
 Link WhatsApp: wa.me/55+DDD+número (sem zero, sem redirecionador)
 Legenda gerada por IA detectável: verbos no imperativo (Descubra, Transforme, Crie), emojis no final das frases, travessão americano, linguagem genérica sem detalhes reais do produto.
 
-EXECUTE A ANÁLISE SEGUINDO ESTA SEQUÊNCIA EXATA. ENTREGUE OS 12 ELEMENTOS NA ORDEM NUMERADA ABAIXO, SEM PULAR E SEM REORDENAR:
+EXECUTE A ANÁLISE NESTA SEQUÊNCIA EXATA. CADA PASSO CORRESPONDE A UM ELEMENTO DA TABELA. NÃO PULE, NÃO REORDENE, NÃO MISTURE PASSOS:
 
-PASSO 0: PRIMEIRA IMPRESSÃO (antes de ler qualquer texto)
+PASSO 1: PRIMEIRA IMPRESSÃO (elemento 1 da tabela)
 Simule ser um cliente novo chegando ao perfil pela primeira vez. É possível identificar o nicho em menos de 3 segundos olhando para a grade de fotos e foto de perfil? O visual é coerente com o tipo de negócio? Passa sensação de profissionalismo ou amadorismo?
-Classifique: APROVADO / ATENÇÃO / URGENTE
 Benchmark: "Se eu tô chegando aqui agora, eu consigo entender em 3 segundos o que você faz?"
+Classifique e atribua nota 0 a 10.
 
-PASSO 1: NOME DE USUÁRIO (@)
-Fácil de ler, escrever e encontrar? Sem underlines duplos, pontos combinados, caracteres desnecessários? Máximo ~25 caracteres?
-Classifique: APROVADO / ATENÇÃO / URGENTE — se problema, diga exatamente o que mudar.
+PASSO 2: NOME DE USUÁRIO (elemento 2 da tabela)
+Fácil de ler, escrever e encontrar? Sem underlines duplos, pontos combinados, caracteres desnecessários? Máximo 25 caracteres?
+Se houver problema, diga exatamente o que mudar.
+Classifique e atribua nota 0 a 10.
 
-PASSO 2: NOME DE DESTAQUE
+PASSO 3: NOME DE DESTAQUE (elemento 3 da tabela)
 Contém nome + nicho + localização? São palavras-chave pesquisáveis? Gera confusão sobre o que a pessoa faz?
-Classifique: APROVADO / ATENÇÃO / URGENTE — se problema, sugira o nome de destaque ideal.
-Benchmark: "Nome, nicho e localização — tudo pesquisável na barra do Instagram."
+Benchmark: "Nome, nicho e localização. Tudo pesquisável na barra do Instagram."
+Se houver problema, sugira o nome de destaque ideal.
+Classifique e atribua nota 0 a 10.
 
-PASSO 3: BIO (fórmula de 5 elementos)
-1. Especialidade — o que faz, qual diferencial (claro para quem nunca ouviu falar)
-2. Promessa — frase forte, NÃO genérica como "feito com amor"
-3. Prova social — tempo de mercado, clientes atendidos, com número concreto
-4. CTA — chamada para ação com verbo claro (Agende, Compre, Fale conosco)
-5. Link — presente e funcional
-TAMBÉM verifique nível de consciência: a bio pressupõe que o visitante já sabe o que você vende? Para nichos menos óbvios, a especialidade precisa ser mais explícita.
-Classifique: APROVADO / ATENÇÃO / URGENTE — se problema, reescreva a bio usando a fórmula.
+PASSO 4: BIO (elemento 4 da tabela)
+Verifique os 5 elementos da fórmula:
+1. Especialidade: o que faz e qual o diferencial (claro para quem nunca ouviu falar)
+2. Promessa: frase forte, não genérica como "feito com amor"
+3. Prova social: tempo de mercado ou clientes atendidos com número concreto
+4. CTA: chamada para ação com verbo claro (Agende, Compre, Fale conosco)
+5. Link: presente e funcional
+Verifique também o nível de consciência: a bio pressupõe que o visitante já sabe o que você vende? Para nichos menos óbvios a especialidade precisa ser mais explícita.
+Se houver problema, reescreva a bio usando a fórmula.
+Classifique e atribua nota 0 a 10.
 
-PASSO 4: LINK DA BIO
-Funciona? Para onde leva? WhatsApp direto (wa.me/55+DDD+número sem zero) ou redirecionador (Bitly, Linktree) que demora >5 segundos?
-Classifique: APROVADO / ATENÇÃO / URGENTE
+PASSO 5: LINK DA BIO (elemento 5 da tabela)
+Funciona? Para onde leva? WhatsApp direto (wa.me/55+DDD+número sem zero) ou redirecionador (Bitly, Linktree) que demora mais de 5 segundos?
 Referência: "Tem pessoas que desistem de entrar em contato porque esses redirecionadores parecem cliques de vírus."
+Classifique e atribua nota 0 a 10.
 
-PASSO 5: FOTO DE PERFIL
-SE a pessoa É a marca: rosto visível e bem enquadrado (mostrando ombros, não cortado no pescoço), fundo adequado, expressão de confiança, boa resolução.
-SE é marca/loja: logomarca profissional, legível no formato circular pequeno.
-EM AMBOS: NÃO deve ter endereço, telefone ou QR code na foto.
-Classifique: APROVADO / ATENÇÃO / URGENTE
+PASSO 6: FOTO DE PERFIL (elemento 6 da tabela)
+Se a pessoa É a marca: rosto visível e bem enquadrado (mostrando ombros, não cortado no pescoço), fundo adequado, expressão de confiança, boa resolução.
+Se é marca ou loja: logomarca profissional, legível no formato circular pequeno.
+Em ambos os casos: NÃO deve ter endereço, telefone ou QR code na foto.
+Classifique e atribua nota 0 a 10.
 
-PASSO 6: STORIES
-Tem stories ativos nas últimas 24h? Tem narrativa ou só foto de produto (previsível = mata retenção)? Variação de formato (bastidores, enquete, produto, processo)?
-Classifique: APROVADO / ATENÇÃO / URGENTE — se ausente, diga o impacto.
+PASSO 7: STORIES (elemento 7 da tabela)
+IMPORTANTE: analise com os dados coletados. Se stories foram coletados via Apify, analise o que foi encontrado. Se a coleta falhou ou retornou vazio, avalie pela frequência e padrão de posts para estimar se o perfil provavelmente tem stories ativos, e sinalize como estimativa.
+Perguntas: Tem stories ativos nas últimas 24h? Tem narrativa ou só foto de produto? Variação de formato (bastidores, enquete, produto, processo)?
+NUNCA recuse analisar este elemento. Sempre atribua nota 0 a 10.
+Classifique e atribua nota 0 a 10.
 
-PASSO 7: DESTAQUES
-VISUAL: capinhas padronizadas na identidade visual? Títulos em texto (não só emojis)?
-CONTEÚDO: separados por categoria relevante ao negócio? NÃO por datas comemorativas? Atualizados? Algum chamado "destaques" (é ignorado pelas pessoas)?
-Classifique: APROVADO / ATENÇÃO / URGENTE — sugira categorias ideais para o nicho.
+PASSO 8: DESTAQUES (elemento 8 da tabela)
+VISUAL: capinhas padronizadas na identidade visual? Títulos em texto e não só emojis?
+CONTEÚDO: separados por categoria relevante ao negócio? Não por datas comemorativas? Atualizados? Algum chamado apenas "destaques" (é ignorado pelas pessoas)?
+Sugira categorias ideais para o nicho.
+Classifique e atribua nota 0 a 10.
 
-PASSO 8: POSTS FIXADOS
+PASSO 9: POSTS FIXADOS (elemento 9 da tabela)
 Estratégia dos 3 fixados:
-1° = Apresentação/Tour (quem é, como funciona, tour pela loja se física)
-2° = Diferencial/Catálogo (produtos/serviços com detalhes)
-3° = Ação atual (flutuante — promoção, lançamento)
-Capas dos fixados são explicativas sem precisar abrir? Vídeos com capa customizada (não cena aleatória)?
-Classifique: APROVADO / ATENÇÃO / URGENTE
+1° fixado: Apresentação/Tour (quem é, como funciona, tour pela loja se física)
+2° fixado: Diferencial/Catálogo (produtos/serviços com detalhes)
+3° fixado: Ação atual (promoção, lançamento, oferta vigente)
+As capas dos fixados são explicativas sem precisar abrir? Vídeos com capa customizada e não cena aleatória?
+Classifique e atribua nota 0 a 10.
 
-PASSO 9: ÚLTIMA PUBLICAÇÃO + QUALIDADE
-Quando foi? Formato? Qualidade técnica (iluminação, nitidez, som)? Legenda presente e com qualidade? Título na capa se reel?
-Detecte sinais de ChatGPT: verbos no imperativo, emojis no final das frases, travessão americano (—), linguagem genérica sem detalhes do produto.
-Classifique: APROVADO / ATENÇÃO / URGENTE — benchmark: ideal a cada 2-3 dias.
+PASSO 10: CONSTÂNCIA (elemento 10 da tabela)
+Quando foi a última publicação? Com que frequência posta? 3 vezes por semana é o mínimo para o algoritmo distribuir. Qualidade técnica do conteúdo: iluminação, nitidez, som, título na capa se reel?
+Detecte sinais de IA: verbos no imperativo (Descubra, Transforme, Crie), emojis no final das frases, linguagem genérica sem detalhes reais do produto.
+Benchmark: ideal a cada 2 a 3 dias.
+Classifique e atribua nota 0 a 10.
 
-PASSO 10: FEED GERAL
-Frequência entre posts (3x/semana é o mínimo)? Engajamento proporcional aos seguidores? Identidade visual consistente? Equilíbrio de formatos? Humanização (a pessoa aparece) vs catálogo puro? Respostas a comentários?
-Classifique: APROVADO / ATENÇÃO / URGENTE
+PASSO 11: LEGENDAS (elemento 11 da tabela)
+As legendas têm detalhes completos do produto (material, sabor, tamanho, preço)? Têm diferencial claro? Têm CTA? São autênticas ou genéricas?
+Engajamento proporcional aos seguidores? Identidade visual consistente? Equilíbrio de formatos?
 Referência: "Catálogo geralmente a gente só olha. A gente não consome assim, engaja."
+Aplique as regras específicas do nicho:
+Casa/Decoração: tour obrigatório se loja física, destaques por tipo e não por datas.
+Gastronomia/Confeitaria: cardápio indispensável com sabores, tamanhos, preços e porções.
+Serviços: serviço em ação (não só bastidores), local, horários, valor, landing page recomendada.
+Saúde/Estética: não presumir conhecimento, explicar o tratamento, cardápio de serviços.
+Beleza: antes/depois como conteúdo principal, título na capa de reels, nunca só fotos do fornecedor.
+Moda: provadores como formato campeão, legenda com tecido/tamanhos/cores/preço, responder todos os comentários.
+Comércio: cardápio no feed e não só stories, fotos com boa iluminação, processo + resultado + preço.
+Infoprodutos: bio com nicho claro e público definido, perfil público (nunca privado), prova social de resultados de clientes.
+Classifique e atribua nota 0 a 10.
 
-PASSO 11: ESPECÍFICO DO NICHO
-Aplique as regras do nicho:
-- Casa/Decoração: tour obrigatório se loja física (fixado 1), destaques por tipo (não por datas)
-- Gastronomia/Confeitaria: cardápio indispensável — sabores, tamanhos, preços, porções
-- Serviços: serviço em ação (não só bastidores), local/horários/valor, landing page recomendada
-- Saúde/Estética: não presumir conhecimento (nível de consciência baixo), explicar o tratamento, cardápio de serviços
-- Beleza: antes/depois como conteúdo principal, título na capa de reels, NUNCA só fotos do fornecedor
-- Moda: provadores como formato campeão, legenda com tecido/tamanhos/cores/preço, responder TODOS os comentários
-- Comércio: cardápio no feed (não só stories), fotos com iluminação, processo + resultado + preço
-- Infoprodutos: bio com nicho claro e público definido, perfil público (nunca privado), prova social de resultados de clientes (depoimentos, prints, antes/depois de resultados), conteúdo educativo para aquecimento de audiência
+PASSO 12: HUMANIZAÇÃO (elemento 12 da tabela)
+A pessoa aparece regularmente no feed? O feed tem variedade (produto, processo, pessoa, bastidores)? Os comentários são respondidos?
+Referência: feed 100% catálogo não engaja. A pessoa precisa aparecer para criar conexão.
+Classifique e atribua nota 0 a 10.
 
 CRITÉRIOS DE PONTUAÇÃO 0-10 (use estes critérios para atribuir nota a cada elemento):
 
