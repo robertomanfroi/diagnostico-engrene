@@ -249,9 +249,11 @@ class Supervisor {
       imagensPosts:   [],
       transcricao:    null,
       conteudosVirais: '',
+      destaques:      null,
+      stories:        null,
     };
 
-    // ── Executa Scout + Download + Hashtag em PARALELO ───────
+    // ── Etapa 1: Scout + Download + Hashtag em PARALELO ──────
     const [scoutResult, downloadResult, hashtagResult] = await Promise.allSettled([
       arroba ? agentScout(arroba, this) : Promise.resolve(null),
       reelUrl ? agentDownloader(reelUrl, this) : Promise.resolve(null),
@@ -268,7 +270,6 @@ class Supervisor {
     // Fallback para Instaloader se Scout falhou
     if (!results.perfilApify?.ok) {
       if (results.perfilApify?.erroTipo === 'private') {
-        // Perfil detectado como privado — não tenta fallback
         this.warn('supervisor', `@${arroba} é privado — abortando análise`);
       } else {
         this.warn('supervisor', 'Scout falhou — usando Instaloader como fallback');
@@ -276,13 +277,25 @@ class Supervisor {
       }
     }
 
-    // ── Imager: baixa imagens dos posts (depende do Scout) ───
+    // ── Etapa 2: Destaques via Apify (paralelo ao Imager) ────
     const perfilOk = results.perfilApify?.ok ? results.perfilApify : null;
-    if (perfilOk?.posts?.length > 0) {
-      results.imagensPosts = await agentImager(perfilOk.posts, this);
-    }
+    const [imagerResult, destaquesResult, storiesResult] = await Promise.allSettled([
+      perfilOk?.posts?.length > 0 ? agentImager(perfilOk.posts, this) : Promise.resolve([]),
+      // Etapa 2: Destaques
+      (process.env.APIFY_TOKEN && arroba) ? agentDestaques(arroba, this).catch(e => {
+        this.warn('supervisor', `Destaques ignorados: ${e.message}`); return null;
+      }) : Promise.resolve(null),
+      // Etapa 3: Stories
+      (process.env.APIFY_TOKEN && arroba) ? agentStories(arroba, this).catch(e => {
+        this.warn('supervisor', `Stories ignorados: ${e.message}`); return null;
+      }) : Promise.resolve(null),
+    ]);
 
-    // ── Transcriber: depende do download ────────────────────
+    results.imagensPosts = imagerResult.value ?? [];
+    results.destaques    = destaquesResult.value ?? null;
+    results.stories      = storiesResult.value ?? null;
+
+    // ── Etapa 4: Transcriber (depende do download) ───────────
     if (videoPath) {
       results.transcricao = await agentTranscriber(videoPath, this);
       try { fs.unlinkSync(videoPath); } catch(e) {}
@@ -336,7 +349,8 @@ async function agentScout(username, sv) {
             shortcode:   post.shortCode  || '',
             imagem_url:  post.displayUrl || '',
             video_url:   post.videoUrl   || '',
-            timestamp:   post.timestamp  || post.takenAt || null
+            timestamp:   post.timestamp  || post.takenAt || null,
+            fixado:      post.isPinned   || false,
           })));
           }
         }
@@ -426,6 +440,80 @@ async function agentScout(username, sv) {
 
   sv.err('scout', 'Todas as fontes falharam.');
   return erroTipo ? { ok: false, erroTipo } : null;
+}
+
+// ══════════════════════════════════════════════════════════════
+//  AGENT: DESTAQUES — coleta highlights do perfil via Apify
+// ══════════════════════════════════════════════════════════════
+async function agentDestaques(username, sv) {
+  sv.info('destaques', `Coletando destaques de @${username}...`);
+  try {
+    const url = `https://api.apify.com/v2/acts/apify~instagram-highlights-scraper/run-sync-get-dataset-items` +
+                `?token=${process.env.APIFY_TOKEN}&timeout=60&memory=128`;
+    const resp = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ usernames: [username], proxy: { useApifyProxy: true } }),
+      timeout: 75000
+    });
+    if (!resp.ok) {
+      sv.warn('destaques', `HTTP ${resp.status} — sem destaques coletados`);
+      return null;
+    }
+    const items = await resp.json();
+    if (!Array.isArray(items) || items.length === 0) {
+      sv.info('destaques', 'Nenhum destaque encontrado (perfil sem highlights)');
+      return { temDestaques: false, total: 0, lista: [] };
+    }
+    const lista = items.map(h => ({
+      titulo:        h.title || h.id || 'Sem título',
+      capinha_url:   h.coverUrl || h.coverImageUrl || '',
+      total_itens:   h.itemsCount || h.reelMediaCount || 0,
+    }));
+    sv.info('destaques', `✅ ${lista.length} destaques coletados`);
+    return { temDestaques: true, total: lista.length, lista };
+  } catch(e) {
+    sv.warn('destaques', `Erro: ${e.message}`);
+    return null;
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+//  AGENT: STORIES — coleta stories ativos via Apify
+// ══════════════════════════════════════════════════════════════
+async function agentStories(username, sv) {
+  sv.info('stories', `Coletando stories de @${username}...`);
+  try {
+    const url = `https://api.apify.com/v2/acts/apify~instagram-stories-scraper/run-sync-get-dataset-items` +
+                `?token=${process.env.APIFY_TOKEN}&timeout=60&memory=128`;
+    const resp = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ usernames: [username], proxy: { useApifyProxy: true } }),
+      timeout: 75000
+    });
+    if (!resp.ok) {
+      sv.warn('stories', `HTTP ${resp.status} — sem stories coletados`);
+      return null;
+    }
+    const items = await resp.json();
+    if (!Array.isArray(items) || items.length === 0) {
+      sv.info('stories', 'Nenhum story ativo encontrado (últimas 24h)');
+      return { temStories: false, total: 0, lista: [] };
+    }
+    const lista = items.map(s => ({
+      tipo:       s.type || (s.isVideo ? 'video' : 'imagem'),
+      timestamp:  s.timestamp || s.takenAt || null,
+      tem_texto:  !!(s.storyContent || s.text || ''),
+      tem_link:   !!(s.linkUrl || s.externalLink || ''),
+      imagem_url: s.displayUrl || s.url || '',
+    }));
+    sv.info('stories', `✅ ${lista.length} stories ativos (últimas 24h)`);
+    return { temStories: true, total: lista.length, lista };
+  } catch(e) {
+    sv.warn('stories', `Erro: ${e.message}`);
+    return null;
+  }
 }
 
 function normalizarPerfil(fonte, p, posts) {
@@ -1268,7 +1356,8 @@ DADOS DO PERFIL @${arroba} [fonte: ${fonte}]:
 ÚLTIMOS ${perfilData.posts?.length || 0} POSTS (dados reais coletados agora):
 ${(perfilData.posts || []).map((p, i) => {
   const dataStr = p.timestamp ? ` | 📅 ${new Date(p.timestamp).toLocaleDateString('pt-BR')}` : '';
-  return `Post ${i+1} [${p.tipo}${p.is_video ? ' · Vídeo' : ''}] — ❤️ ${p.curtidas} | 💬 ${p.comentarios}${p.views ? ` | 👁️ ${p.views} views` : ''}${dataStr}\nLegenda: ${sanitizeText(p.legenda) || '(sem legenda)'}`;
+  const fixadoStr = p.fixado ? ' | 📌 FIXADO' : '';
+  return `Post ${i+1} [${p.tipo}${p.is_video ? ' · Vídeo' : ''}${fixadoStr}] — ❤️ ${p.curtidas} | 💬 ${p.comentarios}${p.views ? ` | 👁️ ${p.views} views` : ''}${dataStr}\nLegenda: ${sanitizeText(p.legenda) || '(sem legenda)'}`;
 }).join('\n\n')}
 `;
     }
@@ -1301,13 +1390,53 @@ INFORMAÇÕES ESTRUTURAIS DO PERFIL:
 - Tem loja física?: ${tem_loja_fisica || 'não informado'}
 - Qualidade técnica geral do conteúdo: ${qualidade_tecnica || 'não informada'}
 ${frequenciaCalculada ? `- Frequência real calculada via timestamps: ${frequenciaCalculada}` : ''}
-${estrutura_perfil ? `- Stories, destaques e fixados (informado pelo usuário): ${estrutura_perfil}` : '- Stories, destaques e fixados: não informados pelo usuário — ESTIME com base no contexto disponível (bio, posts, qualidade do conteúdo, nicho), informe que é uma estimativa e indique o que verificar.'}
+${estrutura_perfil ? `- Estrutura informada pelo usuário: ${estrutura_perfil}` : ''}
+
+${(() => {
+  const d = squadResultado.destaques;
+  const s = squadResultado.stories;
+  const postsFixados = (perfilData?.posts || []).filter(p => p.fixado);
+  let ctx = '';
+
+  // Destaques
+  if (d === null) {
+    ctx += '- DESTAQUES: não foi possível coletar via Apify nesta análise\n';
+  } else if (!d.temDestaques) {
+    ctx += '- DESTAQUES (coletado via Apify): perfil SEM destaques\n';
+  } else {
+    ctx += `- DESTAQUES (coletado via Apify — dados reais): ${d.total} destaques encontrados\n`;
+    ctx += d.lista.map(h => `  • "${h.titulo}" — ${h.total_itens} itens`).join('\n') + '\n';
+  }
+
+  // Stories
+  if (s === null) {
+    ctx += '- STORIES: não foi possível coletar via Apify nesta análise\n';
+  } else if (!s.temStories) {
+    ctx += '- STORIES (coletado via Apify): sem stories ativos nas últimas 24h\n';
+  } else {
+    ctx += `- STORIES (coletado via Apify — dados reais): ${s.total} stories ativos nas últimas 24h\n`;
+    const tipos = s.lista.map(st => st.tipo).join(', ');
+    const comTexto = s.lista.filter(st => st.tem_texto).length;
+    const comLink  = s.lista.filter(st => st.tem_link).length;
+    ctx += `  Formatos: ${tipos} | Com texto/legenda: ${comTexto} | Com link: ${comLink}\n`;
+  }
+
+  // Fixados
+  if (postsFixados.length > 0) {
+    ctx += `- POSTS FIXADOS (identificados nos posts coletados): ${postsFixados.length} post(s) fixado(s)\n`;
+    ctx += postsFixados.map(p => `  • [${p.tipo}] ${sanitizeText(p.legenda).substring(0, 80) || '(sem legenda)'}`).join('\n') + '\n';
+  } else {
+    ctx += '- POSTS FIXADOS: nenhum detectado nos posts coletados (verifique manualmente se há fixados mais antigos)\n';
+  }
+
+  return ctx.trim();
+})()}
 
 ${ctxPerfil}
 ${ctxReel}
 ${squadResultado.conteudosVirais ? `\nCONTEÚDOS VIRAIS DO NICHO "${nicho}" (coletados agora via Apify):\n${squadResultado.conteudosVirais}` : ''}
 
-INSTRUÇÃO: Execute os 12 passos do Método Engrene. Para stories, destaques e fixados sem dados diretos: faça uma estimativa baseada no contexto disponível (padrão do nicho, qualidade geral do perfil, posts analisados). Sinalize com "⚠️ Estimativa" na nota e explique o que o usuário deve verificar manualmente. NUNCA deixe como "Não verificado" — sempre atribua uma nota estimada.
+INSTRUÇÃO: Execute os 12 passos do Método Engrene. Stories, destaques e fixados foram coletados via Apify com dados reais — analise com base nesses dados. Quando a coleta falhou para algum elemento, sinalize com "⚠️ Não coletado" e oriente o que verificar manualmente.
 `.trim();
 
     // ── Analyst: Claude Haiku — análise profunda ─────────────
