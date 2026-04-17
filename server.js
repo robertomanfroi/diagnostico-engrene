@@ -1020,20 +1020,24 @@ OUTPUT — Gere o relatório NESTE FORMATO EXATO:
 
 ## Análise por Elemento
 
-| # | Elemento | Nota | Status | Diagnóstico em 1 frase |
-|---|----------|------|--------|------------------------|
-| 1 | Primeira impressão | X/10 | APROVADO/ATENÇÃO/URGENTE | [1 frase] |
-| 2 | Nome de usuário (@) | X/10 | [status] | [1 frase] |
-| 3 | Nome de destaque | X/10 | [status] | [1 frase] |
-| 4 | Bio | X/10 | [status] | [1 frase] |
-| 5 | Link da bio | X/10 | [status] | [1 frase] |
-| 6 | Foto de perfil | X/10 | [status] | [1 frase] |
-| 7 | Stories | X/10 | [status] | [1 frase] |
-| 8 | Destaques | X/10 | [status] | [1 frase] |
-| 9 | Posts fixados | X/10 | [status] | [1 frase] |
-| 10 | Constância | X/10 | [status] | [1 frase] |
-| 11 | Legendas | X/10 | [status] | [1 frase] |
-| 12 | Humanização | X/10 | [status] | [1 frase] |
+IMPORTANTE para formatação: mantenha as colunas alinhadas e curtas. A coluna "Diagnóstico" deve ter no máximo 60 caracteres. Use os emojis de status exatamente como definido.
+
+| Nº | Elemento            | Nota  | Status    | Diagnóstico rápido                              |
+|----|---------------------|-------|-----------|------------------------------------------------|
+|  1 | Primeira impressão  |  X/10 | ✅ ÓTIMO  | [máx 60 caracteres]                            |
+|  2 | Nome de usuário     |  X/10 | ⚠️ ATENÇÃO | [máx 60 caracteres]                            |
+|  3 | Nome de destaque    |  X/10 | 🔴 URGENTE | [máx 60 caracteres]                           |
+|  4 | Bio                 |  X/10 | [status]  | [máx 60 caracteres]                            |
+|  5 | Link da bio         |  X/10 | [status]  | [máx 60 caracteres]                            |
+|  6 | Foto de perfil      |  X/10 | [status]  | [máx 60 caracteres]                            |
+|  7 | Stories             |  X/10 | [status]  | [máx 60 caracteres — se estimativa: ⚠️ Est.]  |
+|  8 | Destaques           |  X/10 | [status]  | [máx 60 caracteres — se estimativa: ⚠️ Est.]  |
+|  9 | Posts fixados       |  X/10 | [status]  | [máx 60 caracteres — se estimativa: ⚠️ Est.]  |
+| 10 | Constância          |  X/10 | [status]  | [máx 60 caracteres]                            |
+| 11 | Legendas            |  X/10 | [status]  | [máx 60 caracteres]                            |
+| 12 | Humanização         |  X/10 | [status]  | [máx 60 caracteres]                            |
+
+Status possíveis: ✅ ÓTIMO (8-10) | ⚠️ ATENÇÃO (5-7) | 🔴 URGENTE (0-4)
 
 ---
 
@@ -1066,7 +1070,24 @@ OUTPUT — Gere o relatório NESTE FORMATO EXATO:
 ---
 
 ## Pontuação do Perfil
-**[soma das notas]/120 pontos — [percentual]%**
+
+| Elemento            | Nota | Peso | Pontos |
+|---------------------|------|------|--------|
+| Primeira impressão  |  X   |  ×1  |   X    |
+| Nome de usuário     |  X   |  ×1  |   X    |
+| Nome de destaque    |  X   |  ×1  |   X    |
+| Bio                 |  X   |  ×2  |   X    |
+| Link da bio         |  X   |  ×1  |   X    |
+| Foto de perfil      |  X   |  ×1  |   X    |
+| Stories             |  X   |  ×1  |   X    |
+| Destaques           |  X   |  ×1  |   X    |
+| Posts fixados       |  X   |  ×1  |   X    |
+| Constância          |  X   |  ×3  |   X    |
+| Legendas            |  X   |  ×2  |   X    |
+| Humanização         |  X   |  ×1  |   X    |
+| **TOTAL**           |      |      | **X/120** |
+
+**[soma]/120 pontos — [percentual]%**
 - 96-120 pts (80%+) = ✅ Perfil Otimizado
 - 54-95 pts (45-79%) = 🟡 Perfil em Construção
 - 0-53 pts (abaixo de 45%) = 🔴 Perfil Crítico
@@ -1280,13 +1301,13 @@ INFORMAÇÕES ESTRUTURAIS DO PERFIL:
 - Tem loja física?: ${tem_loja_fisica || 'não informado'}
 - Qualidade técnica geral do conteúdo: ${qualidade_tecnica || 'não informada'}
 ${frequenciaCalculada ? `- Frequência real calculada via timestamps: ${frequenciaCalculada}` : ''}
-${estrutura_perfil ? `- Stories, destaques e fixados (informado pelo usuário): ${estrutura_perfil}` : '- Stories, destaques e fixados: não informados pelo usuário — classifique como "Não verificado" e oriente a verificar manualmente'}
+${estrutura_perfil ? `- Stories, destaques e fixados (informado pelo usuário): ${estrutura_perfil}` : '- Stories, destaques e fixados: não informados pelo usuário — ESTIME com base no contexto disponível (bio, posts, qualidade do conteúdo, nicho), informe que é uma estimativa e indique o que verificar.'}
 
 ${ctxPerfil}
 ${ctxReel}
 ${squadResultado.conteudosVirais ? `\nCONTEÚDOS VIRAIS DO NICHO "${nicho}" (coletados agora via Apify):\n${squadResultado.conteudosVirais}` : ''}
 
-INSTRUÇÃO: Execute os 12 passos do Método Engrene. Para os passos cujos dados não foram coletados automaticamente (stories, destaques, fixados), analise com base no que foi informado pelo usuário. Se não há dado algum sobre um elemento, classifique como "Não verificado" e oriente o que verificar manualmente.
+INSTRUÇÃO: Execute os 12 passos do Método Engrene. Para stories, destaques e fixados sem dados diretos: faça uma estimativa baseada no contexto disponível (padrão do nicho, qualidade geral do perfil, posts analisados). Sinalize com "⚠️ Estimativa" na nota e explique o que o usuário deve verificar manualmente. NUNCA deixe como "Não verificado" — sempre atribua uma nota estimada.
 `.trim();
 
     // ── Analyst: Claude Haiku — análise profunda ─────────────
