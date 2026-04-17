@@ -1068,10 +1068,12 @@ Em ambos os casos: NÃO deve ter endereço, telefone ou QR code na foto.
 Classifique e atribua nota 0 a 10.
 
 PASSO 7: STORIES (elemento 7 da tabela)
-IMPORTANTE: analise com os dados coletados. Se stories foram coletados via Apify, analise o que foi encontrado. Se a coleta falhou ou retornou vazio, avalie pela frequência e padrão de posts para estimar se o perfil provavelmente tem stories ativos, e sinalize como estimativa.
-Perguntas: Tem stories ativos nas últimas 24h? Tem narrativa ou só foto de produto? Variação de formato (bastidores, enquete, produto, processo)?
-NUNCA recuse analisar este elemento. Sempre atribua nota 0 a 10.
-Classifique e atribua nota 0 a 10.
+Use SOMENTE os dados coletados via Apify. Nunca invente nem estime.
+Regras:
+• Se o Apify coletou stories: analise quantidade, formato (foto/vídeo), se há narrativa ou só foto de produto, variação de formatos.
+• Se o Apify coletou e retornou VAZIO (sem stories nas últimas 24h): o perfil está sem stories ativos. Nota 0. Informe o impacto disso.
+• Se o Apify não conseguiu coletar (falha técnica): informe "Coleta de stories indisponível nesta análise" e deixe a nota como N/A. NÃO invente, NÃO estime.
+Classifique e atribua nota 0 a 10 apenas quando houver dado real coletado.
 
 PASSO 8: DESTAQUES (elemento 8 da tabela)
 VISUAL: capinhas padronizadas na identidade visual? Títulos em texto e não só emojis?
