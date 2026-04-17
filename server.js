@@ -1148,8 +1148,8 @@ REGRAS DE FORMATAÇÃO DO RELATÓRIO (INEGOCIÁVEL):
 ✅ Os 12 elementos SEMPRE na ordem: 1.Primeira impressão, 2.Nome de usuário, 3.Nome de destaque, 4.Bio, 5.Link da bio, 6.Foto de perfil, 7.Stories, 8.Destaques, 9.Posts fixados, 10.Constância, 11.Legendas, 12.Humanização
 
 ## 📊 DIAGNÓSTICO ENGRENE
-### [Nome do Negócio] | @[arroba]
-**Nicho:** [nicho] | **Seguidores:** [número coletado] | **Data:** [DATA_COLETA]
+### [Nome do Negócio]: @[arroba]
+**Nicho:** [nicho] **Seguidores:** [número coletado] **Data:** [DATA_COLETA]
 
 ---
 
@@ -1160,7 +1160,8 @@ REGRAS DE FORMATAÇÃO DO RELATÓRIO (INEGOCIÁVEL):
 
 ## Análise por Elemento
 
-FORMATAÇÃO DA TABELA: colunas alinhadas, diagnóstico com no máximo 55 caracteres, sem travessões, sem hífens, NUNCA use | (pipe) dentro das células.
+OBRIGATÓRIO: a tabela abaixo DEVE conter EXATAMENTE 12 linhas de dados (elementos 1 a 12), NESTA ORDEM, SEM PULAR nenhum. Todos os 12 elementos aparecem mesmo que tenham nota 10.
+FORMATAÇÃO DA TABELA: diagnóstico com no máximo 55 caracteres, sem travessões, NUNCA use | (pipe) dentro das células.
 REGRA PARA DADOS NÃO COLETADOS: quando Stories, Destaques ou Posts Fixados não foram coletados, use exatamente "N/A" na coluna Nota e "⚠️ ATENÇÃO" no Status.
 
 | Nº | Elemento           | Nota  | Status        | Diagnóstico rápido                         |
@@ -1183,7 +1184,15 @@ Status: ✅ ÓTIMO (8 a 10) | ⚠️ ATENÇÃO (5 a 7) | 🔴 URGENTE (0 a 4)
 ---
 
 ## Detalhamento dos Elementos com ATENÇÃO ou URGENTE
-[Para cada elemento que não passou: o que está errado, o que fazer, referência concreta do nicho. Sem travessões. Use ponto final para separar ideias.]
+
+REGRA CRÍTICA: percorra os elementos NA ORDEM 1 a 12. Para cada elemento com nota abaixo de 8 (status ⚠️ ATENÇÃO ou 🔴 URGENTE), gere um bloco de detalhamento. Elementos com nota 8 a 10 (✅ ÓTIMO) NÃO precisam de bloco. NÃO pule elementos com nota abaixo de 8. NÃO reordene.
+
+Formato de cada bloco:
+### [emoji status] ELEMENTO [Nº]: [NOME EM MAIÚSCULAS] ([nota]/10)
+**O que está:** [descrição do estado atual com dados reais]
+**O que falta:** [o problema específico]
+**Como corrigir:** [ação concreta, executável em menos de 2 horas]
+**Por que importa:** [impacto direto no negócio deste nicho]
 
 ---
 
