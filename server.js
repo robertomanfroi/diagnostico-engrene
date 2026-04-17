@@ -983,6 +983,25 @@ Aplique as regras do nicho:
 - Beleza: antes/depois como conteúdo principal, título na capa de reels, NUNCA só fotos do fornecedor
 - Moda: provadores como formato campeão, legenda com tecido/tamanhos/cores/preço, responder TODOS os comentários
 - Comércio: cardápio no feed (não só stories), fotos com iluminação, processo + resultado + preço
+- Infoprodutos: bio com nicho claro e público definido, perfil público (nunca privado), prova social de resultados de clientes (depoimentos, prints, antes/depois de resultados), conteúdo educativo para aquecimento de audiência
+
+CRITÉRIOS DE PONTUAÇÃO 0-10 (use estes critérios para atribuir nota a cada elemento):
+
+primeira_impressao: 10=nicho identificável em <3s visual profissional | 7=nicho identificável na bio visual ok mas inconsistente | 3=nicho confuso visual amador | 0=impossível identificar nicho
+nome_usuario: 10=fácil de ler escrever encontrar sem caracteres extras | 7=pequeno problema legível | 3=confuso longo muitos caracteres especiais | 0=ilegível
+nome_destaque: 10=nome+nicho+localização presentes e pesquisáveis | 7=2 dos 3 elementos | 3=só nome pessoal | 0=vazio ou irrelevante
+bio: 10=5/5 elementos(especialidade+promessa+prova social c/número+CTA c/verbo+link)+nível consciência correto | 8=4/5 | 6=3/5 | 3=2/5 | 0=vazia ou 1 elemento
+link_bio: 10=wa.me direto funcional ou link direto site/catálogo | 7=funcional mas com redirecionador Bitly/Linktree | 3=quebrado desatualizado ou destino errado | 0=sem link
+foto_perfil(pessoa é marca): 10=rosto visível bem enquadrado(ombros) fundo adequado expressão confiante | 7=rosto visível mas enquadramento ou fundo fracos | 3=cortada no pescoço casual demais ou cartão de visitas | 0=sem foto ou inadequada
+foto_perfil(marca/loja): 10=logomarca profissional legível no formato circular | 7=logo presente mas pouco legível | 3=foto pessoal no lugar da logo | 0=sem foto
+stories: 10=ativos com narrativa e variação de formatos | 7=ativos mas só foto de produto sem narrativa | 3=inativos há 24-48h | 0=sem stories há mais de 48h
+destaques: 10=capinhas padronizadas categorias relevantes ao negócio atualizados conteúdo completo | 7=capinhas presentes mas categorias confusas ou desatualizadas | 3=sem capinhas desorganizados | 0=sem destaques ou com mais de 143 semanas sem atualização
+fixados: 10=3 fixados estratégicos(apresentação+catálogo+ação atual) com capas explicativas | 7=1-2 fixados com alguma estratégia | 3=fixados sem estratégia ou capas confusas | 0=sem fixados
+constancia: 10=3+ posts/semana consistente | 7=2 posts/semana | 3=1 post/semana ou esporádico | 0=parado há mais de 2 semanas
+legendas: 10=detalhes completos do produto(material sabor tamanho preço)+diferencial+CTA+autêntica | 7=informativas mas sem CTA ou preço | 3=genéricas ou sinais de ChatGPT(imperativo+emojis no final+travessão americano) | 0=sem legenda
+humanizacao: 10=pessoa aparece regularmente feed variado comentários respondidos | 7=aparece às vezes feed misto alguns comentários respondidos | 3=feed 100% catálogo aparições raras poucos comentários | 0=nunca aparece feed catálogo puro zero respostas
+
+Regras de status por nota: 8-10=APROVADO ✅ | 4-7=ATENÇÃO ⚠️ | 0-3=URGENTE 🔴
 
 OUTPUT — Gere o relatório NESTE FORMATO EXATO:
 
@@ -999,25 +1018,26 @@ OUTPUT — Gere o relatório NESTE FORMATO EXATO:
 
 ## Análise por Elemento
 
-| # | Elemento | Status | Diagnóstico em 1 frase |
-|---|----------|--------|------------------------|
-| 0 | Primeira impressão | APROVADO/ATENÇÃO/URGENTE | [1 frase] |
-| 1 | Nome de usuário (@) | [status] | [1 frase] |
-| 2 | Nome de destaque | [status] | [1 frase] |
-| 3 | Bio | [status] | [1 frase] |
-| 4 | Link da bio | [status] | [1 frase] |
-| 5 | Foto de perfil | [status] | [1 frase] |
-| 6 | Stories | [status] | [1 frase] |
-| 7 | Destaques | [status] | [1 frase] |
-| 8 | Posts fixados | [status] | [1 frase] |
-| 9 | Última publicação | [status] | [1 frase] |
-| 10 | Feed geral | [status] | [1 frase] |
-| 11 | Específico do nicho | [status] | [1 frase] |
+| # | Elemento | Nota | Status | Diagnóstico em 1 frase |
+|---|----------|------|--------|------------------------|
+| 1 | Primeira impressão | X/10 | APROVADO/ATENÇÃO/URGENTE | [1 frase] |
+| 2 | Nome de usuário (@) | X/10 | [status] | [1 frase] |
+| 3 | Nome de destaque | X/10 | [status] | [1 frase] |
+| 4 | Bio | X/10 | [status] | [1 frase] |
+| 5 | Link da bio | X/10 | [status] | [1 frase] |
+| 6 | Foto de perfil | X/10 | [status] | [1 frase] |
+| 7 | Stories | X/10 | [status] | [1 frase] |
+| 8 | Destaques | X/10 | [status] | [1 frase] |
+| 9 | Posts fixados | X/10 | [status] | [1 frase] |
+| 10 | Constância | X/10 | [status] | [1 frase] |
+| 11 | Legendas | X/10 | [status] | [1 frase] |
+| 12 | Humanização | X/10 | [status] | [1 frase] |
 
 ---
 
 ## Detalhamento — Elementos com ATENÇÃO ou URGENTE
 [Para cada elemento que não passou: o que está errado, o que fazer, referência concreta do nicho]
+[Aplique também as regras específicas do nicho informado, diagnosticando o que falta para ESTE negócio]
 
 ---
 
@@ -1032,7 +1052,7 @@ OUTPUT — Gere o relatório NESTE FORMATO EXATO:
 **Bio atual:** [texto da bio coletada]
 **Bio proposta:**
 \`\`\`
-[Nova bio: especialidade + promessa forte + prova social com número + CTA + link]
+[Nova bio: especialidade + promessa forte + prova social com número + CTA + link — máx 150 caracteres]
 \`\`\`
 *Por que funciona:* [o que foi otimizado]
 
@@ -1044,10 +1064,10 @@ OUTPUT — Gere o relatório NESTE FORMATO EXATO:
 ---
 
 ## Pontuação do Perfil
-[X de 12 elementos APROVADOS]
-- 10-12 aprovados = ✅ Perfil Otimizado
-- 6-9 aprovados = 🟡 Perfil em Construção
-- 0-5 aprovados = 🔴 Perfil Crítico
+**[soma das notas]/120 pontos — [percentual]%**
+- 96-120 pts (80%+) = ✅ Perfil Otimizado
+- 54-95 pts (45-79%) = 🟡 Perfil em Construção
+- 0-53 pts (abaixo de 45%) = 🔴 Perfil Crítico
 
 ---
 
@@ -1062,6 +1082,7 @@ CHECKLIST INTERNO (execute antes de entregar — NÃO mostre ao usuário):
 [ ] As ações prioritárias são executáveis em menos de 2 horas cada?
 [ ] Os diagnósticos citam dados reais (números, bio real, posts reais)?
 [ ] Nenhuma recomendação é genérica — todas são específicas para ESTE nicho?
+[ ] A pontuação total (soma/120 e percentual) foi calculada corretamente?
 Se não → corrija antes de entregar.`;
 
 // ══════════════════════════════════════════════════════════════
@@ -1092,7 +1113,7 @@ app.post('/api/analisar', upload.fields([
 
   try {
     const { nome, nicho, arroba, objetivo, seguidores, frequencia, descricao,
-            nome_destaque, pessoa_e_a_marca, tem_loja_fisica, estrutura_perfil } = req.body;
+            nome_destaque, pessoa_e_a_marca, tem_loja_fisica, estrutura_perfil, qualidade_tecnica } = req.body;
 
     // ── Validação básica ────────────────────────────────────
     if (!nome?.trim() || !nicho?.trim() || !arroba?.trim()) {
@@ -1218,6 +1239,7 @@ INFORMAÇÕES ESTRUTURAIS DO PERFIL (informadas pelo usuário):
 - Nome de destaque (campo em negrito abaixo do @): ${nome_destaque || 'não informado'}
 - A pessoa É a marca (profissional liberal/prestador) ou tem marca/loja com identidade própria?: ${pessoa_e_a_marca || 'não informado'}
 - Tem loja física?: ${tem_loja_fisica || 'não informado'}
+- Qualidade técnica geral do conteúdo: ${qualidade_tecnica || 'não informada'}
 ${estrutura_perfil ? `- Descrição de stories, destaques e fixados: ${estrutura_perfil}` : ''}
 
 ${ctxPerfil}

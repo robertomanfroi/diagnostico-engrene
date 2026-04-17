@@ -1254,6 +1254,17 @@
             <span class="field-hint">Descreva o que você tem — ajuda a analisar a estrutura completa do perfil</span>
           </div>
 
+          <div class="field">
+            <label class="field-label" for="f-qualidade-tecnica">Qualidade técnica geral do conteúdo <span class="opt">(opcional)</span></label>
+            <select class="field-input" id="f-qualidade-tecnica">
+              <option value="">Selecione...</option>
+              <option value="alta">Alta — fotos nítidas, vídeos com boa iluminação e som</option>
+              <option value="media">Média — qualidade razoável, alguns problemas pontuais</option>
+              <option value="baixa">Baixa — fotos escuras, pixeladas ou vídeos com som ruim</option>
+            </select>
+            <span class="field-hint">Avaliação geral da qualidade das fotos e vídeos no perfil</span>
+          </div>
+
           <div class="btn-row">
             <div></div>
             <button class="btn-primary" onclick="irEtapa(2)">
@@ -1622,6 +1633,7 @@
       fd.append('pessoa_e_a_marca', document.getElementById('f-pessoa-marca').value || '');
       fd.append('tem_loja_fisica',  document.getElementById('f-loja-fisica').value || '');
       fd.append('estrutura_perfil', document.getElementById('f-estrutura').value || '');
+      fd.append('qualidade_tecnica',  document.getElementById('f-qualidade-tecnica').value || '');
       fd.append('_dfp',             window._deviceFingerprint || '');
 
       const API_BASE = window.location.hostname.includes('github.io') ? 'https://hospitable-patience-production.up.railway.app' : '';
