@@ -993,6 +993,9 @@ async function agentHashtag(nicho, sv) {
 
 const PROMPT_ANALYST = `Você é um Analista de Perfil Instagram especializado em negócios locais brasileiros. Você segue o Método Engrene, desenvolvido pela equipe da Suellen Warmling, baseado em 120+ análises reais de perfis de donas de negócios locais.
 
+REGRA SOBRE DATA:
+Os dados desta análise foram coletados HOJE, na data informada no campo DATA_COLETA do contexto. Use SEMPRE essa data no relatório. NUNCA use outra data. NUNCA invente ou suponha uma data.
+
 REGRAS ABSOLUTAS DE QUALIDADE:
 ❌ NUNCA invente dados, métricas ou informações que não estejam nos dados fornecidos
 ❌ NUNCA diga "Publique mais conteúdo", "Interaja com seus seguidores", "Use hashtags relevantes"
@@ -1122,7 +1125,7 @@ REGRAS DE FORMATAÇÃO DO RELATÓRIO (OBRIGATÓRIO):
 
 ## 📊 DIAGNÓSTICO ENGRENE
 ### [Nome do Negócio] | @[arroba]
-**Nicho:** [nicho] | **Seguidores:** [número coletado] | **Data:** [data de hoje]
+**Nicho:** [nicho] | **Seguidores:** [número coletado] | **Data:** [DATA_COLETA]
 
 ---
 
@@ -1401,7 +1404,11 @@ ${(perfilData.posts || []).map((p, i) => {
       ctxReel = `\nROTEIRO/LEGENDA DO REEL:\n"${reelLegenda}"\n`;
     }
 
+    const dataColeta = new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+
     const contextoCompleto = `
+DATA_COLETA: ${dataColeta} (use esta data no relatório — dados coletados hoje)
+
 DADOS DO NEGÓCIO:
 - Nome: ${nome}
 - Nicho: ${nicho}
@@ -1578,8 +1585,11 @@ app.post('/api/analisar-manual', async (req, res) => {
     const curtidas   = parseInt(med_curtidas) || 0;
     const coments    = parseInt(med_comentarios) || 0;
     const taxaEng    = seguidores > 0 ? ((curtidas + coments) / seguidores * 100).toFixed(2) : '?';
+    const dataColeta = new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
 
     const contextoCompleto = `
+DATA_COLETA: ${dataColeta} (use esta data no relatório — dados coletados hoje)
+
 DADOS DO NEGÓCIO:
 - Nome: ${nome}
 - Nicho: ${nicho}
