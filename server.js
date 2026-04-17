@@ -262,10 +262,10 @@ class Supervisor {
       }) : Promise.resolve(''),
     ]);
 
-    // Consolida resultados paralelos
-    results.perfilApify    = scoutResult.value ?? null;
-    const videoPath        = downloadResult.value ?? null;
-    results.conteudosVirais = hashtagResult.value ?? '';
+    // Consolida resultados paralelos (allSettled — checar status antes de .value)
+    results.perfilApify    = scoutResult.status === 'fulfilled'   ? scoutResult.value    : null;
+    const videoPath        = downloadResult.status === 'fulfilled' ? downloadResult.value : null;
+    results.conteudosVirais = hashtagResult.status === 'fulfilled' ? (hashtagResult.value ?? '') : '';
 
     // Fallback para Instaloader se Scout falhou
     if (!results.perfilApify?.ok) {
@@ -291,9 +291,9 @@ class Supervisor {
       }) : Promise.resolve(null),
     ]);
 
-    results.imagensPosts = imagerResult.value ?? [];
-    results.destaques    = destaquesResult.value ?? null;
-    results.stories      = storiesResult.value ?? null;
+    results.imagensPosts = imagerResult.status === 'fulfilled'    ? (imagerResult.value    ?? [])   : [];
+    results.destaques    = destaquesResult.status === 'fulfilled' ? (destaquesResult.value ?? null) : null;
+    results.stories      = storiesResult.status === 'fulfilled'   ? (storiesResult.value   ?? null) : null;
 
     // ── Etapa 4: Transcriber (depende do download) ───────────
     if (videoPath) {
@@ -448,27 +448,37 @@ async function agentScout(username, sv) {
 async function agentDestaques(username, sv) {
   sv.info('destaques', `Coletando destaques de @${username}...`);
   try {
-    const url = `https://api.apify.com/v2/acts/apify~instagram-highlights-scraper/run-sync-get-dataset-items` +
-                `?token=${process.env.APIFY_TOKEN}&timeout=60&memory=128`;
+    // Actor: apify~instagram-scraper suporta highlights via campo highlightedReels
+    // Usamos o profile scraper com campo específico para highlights
+    const url = `https://api.apify.com/v2/acts/apify~instagram-profile-scraper/run-sync-get-dataset-items` +
+                `?token=${process.env.APIFY_TOKEN}&timeout=90&memory=256`;
     const resp = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ usernames: [username], proxy: { useApifyProxy: true } }),
-      timeout: 75000
+      body: JSON.stringify({
+        usernames: [username],
+        resultsLimit: 1,
+        scrapeHighlights: true,
+        proxy: { useApifyProxy: true }
+      }),
+      signal: AbortSignal.timeout(100000)
     });
     if (!resp.ok) {
       sv.warn('destaques', `HTTP ${resp.status} — sem destaques coletados`);
       return null;
     }
     const items = await resp.json();
-    if (!Array.isArray(items) || items.length === 0) {
+    // O profile scraper retorna array com o perfil; highlights estão em highlightedReels ou highlights
+    const perfil = Array.isArray(items) && items.length > 0 ? items[0] : null;
+    const highlights = perfil?.highlightedReels || perfil?.highlights || [];
+    if (!Array.isArray(highlights) || highlights.length === 0) {
       sv.info('destaques', 'Nenhum destaque encontrado (perfil sem highlights)');
       return { temDestaques: false, total: 0, lista: [] };
     }
-    const lista = items.map(h => ({
-      titulo:        h.title || h.id || 'Sem título',
-      capinha_url:   h.coverUrl || h.coverImageUrl || '',
-      total_itens:   h.itemsCount || h.reelMediaCount || 0,
+    const lista = highlights.map(h => ({
+      titulo:        h.title || h.name || h.id || 'Sem título',
+      capinha_url:   h.coverUrl || h.coverImageUrl || h.thumbnail || '',
+      total_itens:   h.itemsCount || h.reelMediaCount || h.mediaCount || 0,
     }));
     sv.info('destaques', `✅ ${lista.length} destaques coletados`);
     return { temDestaques: true, total: lista.length, lista };
@@ -484,13 +494,19 @@ async function agentDestaques(username, sv) {
 async function agentStories(username, sv) {
   sv.info('stories', `Coletando stories de @${username}...`);
   try {
-    const url = `https://api.apify.com/v2/acts/apify~instagram-stories-scraper/run-sync-get-dataset-items` +
-                `?token=${process.env.APIFY_TOKEN}&timeout=60&memory=128`;
+    // Actor correto para stories no Apify
+    const url = `https://api.apify.com/v2/acts/apify~instagram-scraper/run-sync-get-dataset-items` +
+                `?token=${process.env.APIFY_TOKEN}&timeout=90&memory=256`;
     const resp = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ usernames: [username], proxy: { useApifyProxy: true } }),
-      timeout: 75000
+      body: JSON.stringify({
+        directUrls: [`https://www.instagram.com/${username}/`],
+        resultsType: 'stories',
+        resultsLimit: 20,
+        proxy: { useApifyProxy: true }
+      }),
+      signal: AbortSignal.timeout(100000)
     });
     if (!resp.ok) {
       sv.warn('stories', `HTTP ${resp.status} — sem stories coletados`);
