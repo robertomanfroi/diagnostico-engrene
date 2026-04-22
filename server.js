@@ -182,7 +182,7 @@ app.use(express.json({ limit: '50mb' }));
 app.use((req, res, next) => {
   const host = req.headers.host || '';
   if (host.includes('onrender.com')) {
-    return res.redirect(301, 'https://hospitable-patience-production.up.railway.app' + req.originalUrl);
+    return res.redirect(301, 'https://diagnostico-engrene-production.up.railway.app' + req.originalUrl);
   }
   next();
 });
@@ -2118,13 +2118,15 @@ const server = app.listen(PORT, () => {
   console.log(`   🧠 Analyst     — Claude Haiku: análise profunda\n`);
   server.timeout = 120000;
 
-  // ── Self-ping a cada 14 min para evitar hibernate no Render free tier ──
-  const SELF_URL = process.env.RENDER_EXTERNAL_URL || `http://localhost:${PORT}`;
+  // ── Self-ping a cada 14 min (Railway não hiberna, mas protege contra crash silencioso) ──
+  const SELF_URL = process.env.RAILWAY_PUBLIC_DOMAIN
+    ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}`
+    : `http://localhost:${PORT}`;
   setInterval(async () => {
     try {
       await fetch(`${SELF_URL}/health`, { method: 'GET' });
     } catch (e) {
-      // silencia — se falhar o Render já vai acordar na próxima requisição real
+      // silencia
     }
   }, 14 * 60 * 1000);
 });

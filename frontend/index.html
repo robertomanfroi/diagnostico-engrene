@@ -1512,7 +1512,7 @@
     // ── Poll status da fila a cada 5s ─────────────────────
     const statusInterval = setInterval(async () => {
       try {
-        const API_BASE = window.location.hostname.includes('github.io') ? 'https://hospitable-patience-production.up.railway.app' : '';
+        const API_BASE = window.location.hostname.includes('github.io') ? 'https://diagnostico-engrene-production.up.railway.app' : '';
         const s = await fetch(API_BASE + '/api/status').then(r => r.json());
         tempoEst = s.tempoEstimadoSeg || 60;
         estEl.textContent = `~${Math.max(0, tempoEst - segundos)}s`;
@@ -1550,7 +1550,7 @@
       fd.append('descricao',        document.getElementById('f-desc').value || '');
       fd.append('_dfp',             window._deviceFingerprint || '');
 
-      const API_BASE = window.location.hostname.includes('github.io') ? 'https://hospitable-patience-production.up.railway.app' : '';
+      const API_BASE = window.location.hostname.includes('github.io') ? 'https://diagnostico-engrene-production.up.railway.app' : '';
       const res  = await fetch(API_BASE + '/api/analisar', { method:'POST', body:fd });
       const data = await res.json();
 
