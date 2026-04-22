@@ -29,3 +29,18 @@ Thumbs.db
 .aiox/install-log.txt
 server.js.backup
 Dockerfile.bak.disabled
+
+# Frameworks e ferramentas locais (não fazem parte do projeto)
+.aiox-core/
+.aiox/
+.antigravity/
+.claude/
+.codex/
+.cursor/
+.gemini/
+squads/
+data/
+skills-lock.json
+fly.toml
+Dockerfile.bak.disabled
+lista-*.txt*
