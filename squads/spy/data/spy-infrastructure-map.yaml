@@ -1,0 +1,27 @@
+service_catalog:
+  benchmark_storage:
+    service_ref: docs-bench-store
+    connection: "docs/bench/"
+    integration: "Persistência de benchmarks comparativos"
+  runtime_outputs:
+    service_ref: spy-output-store
+    connection: "outputs/sinkra-squad/spy/"
+    integration: "Persistência de análises operacionais"
+  source_apis:
+    service_ref: research-api-gateway
+    connection: "YOUTUBE_API_KEY,META_ACCESS_TOKEN"
+    integration: "Coleta de dados e sinais de mercado"
+
+integrations:
+  - name: docs_bench_publish
+    connection: "docs/bench/"
+    endpoint: local-filesystem
+    mode: read_write
+  - name: spy_outputs_runtime
+    connection: "outputs/sinkra-squad/spy/"
+    endpoint: local-filesystem
+    mode: read_write
+  - name: external_research_sources
+    connection: "YouTube Data v3 / Meta Graph / Web Search"
+    endpoint: api
+    mode: read_only

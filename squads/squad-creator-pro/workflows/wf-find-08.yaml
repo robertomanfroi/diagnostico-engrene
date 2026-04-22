@@ -1,0 +1,71 @@
+workflow:
+  id: wf-find-08
+  name: "Find 0.8% (Pareto ao Cubo)"
+  version: "1.0.0"
+  description: >
+    Apply Pareto ao Cubo to map activities/knowledge into 4 zones and prioritize
+    what matters. Triple 80/20: 20% -> 4% -> 0.8% generating ~51% of results.
+    Hierarchy: ELIMINA (80%) -> AUTOMATIZA (restante) -> AMPLIFICA (0.8%).
+  type: orchestration
+  command: "*find-0-8 {activities}"
+  state_machine:
+    states: [init, classify, recommend, complete, failed]
+    transitions:
+      - trigger: start
+        source: init
+        dest: classify
+      - trigger: classify_complete
+        source: classify
+        dest: recommend
+      - trigger: classify_failed
+        source: classify
+        dest: failed
+      - trigger: recommend_complete
+        source: recommend
+        dest: complete
+      - trigger: recommend_failed
+        source: recommend
+        dest: failed
+      - trigger: fail
+        source: "*"
+        dest: failed
+  sequence:
+    - step: classify
+      id: classify
+      phase: 1
+      phase_name: CLASSIFY ACTIVITIES
+      agent: squad-chief
+      task_ref: find-0-8-classify
+      action: execute_apply_4_zones_and_checklist_lendario
+      description: Apply 4 zones + Checklist Lendario decision flow to classify activities
+      inputs:
+        - activities_list
+      outputs:
+        - classified_activities
+      next: recommend
+    - step: recommend
+      id: recommend
+      phase: 2
+      phase_name: RECOMMEND ACTIONS
+      agent: squad-chief
+      task_ref: find-0-8-recommend
+      action: execute_generate_action_recommendations
+      description: Generate action recommendations per zone (eliminate/automate/delegate/protect)
+      inputs:
+        - classified_activities
+      outputs:
+        - action_plan
+        - report_yaml
+    - workflow_end:
+        id: complete
+        action: workflow_complete
+  inputs:
+    required:
+      - name: activities_list
+        type: array
+        description: List of activities/knowledge areas to classify
+  outputs:
+    primary:
+      - classified_activities
+      - action_plan
+      - report_yaml

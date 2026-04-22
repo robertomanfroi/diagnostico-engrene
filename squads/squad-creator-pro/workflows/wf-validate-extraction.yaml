@@ -1,0 +1,111 @@
+workflow:
+  id: wf-validate-extraction
+  name: Validate Extraction Quality
+  version: "1.0.0"
+  description: >
+    Self-validation gate with 11-point checklist and adversarial tests before
+    handoff to @pedro-valerio. If it fails, LOOP -- do not handoff.
+  type: orchestration
+  command: "*validate-extraction {expert_name}"
+  state_machine:
+    states: [init, run-checklist, adversarial-tests, gate-decision, complete, failed]
+    transitions:
+      - trigger: start
+        source: init
+        dest: run-checklist
+      - trigger: run_checklist_complete
+        source: run-checklist
+        dest: adversarial-tests
+      - trigger: run_checklist_failed
+        source: run-checklist
+        dest: failed
+      - trigger: adversarial_tests_complete
+        source: adversarial-tests
+        dest: gate-decision
+      - trigger: adversarial_tests_failed
+        source: adversarial-tests
+        dest: failed
+      - trigger: gate_decision_pass
+        source: gate-decision
+        dest: complete
+      - trigger: gate_decision_loop
+        source: gate-decision
+        dest: run-checklist
+      - trigger: gate_decision_failed
+        source: gate-decision
+        dest: failed
+      - trigger: fail
+        source: "*"
+        dest: failed
+  sequence:
+    - step: run-checklist
+      id: run-checklist
+      phase: 1
+      phase_name: 11-POINT CHECKLIST
+      agent: squad-chief
+      task_ref: validate-extraction-checklist
+      action: execute_run_11_point_checklist
+      description: Run 11-point extraction quality checklist
+      inputs:
+        - expert_name
+        - extraction_files
+      outputs:
+        - checklist_results
+      next: adversarial-tests
+    - step: adversarial-tests
+      id: adversarial-tests
+      phase: 2
+      phase_name: ADVERSARIAL TESTS
+      agent: squad-chief
+      task_ref: validate-extraction-adversarial
+      action: execute_cross_source_and_adversarial
+      description: Cross-source verification and adversarial pattern testing
+      inputs:
+        - checklist_results
+        - extraction_files
+      outputs:
+        - adversarial_results
+        - cross_source_patterns
+      next: gate-decision
+    - step: gate-decision
+      id: gate-decision
+      phase: 3
+      phase_name: GATE DECISION
+      agent: squad-chief
+      task_ref: validate-extraction-gate
+      action: execute_gate_decision_and_handoff
+      description: Determine PASS/LOOP decision and prepare handoff package
+      inputs:
+        - checklist_results
+        - adversarial_results
+      outputs:
+        - validation_report
+        - gate_decision
+    - workflow_end:
+        id: complete
+        action: workflow_complete
+  inputs:
+    required:
+      - name: expert_name
+        type: string
+        description: Nome do expert avaliado
+      - name: extraction_files
+        type: array
+        description: Arquivos de extracao a validar
+  outputs:
+    primary:
+      - validation_report
+      - gate_decision
+
+  quality_gates:
+    - id: SCP_VEX_001
+      phase: gate-decision
+      type: automated
+      placement: exit
+      severity: blocking
+      description: "Extraction validation gate — 11-point checklist + adversarial tests must pass"
+      criteria:
+        - field: gate_decision
+          operator: "in"
+          value: ["PASS", "PASS_WITH_CAVEATS"]
+      on_fail: loop_to_extraction

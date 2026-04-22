@@ -1,0 +1,104 @@
+workflow:
+  id: wf-collect-sources
+  name: Collect Sources Pipeline
+  version: "1.0.0"
+  description: Canonical atomic pipeline for collecting, classifying, validating and qualifying source material before DNA extraction.
+  type: orchestration
+  state_machine:
+    states: [init, discover, classify, validate, gap-analysis, quality-gate, complete, failed]
+    transitions:
+      - trigger: start
+        source: init
+        dest: discover
+      - trigger: discover_complete
+        source: discover
+        dest: classify
+      - trigger: discover_failed
+        source: discover
+        dest: failed
+      - trigger: classify_complete
+        source: classify
+        dest: validate
+      - trigger: classify_failed
+        source: classify
+        dest: failed
+      - trigger: validate_complete
+        source: validate
+        dest: gap-analysis
+      - trigger: validate_failed
+        source: validate
+        dest: failed
+      - trigger: gap_analysis_complete
+        source: gap-analysis
+        dest: quality-gate
+      - trigger: gap_analysis_failed
+        source: gap-analysis
+        dest: failed
+      - trigger: quality_gate_complete
+        source: quality-gate
+        dest: complete
+      - trigger: quality_gate_failed
+        source: quality-gate
+        dest: failed
+      - trigger: fail
+        source: "*"
+        dest: failed
+  sequence:
+    - step: discover
+      id: discover
+      phase: 1
+      phase_name: Discover Sources
+      agent: "@squad-chief"
+      action: execute_collect_sources_discover
+      task_ref: collect-sources-discover
+      next: classify
+    - step: classify
+      id: classify
+      phase: 2
+      phase_name: Classify Sources
+      agent: "@squad-chief"
+      action: execute_collect_sources_classify
+      task_ref: collect-sources-classify
+      next: validate
+    - step: validate
+      id: validate
+      phase: 3
+      phase_name: Validate Coverage
+      agent: "@squad-chief"
+      action: execute_collect_sources_validate
+      task_ref: collect-sources-validate
+      next: gap-analysis
+    - step: gap-analysis
+      id: gap-analysis
+      phase: 4
+      phase_name: Gap Analysis
+      agent: "@squad-chief"
+      action: execute_collect_sources_gap_analysis
+      task_ref: collect-sources-gap-analysis
+      next: quality-gate
+    - step: quality-gate
+      id: quality-gate
+      phase: 5
+      phase_name: Quality Gate
+      agent: "@squad-chief"
+      action: execute_collect_sources_quality_gate
+      task_ref: collect-sources-quality-gate
+    - workflow_end:
+        id: complete
+        action: workflow_complete
+
+  quality_gates:
+    - id: SCP_COL_001
+      phase: quality-gate
+      type: automated
+      placement: exit
+      severity: blocking
+      description: "Source collection must pass coverage and quality thresholds"
+      criteria:
+        - field: sources_discovered
+          operator: ">="
+          value: 5
+        - field: coverage_adequate
+          operator: "=="
+          value: true
+      on_fail: block

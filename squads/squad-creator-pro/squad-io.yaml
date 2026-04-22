@@ -1,0 +1,49 @@
+# Squad IO Contract — squad-creator-pro
+# Story: 55.15 | Date: 2026-03-24
+
+inputs:
+  - "Squad requirements (domain, capabilities)"
+  - "Mind clone DNA (from mmos)"
+  - "Governance process output (from governance-squad)"
+  - "Strategy/monetization context"
+
+outputs:
+  - "Squad config.yaml"
+  - "Agent definition files (.md)"
+  - "Squad validation report"
+  - "Ecosystem registry update"
+
+triggers:
+  - "Manual activation via @squad-chief"
+  - "Handoff from governance-squad (process mode)"
+  - "Handoff from mmos (mind clone ready)"
+
+dependencies:
+  - ".aiox-core/ (framework configuration)"
+  - "squads/squad-creator/ (base mode fallback)"
+
+artifacts_produced:
+  - "squad-config"
+  - "agent-definition"
+  - "squad-validation-report"
+
+artifacts_consumed:
+  - "governance-process-output (from governance-squad)"
+  - "mind-clone-dna (from mmos)"
+  - "process-blueprint (from process-excellence-squad)"
+
+data_sources:
+  - "squads/squad-creator-pro/data/squad-registry.yaml"
+  - "squads/squad-creator-pro/data/"
+
+integrations:
+  - squad: governance-squad
+    type: upstream
+    purpose: "Receives governance process output"
+  - squad: mmos
+    type: upstream
+    purpose: "Receives mind clone DNA"
+
+observability:
+  quality_threshold: 8.5
+  ecosystem_report: true

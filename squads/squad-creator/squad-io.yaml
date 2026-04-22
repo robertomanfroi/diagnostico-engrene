@@ -1,0 +1,71 @@
+# Squad IO Contract — squad-creator
+# Story: 55.15 | Date: 2026-03-24
+
+inputs:
+  - "Squad requirements (domain, capabilities)"
+  - "Template selection (base mode)"
+  - "Ecosystem context"
+
+outputs:
+  - "Squad config.yaml (template-driven)"
+  - "Agent persona files (.md)"
+  - "Ecosystem report"
+
+triggers:
+  - "Manual activation via @squad-chief"
+  - "Template-driven squad creation request"
+
+dependencies:
+  - "squads/squad-creator-pro/ (pro mode auto-detection)"
+
+artifact_contracts:
+  - artifact_id: "squad-config-base"
+    template_path: "squads/squad-creator/templates/config-tmpl.yaml"
+    producer_task: "create-squad-design"
+    validator_task: "validate-final-artifacts"
+    lifecycle_states: [draft, validated, approved]
+    schema:
+      required_fields: [pack, agents, capabilities, activation]
+      optional_fields: [artifact_contracts, bu_mapping, supported_modes, workspace_integration]
+
+  - artifact_id: "agent-persona"
+    template_path: "squads/squad-creator/templates/agent-tmpl.md"
+    producer_task: "create-agent-generate"
+    validator_task: "qa-check-completeness"
+    lifecycle_states: [draft, validated, approved]
+    schema:
+      required_fields: [agent.id, agent.name, persona, commands]
+      optional_fields: [specialist_guidance, memory]
+
+  - artifact_id: "squad-workflow"
+    template_path: "squads/squad-creator/templates/workflow-tmpl.yaml"
+    producer_task: "create-workflow-generate"
+    validator_task: "qa-check-schema"
+    lifecycle_states: [draft, validated, approved]
+    schema:
+      required_fields: [workflow.id, workflow.phases]
+      optional_fields: [workflow.quality_gates, workflow.handoffs]
+
+  - artifact_id: "squad-task-definition"
+    template_path: "squads/squad-creator/templates/task-tmpl.md"
+    producer_task: "create-task-generate"
+    validator_task: "create-task-validate"
+    lifecycle_states: [draft, validated, approved]
+    schema:
+      required_fields: [id, execution_type, inputs, outputs, acceptance_criteria, accountability]
+      optional_fields: [domain, estimated_time, dependencies]
+
+artifacts_consumed: []
+
+data_sources:
+  - "squads/squad-creator/data/"
+  - "squads/squad-creator/templates/"
+
+integrations:
+  - squad: squad-creator-pro
+    type: sibling
+    purpose: "Pro mode extends base with mind cloning"
+
+observability:
+  quality_threshold: 8.5
+  score: 9.0

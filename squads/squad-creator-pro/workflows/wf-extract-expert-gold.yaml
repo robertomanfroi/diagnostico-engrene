@@ -1,0 +1,101 @@
+workflow:
+  id: wf-extract-expert-gold
+  name: Extract Expert Gold Pipeline
+  version: "1.0.0"
+  description: Canonical atomic pipeline for enriching squad knowledge from expert transcripts through context load, multi-lense extraction, filtering, enrichment and validation.
+  type: orchestration
+  state_machine:
+    states: [init, context-load, multi-lense, gold-filter, enrichment, validation, complete, failed]
+    transitions:
+      - trigger: start
+        source: init
+        dest: context-load
+      - trigger: context_load_complete
+        source: context-load
+        dest: multi-lense
+      - trigger: context_load_failed
+        source: context-load
+        dest: failed
+      - trigger: multi_lense_complete
+        source: multi-lense
+        dest: gold-filter
+      - trigger: multi_lense_failed
+        source: multi-lense
+        dest: failed
+      - trigger: gold_filter_complete
+        source: gold-filter
+        dest: enrichment
+      - trigger: gold_filter_failed
+        source: gold-filter
+        dest: failed
+      - trigger: enrichment_complete
+        source: enrichment
+        dest: validation
+      - trigger: enrichment_failed
+        source: enrichment
+        dest: failed
+      - trigger: validation_complete
+        source: validation
+        dest: complete
+      - trigger: validation_failed
+        source: validation
+        dest: failed
+      - trigger: fail
+        source: "*"
+        dest: failed
+  sequence:
+    - step: context-load
+      id: context-load
+      phase: 1
+      phase_name: Context Load
+      agent: "@squad-chief"
+      action: execute_extract_expert_gold_context_load
+      task_ref: extract-expert-gold-context-load
+      next: multi-lense
+    - step: multi-lense
+      id: multi-lense
+      phase: 2
+      phase_name: Multi-Lense Extraction
+      agent: "@squad-chief"
+      action: execute_extract_expert_gold_multi_lense
+      task_ref: extract-expert-gold-multi-lense
+      next: gold-filter
+    - step: gold-filter
+      id: gold-filter
+      phase: 3
+      phase_name: Gold Filter
+      agent: "@squad-chief"
+      action: execute_extract_expert_gold_filter
+      task_ref: extract-expert-gold-filter
+      next: enrichment
+    - step: enrichment
+      id: enrichment
+      phase: 4
+      phase_name: Enrichment
+      agent: "@squad-chief"
+      action: execute_extract_expert_gold_enrichment
+      task_ref: extract-expert-gold-enrichment
+      next: validation
+    - step: validation
+      id: validation
+      phase: 5
+      phase_name: Validation
+      agent: "@squad-chief"
+      action: execute_extract_expert_gold_validation
+      task_ref: extract-expert-gold-validation
+    - workflow_end:
+        id: complete
+        action: workflow_complete
+
+  quality_gates:
+    - id: SCP_EGD_001
+      phase: validation
+      type: automated
+      placement: exit
+      severity: blocking
+      description: "Expert gold extraction must pass multi-lense validation"
+      criteria:
+        - field: gold_validated
+          operator: "=="
+          value: true
+      on_fail: block

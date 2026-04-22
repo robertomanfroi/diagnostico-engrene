@@ -1,0 +1,138 @@
+workflow:
+  id: wf-create-workflow
+  name: Create Squad Workflow Pipeline
+  version: 1.0.0
+  description: Orchestrates 3 composed tasks to create multi-phase workflows that orchestrate complex operations across agents. Covers classification, design (phases + task binding + quality gates), and generation (+ registration).
+  type: orchestration
+  agent_mapping:
+    agents:
+      squad-chief: orchestrator
+    phase_ownership:
+      classify: squad-chief
+      design: squad-chief
+      generate: squad-chief
+  state_machine:
+    states:
+      - init
+      - classify
+      - design
+      - generate
+      - complete
+      - failed
+    transitions:
+      - trigger: start
+        source: init
+        dest: classify
+      - trigger: classify_complete
+        source: classify
+        dest: design
+      - trigger: classify_redirect
+        source: classify
+        dest: failed
+        reason: should_be_task
+      - trigger: design_complete
+        source: design
+        dest: generate
+      - trigger: design_failed
+        source: design
+        dest: failed
+      - trigger: generate_complete
+        source: generate
+        dest: complete
+      - trigger: generate_failed
+        source: generate
+        dest: design
+        max_retries: 2
+      - trigger: fail
+        source: "*"
+        dest: failed
+  sequence:
+    - phase: classify
+      id: classify
+      agent: squad-chief
+      task_ref: create-workflow-classify
+      action: classify_workflow
+      description: Determine Workflow vs Task, define identity and scope
+      inputs:
+        - workflow_purpose
+        - squad_name
+      outputs:
+        - classification_result
+        - workflow_identity
+        - workflow_scope
+      heuristic: SC_WFL_PRE
+    - phase: design
+      id: design
+      agent: squad-chief
+      task_ref: create-workflow-design
+      action: design_phases_tasks_and_gates
+      description: Design workflow phases with tiers, assign agents with task_ref bindings, define checkpoints and error handling
+      blocking: true
+      inputs:
+        - workflow_identity
+        - workflow_scope
+        - squad_name
+      outputs:
+        - phase_definitions
+        - phase_tiers
+        - inline_structures
+        - agent_assignments
+        - task_ref_bindings
+        - handoff_definitions
+        - synergy_map
+        - checkpoint_definitions
+        - veto_conditions
+        - error_handling_config
+      heuristic: SC_PHS_001
+      on_pass:
+        trigger: design_complete
+      on_fail:
+        trigger: design_failed
+    - phase: generate
+      id: generate
+      agent: squad-chief
+      task_ref: create-workflow-generate
+      action: generate_and_register_workflow
+      description: Generate YAML workflow file from template, run SC_WFL_001 quality gate, register in config.yaml and README
+      blocking: true
+      inputs:
+        - workflow_identity
+        - phase_definitions
+        - task_ref_bindings
+        - checkpoint_definitions
+        - veto_conditions
+        - error_handling_config
+        - squad_name
+      outputs:
+        - workflow_file_path
+        - workflow_file_content
+        - validation_result
+        - updated_config
+        - updated_readme
+        - handoff_summary
+      heuristic: SC_WFL_001
+      on_pass:
+        trigger: generate_complete
+      on_fail:
+        trigger: generate_failed
+        action: fix_and_retry
+        max_iterations: 2
+  error_handling:
+    on_error:
+      - save_state
+      - log_error
+    recovery:
+      enabled: true
+      strategy: resume_from_last_complete
+    redirects:
+      should_be_task: "Redirect to *create-task"
+      fewer_than_3_phases: "Suggest combining phases or using task instead"
+      agent_not_in_squad: "Create agent or reassign to existing"
+  resume:
+    state_file: .aiox/squad-runtime/create-workflow/{squad_name}/state.json
+    supported: true
+    preserve_outputs: true
+    allowed_phases:
+      - classify
+      - design
+      - generate

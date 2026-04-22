@@ -1,0 +1,57 @@
+time:
+  - benchmark_window
+capacity:
+  - max_parallel_subjects
+threshold:
+  - benchmark_quality_gate
+priority:
+  - subject_priority
+permission:
+  - source_access_scope
+taxonomy:
+  - comparison_type
+behavior:
+  - fail_loud_publish
+accountability:
+  - spy_operator_approval
+mode:
+  - ENTENDER
+  - EXPLORAR
+
+tokens:
+  - token_name: benchmark_window
+    family: Time
+    semantic: "Janela temporal usada para recorte de evidências"
+  - token_name: max_parallel_subjects
+    family: Capacity
+    semantic: "Número máximo de sujeitos processados em paralelo"
+  - token_name: benchmark_quality_gate
+    family: Threshold
+    semantic: "Threshold principal para benchmark aprovado"
+  - token_name: subject_priority
+    family: Priority
+    semantic: "Prioridade relativa entre subjects e fontes"
+  - token_name: source_access_scope
+    family: Permission
+    semantic: "Escopo permitido de acesso a dados e repositórios"
+  - token_name: comparison_type
+    family: Taxonomy
+    semantic: "Tipo canônico de comparação benchmark"
+  - token_name: fail_loud_publish
+    family: Behavior
+    semantic: "Comportamento de falha explícita na publicação"
+  - token_name: spy_operator_approval
+    family: Accountability
+    semantic: "Aprovação humana obrigatória para publicação crítica"
+  - token_name: ENTENDER
+    family: Mode
+    semantic: "Modo de entendimento profundo"
+  - token_name: EXPLORAR
+    family: Mode
+    semantic: "Modo de exploração comparativa"
+  - token_name: benchmark_evidence_pack
+    family: Behavior
+    semantic: "Pacote rastreável de evidências por benchmark"
+  - token_name: report_release_gate
+    family: Threshold
+    semantic: "Gate final para relatório executivo"

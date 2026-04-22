@@ -1,0 +1,148 @@
+workflow:
+  id: wf-deep-research
+  name: Deep Research Pre-Agent
+  version: "1.0.0"
+  description: >
+    Generate a comprehensive deep research prompt and execute research to establish
+    the knowledge foundation BEFORE creating an agent. Ensures agents are built on
+    REAL methodologies from domain experts, not generic LLM knowledge.
+  type: orchestration
+  command: "*deep-research {agent_purpose} {domain}"
+  state_machine:
+    states: [init, check-local-knowledge, generate-prompt, execute-research, validate-research, complete, failed]
+    transitions:
+      - trigger: start
+        source: init
+        dest: check-local-knowledge
+      - trigger: check_local_knowledge_complete
+        source: check-local-knowledge
+        dest: generate-prompt
+      - trigger: check_local_knowledge_skipped
+        source: check-local-knowledge
+        dest: generate-prompt
+      - trigger: check_local_knowledge_failed
+        source: check-local-knowledge
+        dest: failed
+      - trigger: generate_prompt_complete
+        source: generate-prompt
+        dest: execute-research
+      - trigger: generate_prompt_failed
+        source: generate-prompt
+        dest: failed
+      - trigger: execute_research_complete
+        source: execute-research
+        dest: validate-research
+      - trigger: execute_research_failed
+        source: execute-research
+        dest: failed
+      - trigger: validate_research_complete
+        source: validate-research
+        dest: complete
+      - trigger: validate_research_retry
+        source: validate-research
+        dest: execute-research
+      - trigger: validate_research_failed
+        source: validate-research
+        dest: failed
+      - trigger: fail
+        source: "*"
+        dest: failed
+  sequence:
+    - step: check-local-knowledge
+      id: check-local-knowledge
+      phase: 1
+      phase_name: CHECK LOCAL KNOWLEDGE
+      agent: squad-chief
+      task_ref: deep-research-check-local-knowledge
+      action: execute_search_mmos_and_catalog
+      description: Search MMOS, catalog resources, determine research mode
+      condition: specialist_slug provided
+      inputs:
+        - specialist_slug
+        - domain
+      outputs:
+        - local_catalog
+        - research_mode
+        - research_note
+      next: generate-prompt
+    - step: generate-prompt
+      id: generate-prompt
+      phase: 2
+      phase_name: GENERATE PROMPT
+      agent: squad-chief
+      task_ref: deep-research-generate-prompt
+      action: execute_generate_7_component_prompt
+      description: Generate 7-component research prompt
+      inputs:
+        - agent_purpose
+        - domain
+        - local_catalog
+      outputs:
+        - research_prompt
+      next: execute-research
+    - step: execute-research
+      id: execute-research
+      phase: 3
+      phase_name: EXECUTE RESEARCH
+      agent: squad-chief
+      task_ref: deep-research-execute
+      action: execute_process_local_and_web_research
+      description: Process local + web research, produce research document
+      inputs:
+        - research_prompt
+        - research_mode
+      outputs:
+        - research_document
+      next: validate-research
+    - step: validate-research
+      id: validate-research
+      phase: 4
+      phase_name: VALIDATE RESEARCH
+      agent: squad-chief
+      task_ref: deep-research-validate
+      action: execute_score_quality_and_retry
+      description: Score quality, retry if < 60% (max 2 retries)
+      inputs:
+        - research_document
+      outputs:
+        - quality_score
+        - validated_research
+    - workflow_end:
+        id: complete
+        action: workflow_complete
+  inputs:
+    required:
+      - name: agent_purpose
+        type: string
+        description: What the agent should do
+      - name: domain
+        type: string
+        description: Area of expertise
+      - name: activity
+        type: string
+        description: Specific activity
+    optional:
+      - name: specialist_slug
+        type: string
+        description: If based on human expert
+      - name: specialist_name
+        type: string
+        description: Human-readable name
+  outputs:
+    primary:
+      - research_document
+      - quality_score
+
+  quality_gates:
+    - id: SCP_DRS_001
+      phase: validate
+      type: automated
+      placement: exit
+      severity: blocking
+      description: "Research quality must meet minimum threshold"
+      criteria:
+        - field: quality_score
+          operator: ">="
+          value: 7.0
+      on_fail: retry
+      max_retries: 2

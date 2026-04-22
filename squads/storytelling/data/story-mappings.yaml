@@ -1,0 +1,200 @@
+# Story Mappings — Canonical Vocabulary
+# Translation tables for refining vague narrative requests into professional storytelling terminology.
+# All storytelling squad agents should consult this file before generating output.
+#
+# Based on: Stitch design-mappings pattern (google-labs-code/stitch-skills)
+# Extended with: Campbell, Duarte, StoryBrand, Story Grid, ABT, Ganz
+#
+# Epic: epic-cross-squad-prompt-consistency (Story 5)
+# Version: 1.0.0
+
+metadata:
+  version: "1.0.0"
+  squad: "storytelling"
+  created: "2026-03-23"
+
+# ═══════════════════════════════════════════════════════════════════════════
+# TABLE 1: Narrative Terms
+# Translates vague story requests into professional narrative terminology.
+# ═══════════════════════════════════════════════════════════════════════════
+narrative_terms:
+  - vague: "conta uma historia"
+    enhanced: "structured narrative with hook, rising action, climax, and resolution tied to a clear lesson"
+  - vague: "tell a story"
+    enhanced: "structured narrative with hook, rising action, climax, and resolution tied to a clear lesson"
+  - vague: "apresentacao"
+    enhanced: "persuasive presentation with sparkline structure (what is vs. what could be) and clear call to action"
+  - vague: "pitch"
+    enhanced: "high-stakes pitch with frame control, status alignment, and time-constrained narrative arc"
+  - vague: "discurso"
+    enhanced: "leadership speech with story of self, story of us, and story of now (Ganz public narrative)"
+  - vague: "roteiro"
+    enhanced: "screenplay structure with 15 beats (Save the Cat), clear genre conventions, and emotional turning points"
+  - vague: "jornada do heroi"
+    enhanced: "17-stage monomyth with departure, initiation, and return arcs (Campbell hero's journey)"
+  - vague: "brand story"
+    enhanced: "StoryBrand 7-part framework: character, problem (3 levels), guide, plan, call to action, failure, success"
+  - vague: "elevator pitch"
+    enhanced: "ABT structure: [situation] AND [complication] BUT [resolution] in 30 seconds or less"
+  - vague: "começo"
+    enhanced: "opening hook: 5-second moment that creates curiosity gap or emotional entry point"
+  - vague: "conflito"
+    enhanced: "rising tension through progressive complications, stakes escalation, and obstacle mounting"
+  - vague: "final"
+    enhanced: "resolution with transformation reveal, lesson crystallization, and callback to opening"
+  - vague: "personagem"
+    enhanced: "character with clear want (external), need (internal), wound (backstory), and transformation arc"
+  - vague: "mensagem"
+    enhanced: "controlling idea: one-sentence theme that the story proves through its climax"
+  - vague: "engajamento"
+    enhanced: "audience engagement through status transactions, pattern interrupts, and participatory moments"
+  - vague: "improviso"
+    enhanced: "spontaneous narrative using 'yes and' principle, status play, and Johnstone's improv techniques"
+  - vague: "storytelling de dados"
+    enhanced: "data narrative with SlideDocs structure: context, insight, implication, action"
+  - vague: "caso de sucesso"
+    enhanced: "customer success story: situation (before), struggle (obstacle), solution (turning point), success (measurable result)"
+
+# ═══════════════════════════════════════════════════════════════════════════
+# TABLE 2: Framework Selector
+# Maps objectives to the recommended storytelling framework.
+# ═══════════════════════════════════════════════════════════════════════════
+framework_selector:
+  - objective: "vender produto/servico"
+    framework: "StoryBrand (Donald Miller)"
+    agent: "donald-miller"
+    reason: "Positions the customer as the hero, brand as the guide. Clear CTA structure."
+
+  - objective: "pitch de investimento"
+    framework: "Pitch Anything (Oren Klaff)"
+    agent: "oren-klaff"
+    reason: "Frame control, status alignment, and time-constrained narrative for high-stakes pitches."
+
+  - objective: "apresentacao executiva"
+    framework: "Resonate (Nancy Duarte)"
+    agent: "nancy-duarte"
+    reason: "Sparkline structure (what is vs. what could be) for persuasive business presentations."
+
+  - objective: "mobilizar equipe/comunidade"
+    framework: "Public Narrative (Marshall Ganz)"
+    agent: "marshall-ganz"
+    reason: "Story of Self, Story of Us, Story of Now for leadership and movement building."
+
+  - objective: "historia pessoal/keynote"
+    framework: "Storyworthy (Matthew Dicks)"
+    agent: "matthew-dicks"
+    reason: "5-second moment technique for finding and crafting compelling personal stories."
+
+  - objective: "roteiro de video/serie"
+    framework: "Save the Cat (Blake Snyder)"
+    agent: "blake-snyder"
+    reason: "15 beats structure for commercially viable screenplays and video content."
+
+  - objective: "diagnostico de estrutura narrativa"
+    framework: "Story Grid (Shawn Coyne)"
+    agent: "shawn-coyne"
+    reason: "Analytical framework for diagnosing structural problems in existing narratives."
+
+  - objective: "comunicacao rapida (30s-2min)"
+    framework: "ABT (Park Howell)"
+    agent: "park-howell"
+    reason: "And-But-Therefore structure for concise, impactful business communication."
+
+  - objective: "conteudo episodico/serie"
+    framework: "Story Circle (Dan Harmon)"
+    agent: "dan-harmon"
+    reason: "8-step circular structure for episodic content and recurring narratives."
+
+  - objective: "jornada epica/transformacao profunda"
+    framework: "Hero's Journey (Joseph Campbell)"
+    agent: "joseph-campbell"
+    reason: "17-stage monomyth for deep transformation narratives and brand mythologies."
+
+  - objective: "desbloqueio criativo"
+    framework: "Impro (Keith Johnstone)"
+    agent: "keith-johnstone"
+    reason: "Status transactions and spontaneity for unlocking creative blocks."
+
+  - objective: "storytelling de negocio/marca"
+    framework: "Stories That Stick (Kindra Hall)"
+    agent: "kindra-hall"
+    reason: "4 story types (value, founder, purpose, customer) for strategic business storytelling."
+
+# ═══════════════════════════════════════════════════════════════════════════
+# TABLE 3: Story Elements
+# Translates generic narrative elements into specific, actionable components.
+# ═══════════════════════════════════════════════════════════════════════════
+story_elements:
+  hook:
+    - type: "curiosity gap"
+      description: "Open a question the audience MUST have answered"
+      example: "The day I almost lost everything, I learned the one thing that actually matters."
+    - type: "in medias res"
+      description: "Start in the middle of the action"
+      example: "The phone rang at 3am. I already knew what it meant."
+    - type: "provocative statement"
+      description: "Challenge a belief the audience holds"
+      example: "Everything you know about leadership is wrong."
+    - type: "5-second moment"
+      description: "Start at the exact moment of transformation (Dicks technique)"
+      example: "I was standing in the parking lot when I realized I would never go back."
+    - type: "status transaction"
+      description: "Establish status dynamic between characters (Johnstone)"
+      example: "He looked at me like I was the help. I was the CEO."
+
+  structure:
+    - type: "3-act"
+      description: "Setup, Confrontation, Resolution"
+    - type: "5-act"
+      description: "Exposition, Rising Action, Climax, Falling Action, Denouement"
+    - type: "sparkline"
+      description: "Alternating 'what is' and 'what could be' (Duarte)"
+    - type: "ABT"
+      description: "And (agreement), But (contradiction), Therefore (consequence)"
+    - type: "story circle"
+      description: "You, Need, Go, Search, Find, Take, Return, Change (Harmon)"
+
+  climax:
+    - type: "revelation"
+      description: "Hidden truth is revealed that reframes everything"
+    - type: "choice"
+      description: "Character must choose between two irreconcilable values"
+    - type: "sacrifice"
+      description: "Character gives up something valued to gain something greater"
+    - type: "transformation"
+      description: "Character becomes fundamentally different (identity shift)"
+
+# ═══════════════════════════════════════════════════════════════════════════
+# TABLE 4: Audience Context
+# Maps audience type to storytelling approach.
+# ═══════════════════════════════════════════════════════════════════════════
+audience_context:
+  - audience: "investors"
+    approach: "Lead with traction, frame problem as market opportunity, end with vision and ask"
+    avoid: "Emotional stories without data backing, long personal narratives"
+    framework_hint: "oren-klaff or nancy-duarte"
+
+  - audience: "customers"
+    approach: "Position them as hero, show transformation through social proof, clear CTA"
+    avoid: "Company-centric language, features without benefits"
+    framework_hint: "donald-miller or kindra-hall"
+
+  - audience: "employees/team"
+    approach: "Story of us, shared values, collective challenge, agency and urgency"
+    avoid: "Top-down directives, empty inspiration without action steps"
+    framework_hint: "marshall-ganz or nancy-duarte"
+
+  - audience: "conference/keynote"
+    approach: "Personal vulnerability, universal lesson, memorable 5-second moment"
+    avoid: "Corporate jargon, death by slides, no personal stake"
+    framework_hint: "matthew-dicks or nancy-duarte"
+
+  - audience: "social media"
+    approach: "Hook in first 3 seconds, ABT structure, end with shareable insight"
+    avoid: "Long setup, burying the hook, no visual anchor"
+    framework_hint: "park-howell or dan-harmon"
+
+  - audience: "students/learners"
+    approach: "Discovery-based narrative, Socratic questioning, progressive revelation"
+    avoid: "Lecturing, telling without showing, no participation"
+    framework_hint: "keith-johnstone or joseph-campbell"

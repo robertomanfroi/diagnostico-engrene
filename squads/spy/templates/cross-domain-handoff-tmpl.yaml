@@ -1,0 +1,9 @@
+handoff:
+  id: spy-cross-domain-handoff
+  version: 1.0.0
+  from_domain: Strategic
+  to_domain: Tactical
+  context_summary: ""
+  evidence_paths: []
+  blocking_risks: []
+  next_action: ""

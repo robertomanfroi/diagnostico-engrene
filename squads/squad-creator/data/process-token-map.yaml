@@ -1,0 +1,225 @@
+meta:
+  id: base-process-token-map
+  version: 1.0.0
+  scope: squad-creator-base-core
+  purpose: >-
+    Contrato local dos tokens de processo do squad-creator base. Explicita
+    produtor, consumidores e semântica operacional sem depender do output formal
+    de governança durante a execução cotidiana do squad.
+  reconciled_from:
+    local_contract: "data/base-core-contract.yaml"
+    reconciled_at: "2026-03-27"
+
+rules:
+  - "Todo token deve declarar produtor formal e consumidores explícitos."
+  - "Tokens terminais podem ter consumed_by vazio."
+  - "O contrato local descreve apenas o fluxo operacional do base."
+
+time:
+  - creation_window
+capacity:
+  - max_parallel_generations
+threshold:
+  - viability_gate
+priority:
+  - route_priority
+permission:
+  - workspace_read_scope
+taxonomy:
+  - base_governance_token
+behavior:
+  - fallback_recovery_mode
+accountability:
+  - squad_operator_accountability
+mode:
+  - criar
+  - configurar
+  - validar
+
+tokens:
+  - token_name: base_governance_token
+    token_type: Taxonomy
+    producer_contract_id: scb-atm-001
+    consumed_by: [scb-atm-002]
+    domain: Strategic
+    semantic: "Contrato base carregado e modo base ativo."
+  - token_name: route_decision_token
+    token_type: Control
+    producer_contract_id: scb-atm-002
+    consumed_by: [scb-atm-003, scb-atm-009, scb-atm-010, scb-atm-011, scb-atm-012, scb-atm-014, scb-atm-015, scb-atm-016, scb-atm-018]
+    domain: Tactical
+    semantic: "Rota canônica escolhida para o comando atual."
+  - token_name: discovery_packet_token
+    token_type: Discovery
+    producer_contract_id: scb-atm-003
+    consumed_by: [scb-atm-004]
+    domain: Tactical
+    semantic: "Pacote de descoberta consolidado para criação de squad."
+  - token_name: squad_blueprint_token
+    token_type: Planning
+    producer_contract_id: scb-atm-004
+    consumed_by: [scb-atm-005, scb-atm-006]
+    domain: Tactical
+    semantic: "Blueprint aprovado do squad a ser criado."
+  - token_name: scaffold_ready_token
+    token_type: Artifact
+    producer_contract_id: scb-atm-005
+    consumed_by: [scb-atm-006]
+    domain: Operational
+    semantic: "Estrutura inicial do squad pronta para receber componentes."
+  - token_name: component_bundle_token
+    token_type: Artifact
+    producer_contract_id: scb-atm-006
+    consumed_by: [scb-atm-007]
+    domain: Operational
+    semantic: "Pacote de agentes, tasks e workflows gerado."
+  - token_name: integrated_squad_token
+    token_type: Artifact
+    producer_contract_id: scb-atm-007
+    consumed_by: [scb-atm-008]
+    domain: Operational
+    semantic: "Squad integrado e pronto para validação estrutural."
+  - token_name: created_squad_validation_token
+    token_type: Validation
+    producer_contract_id: scb-atm-008
+    consumed_by: [scb-atm-013, scb-atm-014, scb-atm-019]
+    domain: Operational
+    semantic: "Resultado da validação do squad recém-criado."
+  - token_name: agent_factory_token
+    token_type: Artifact
+    producer_contract_id: scb-atm-009
+    consumed_by: [scb-atm-013]
+    domain: Operational
+    semantic: "Saída da fábrica canônica de agents."
+  - token_name: task_factory_token
+    token_type: Artifact
+    producer_contract_id: scb-atm-010
+    consumed_by: [scb-atm-013]
+    domain: Operational
+    semantic: "Saída da fábrica canônica de tasks."
+  - token_name: workflow_factory_token
+    token_type: Artifact
+    producer_contract_id: scb-atm-011
+    consumed_by: [scb-atm-013]
+    domain: Operational
+    semantic: "Saída da fábrica canônica de workflows."
+  - token_name: validation_report_token
+    token_type: Validation
+    producer_contract_id: scb-atm-012
+    consumed_by: [scb-atm-017, scb-atm-019]
+    domain: Tactical
+    semantic: "Relatório estruturado da validação de squad."
+  - token_name: qa_verdict_token
+    token_type: Validation
+    producer_contract_id: scb-atm-013
+    consumed_by: [scb-atm-019]
+    domain: Tactical
+    semantic: "Veredito pós-criação consolidado."
+  - token_name: ide_installation_token
+    token_type: Installation
+    producer_contract_id: scb-atm-014
+    consumed_by: [scb-atm-019]
+    domain: Operational
+    semantic: "Comandos instalados e sincronizados no ambiente alvo."
+  - token_name: tool_discovery_token
+    token_type: Discovery
+    producer_contract_id: scb-atm-015
+    consumed_by: [scb-atm-019]
+    domain: Tactical
+    semantic: "Ferramentas disponíveis descobertas e classificadas."
+  - token_name: upgrade_inventory_token
+    token_type: Discovery
+    producer_contract_id: scb-atm-016
+    consumed_by: [scb-atm-017]
+    domain: Tactical
+    semantic: "Inventário do squad existente preparado para upgrade."
+  - token_name: upgrade_plan_token
+    token_type: Planning
+    producer_contract_id: scb-atm-017
+    consumed_by: [scb-atm-018]
+    domain: Tactical
+    semantic: "Plano de upgrade aprovado para aplicação."
+  - token_name: provider_qualification_token
+    token_type: Validation
+    producer_contract_id: scb-atm-018
+    consumed_by: [scb-atm-019]
+    domain: Tactical
+    semantic: "Resultado da qualificação cross-provider consolidado."
+  - token_name: base_handoff_token
+    token_type: Control
+    producer_contract_id: scb-atm-019
+    consumed_by: []
+    domain: Strategic
+    semantic: "Handoff final do base pronto para execução ou escalonamento."
+
+  # --- Kaizen tokens (merged from squads/kaizen/data/token-registry.yaml | migration_story: STORY-108.3 | date: 2026-04-04) ---
+  - token_id: KZ-TOK-001
+    token_name: weekly_cadence
+    token_type: Time
+    domain: Operational
+    consumed_by: [ecosystem-analyst]
+    semantic: "Cadência semanal de análise do ecossistema (domingo 20:00 BRT)."
+    value: "sunday-20:00-brt"
+  - token_id: KZ-TOK-002
+    token_name: max_recommendations
+    token_type: Capacity
+    domain: Operational
+    consumed_by: [ecosystem-analyst]
+    semantic: "Máximo de recomendações priorizadas por relatório."
+    value: 5
+  - token_id: KZ-TOK-003
+    token_name: critical_gap_n3
+    token_type: Threshold
+    domain: Operational
+    consumed_by: [ecosystem-analyst]
+    semantic: "Mínimo de ocorrências para classificar gap como crítico (RULE-RD-001)."
+    value: 3
+  - token_id: KZ-TOK-004
+    token_name: ecosystem_health_first
+    token_type: Priority
+    domain: Strategic
+    consumed_by: [ecosystem-analyst]
+    semantic: "Prioridade da saúde do ecossistema sobre criação de novos squads."
+    value: high
+  - token_id: KZ-TOK-005
+    token_name: human_approval_required
+    token_type: Permission
+    domain: Governance
+    consumed_by: [ecosystem-analyst]
+    semantic: "Aprovação humana obrigatória para mudanças destrutivas."
+    value: true
+  - token_id: KZ-TOK-006
+    token_name: ecosystem_squad_type
+    token_type: Taxonomy
+    domain: Tactical
+    consumed_by: [ecosystem-analyst]
+    semantic: "Tipo de squad do ecosystem-analyst: meta-squad de análise."
+    value: meta-squad
+  - token_id: KZ-TOK-007
+    token_name: auto_heal_trivial_gaps
+    token_type: Behavior
+    domain: Operational
+    consumed_by: [ecosystem-analyst]
+    semantic: "Auto-aplicar melhorias triviais de baseline/heurística."
+    value: enabled
+  - token_id: KZ-TOK-008
+    token_name: ecosystem_operator
+    token_type: Accountability
+    domain: Governance
+    consumed_by: [ecosystem-analyst]
+    semantic: "Responsável humano pelo ecossistema de squads."
+    value: "Human:Ecosystem_Operator"
+  - token_id: KZ-TOK-009
+    token_name: ecosystem_default_modes
+    token_type: Mode
+    domain: Operational
+    consumed_by: [ecosystem-analyst]
+    semantic: "Modos operacionais do ecosystem-analyst."
+    value: "GERENCIAR|VALIDAR|ENTENDER|EXPLORAR"
+  - token_id: KZ-TOK-010
+    token_name: analysis_timeout
+    token_type: Time
+    domain: Operational
+    consumed_by: [ecosystem-analyst]
+    semantic: "Timeout máximo por análise completa do ecossistema."
+    value: 20m

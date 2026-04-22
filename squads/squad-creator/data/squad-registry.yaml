@@ -1,0 +1,14 @@
+# DEPRECATED: 2026-03-26
+# Replaced by: squads/sinkra-squad/data/ecosystem-registry.yaml
+# Grace period: 30 days (removal after 2026-04-25)
+# Do not add new entries. Use ecosystem-registry.yaml instead.
+
+metadata:
+  deprecated: true
+  replaced_by: "squads/sinkra-squad/data/ecosystem-registry.yaml"
+  deprecation_date: "2026-03-26"
+  removal_date: "2026-04-25"
+  grace_period: "30d"
+  note: "Legacy redirect stub kept only for backward compatibility during STORY-META-1.5 grace period."
+
+squads: {}

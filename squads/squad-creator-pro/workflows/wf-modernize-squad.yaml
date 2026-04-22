@@ -1,0 +1,178 @@
+workflow:
+  id: wf-modernize-squad
+  name: Modernize Squad
+  version: 1.1.0
+  purpose: Upgrade legacy squads through compliance hardening, atomization planning, workflow composition, checklist coverage, state-machine integrity, and IP sanitization.
+  orchestrator: "@squad-chief"
+  mode: guided
+  command: "*modernize-squad {squad_name} [--phases compliance,atomize,workflows,checklists,state-machines,sanitize] [--dry-run]"
+  description: Canonical modernization workflow for legacy squads that need to meet current internal quality standards without exposing methodology internals.
+  type: enhancement
+  state_machine:
+    states: [init, compliance, atomization, workflow-composition, checklist-coverage, state-machine-integrity, sanitization, validation, complete, failed]
+    transitions:
+      - trigger: start
+        source: init
+        dest: compliance
+      - trigger: compliance_complete
+        source: compliance
+        dest: atomization
+      - trigger: compliance_failed
+        source: compliance
+        dest: failed
+      - trigger: atomization_complete
+        source: atomization
+        dest: workflow-composition
+      - trigger: atomization_failed
+        source: atomization
+        dest: failed
+      - trigger: workflow_composition_complete
+        source: workflow-composition
+        dest: checklist-coverage
+      - trigger: workflow_composition_failed
+        source: workflow-composition
+        dest: failed
+      - trigger: checklist_coverage_complete
+        source: checklist-coverage
+        dest: state-machine-integrity
+      - trigger: checklist_coverage_failed
+        source: checklist-coverage
+        dest: failed
+      - trigger: state_machine_integrity_complete
+        source: state-machine-integrity
+        dest: sanitization
+      - trigger: state_machine_integrity_failed
+        source: state-machine-integrity
+        dest: failed
+      - trigger: sanitization_complete
+        source: sanitization
+        dest: validation
+      - trigger: sanitization_failed
+        source: sanitization
+        dest: failed
+      - trigger: validation_complete
+        source: validation
+        dest: complete
+      - trigger: validation_failed
+        source: validation
+        dest: failed
+      - trigger: fail
+        source: "*"
+        dest: failed
+  sequence:
+    - phase: compliance
+      id: compliance
+      agent: "@squad-chief"
+      task: modernize-squad
+      task_ref: modernize-squad
+      action: audit_governance_compliance
+      outputs:
+        - .aiox/squad-runtime/modernize-squad/{squad_name}/compliance_report.yaml
+    - phase: atomization
+      id: atomization
+      agent: "@squad-chief"
+      task: modernize-squad
+      task_ref: modernize-squad
+      action: atomize_monoliths
+      outputs:
+        - .aiox/squad-runtime/modernize-squad/{squad_name}/atomization_report.yaml
+    - phase: workflow-composition
+      id: workflow-composition
+      agent: "@squad-chief"
+      task: modernize-squad
+      task_ref: modernize-squad
+      action: compose_orchestration_workflows
+      outputs:
+        - .aiox/squad-runtime/modernize-squad/{squad_name}/workflow_composition_report.yaml
+    - phase: checklist-coverage
+      id: checklist-coverage
+      agent: "@squad-chief"
+      task: modernize-squad
+      task_ref: modernize-squad
+      action: backfill_quality_checklists
+      outputs:
+        - .aiox/squad-runtime/modernize-squad/{squad_name}/checklist_coverage_report.yaml
+    - phase: state-machine-integrity
+      id: state-machine-integrity
+      agent: "@squad-chief"
+      task: modernize-squad
+      task_ref: modernize-squad
+      action: enforce_state_machine_integrity
+      outputs:
+        - .aiox/squad-runtime/modernize-squad/{squad_name}/state_machine_report.yaml
+    - phase: sanitization
+      id: sanitization
+      agent: "@squad-chief"
+      task: modernize-squad
+      task_ref: modernize-squad
+      action: sanitize_methodology_references
+      outputs:
+        - .aiox/squad-runtime/modernize-squad/{squad_name}/sanitization_report.yaml
+    - phase: validation
+      id: validation
+      agent: "@squad-chief"
+      task: validate-squad
+      task_ref: validate-squad
+      action: validate_modernized_squad
+      outputs:
+        - .aiox/squad-runtime/modernize-squad/{squad_name}/modernization-report.md
+    - workflow_end:
+        id: complete
+        action: workflow_complete
+  checkpoints:
+    - id: CP_COMPLIANCE
+      phase: compliance
+      decision: COMPLIANCE_BASELINE_CAPTURED
+    - id: CP_ATOMIZE
+      phase: atomization
+      decision: MONOLITHS_RESTRUCTURED_OR_ACCEPTED
+    - id: CP_WORKFLOWS
+      phase: workflow-composition
+      decision: ORCHESTRATION_COVERAGE_COMPLETE
+    - id: CP_CHECKLISTS
+      phase: checklist-coverage
+      decision: CHECKLIST_COVERAGE_ACCEPTED
+    - id: CP_STATE
+      phase: state-machine-integrity
+      decision: ALL_WORKFLOWS_HAVE_FORMAL_STATE_MACHINE
+    - id: CP_SANITIZE
+      phase: sanitization
+      decision: ZERO_METHODOLOGY_REFERENCES_REMAIN
+    - id: CP_FINAL
+      phase: validation
+      decision: MODERNIZED_SQUAD_VALID
+  inputs:
+    squad_name:
+      type: string
+      required: true
+      description: Name of the squad to modernize
+    squad_path:
+      type: string
+      required: false
+      description: Override path for the target squad
+    phases:
+      type: enum[]
+      required: false
+      default: all
+      values:
+        - all
+        - compliance
+        - atomize
+        - workflows
+        - checklists
+        - state-machines
+        - sanitize
+      description: Restrict execution to specific modernization phases
+    dry_run:
+      type: boolean
+      required: false
+      default: false
+      description: Analyze and report without writing changes
+  outputs:
+    - .aiox/squad-runtime/modernize-squad/{squad_name}/modernization-report.md
+    - .aiox/squad-runtime/modernize-squad/{squad_name}/compliance_report.yaml
+    - .aiox/squad-runtime/modernize-squad/{squad_name}/atomization_report.yaml
+    - .aiox/squad-runtime/modernize-squad/{squad_name}/workflow_composition_report.yaml
+    - .aiox/squad-runtime/modernize-squad/{squad_name}/checklist_coverage_report.yaml
+    - .aiox/squad-runtime/modernize-squad/{squad_name}/state_machine_report.yaml
+    - .aiox/squad-runtime/modernize-squad/{squad_name}/sanitization_report.yaml

@@ -1,0 +1,158 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "validation-report.schema.json",
+  "title": "Squad Creator Validation Report",
+  "description": "Structured JSON twin of the markdown QA report. Produced by qa-generate-report for machine consumption. [STORY-109.1] AC4",
+  "type": "object",
+  "required": [
+    "squad_name",
+    "version",
+    "timestamp",
+    "total_checks",
+    "passed",
+    "failed",
+    "skipped",
+    "blocking_passed",
+    "final_score",
+    "verdict",
+    "dimensions",
+    "checks"
+  ],
+  "properties": {
+    "squad_name": {
+      "type": "string",
+      "description": "Kebab-case squad identifier"
+    },
+    "version": {
+      "type": "string",
+      "description": "Schema version (semver)",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp of report generation"
+    },
+    "total_checks": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Total number of checks executed"
+    },
+    "passed": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Number of checks that passed"
+    },
+    "failed": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Number of checks that failed"
+    },
+    "skipped": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Number of checks skipped"
+    },
+    "blocking_passed": {
+      "type": "boolean",
+      "description": "Whether all blocking checks passed"
+    },
+    "final_score": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 10,
+      "description": "Final quality score on 0-10 scale"
+    },
+    "verdict": {
+      "type": "string",
+      "enum": ["PASS", "CONDITIONAL", "FAIL"],
+      "description": "Overall QA verdict"
+    },
+    "dimensions": {
+      "type": "object",
+      "description": "Per-dimension scoring breakdown",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["weight", "score", "weighted_score"],
+        "properties": {
+          "weight": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "score": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "weighted_score": {
+            "type": "number",
+            "minimum": 0
+          },
+          "details": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "checks": {
+      "type": "array",
+      "description": "Individual check results",
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "status"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique check identifier"
+          },
+          "name": {
+            "type": "string",
+            "description": "Human-readable check name"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["pass", "fail", "skip", "warn"],
+            "description": "Check result status"
+          },
+          "blocking": {
+            "type": "boolean",
+            "description": "Whether this check is blocking",
+            "default": false
+          },
+          "message": {
+            "type": "string",
+            "description": "Detail message or error description"
+          },
+          "severity": {
+            "type": "string",
+            "enum": ["critical", "high", "medium", "low", "info"],
+            "description": "Issue severity when status is fail or warn"
+          }
+        }
+      }
+    },
+    "recommended_actions": {
+      "type": "array",
+      "description": "Ordered list of recommended remediation actions",
+      "items": {
+        "type": "object",
+        "required": ["action", "priority"],
+        "properties": {
+          "action": {
+            "type": "string"
+          },
+          "priority": {
+            "type": "string",
+            "enum": ["critical", "high", "medium", "low"]
+          },
+          "related_check": {
+            "type": "string",
+            "description": "ID of the check that triggered this recommendation"
+          }
+        }
+      }
+    }
+  },
+  "additionalProperties": false
+}

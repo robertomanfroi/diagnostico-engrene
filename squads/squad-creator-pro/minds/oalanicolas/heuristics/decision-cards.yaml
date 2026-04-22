@@ -1,0 +1,1010 @@
+# Alan Nicolas — Decision Cards (L1+L2)
+# Formato otimizado pra tomada de decisão em runtime.
+#
+# L1 (inline): id + name + rule (3 campos, 1 lookup)
+# L2 (reference): + zone + trigger + evidence_threshold + anti_pattern + evidence (decisão informada)
+# L2.5 (nested logic): + pipeline_instances (ramificações cruciais importadas da árvore L3)
+# L3 (full doc): AN_KE_NNN.md (onboarding, não runtime)
+#
+# USO: Agente carrega este arquivo quando precisa decidir.
+# NÃO carrega os .md individuais — são documentação.
+
+version: "3.3.0-H6-Mining"
+total: 133
+last_updated: "2026-04-01"
+# v3.3.0: +AN_KE_126-133 (8 new cards from history.jsonl mining — STORY-MMOS-H.6). 938 raw hits, 8 formalized.
+# v3.2.2: +AN_KE_125 (persistence inversion). Deleted 126 (generic gate), 127 (generic turns). Updated 064, 118, 120 evidence.
+audit_notes: |
+  v3.2: Implementando True L3-State (sys_tensions, evidence_threshold, pipeline_instances).
+  v3.0: Curadoria ouro/bronze via history.jsonl mining.
+  Deleted: 033 (no evidence), 041 (generic), 042 (no evidence), 049 (derivative/Sivers), 051 (merged→050), 055-100 (Gemini junk).
+  Rewritten: 038 (fixed evidence). Reclassified: 050, 052 (brand, not engineering).
+
+# ═══════════════════════════════════════════════════════════════
+# ORIGINAIS (AN_KE_001 — AN_KE_010)
+# ═══════════════════════════════════════════════════════════════
+
+cards:
+
+  # ── Knowledge Extraction ──
+
+  - id: AN_KE_001
+    name: "Knowledge Extraction Architecture"
+    rule: "SE extraindo conhecimento → ENTÃO pipeline: Source → Pareto → Deconstruct → Extract → Validate"
+    zone: framework
+    trigger: "Qualquer extração de conhecimento"
+
+  - id: AN_KE_002
+    name: "Regra 40/20/40"
+    rule: "SE criando clone → ENTÃO 40% curadoria, 20% prompt, 40% refinamento"
+    zone: excelencia
+    trigger: "Criando clone de mente"
+    anti_pattern: "Investir 80% no prompt e 20% no resto"
+
+  - id: AN_KE_003
+    name: "Pareto ao Cubo"
+    rule: "SE mapeando atividades → ENTÃO classificar: 0,8% genialidade, 4% excelência, 20% impacto, 80% eliminar"
+    zone: genialidade
+    trigger: "Priorizando qualquer coisa"
+    evidence: "0,8% produz 51% dos resultados"
+
+  - id: AN_KE_004
+    name: "Regra do Ouro"
+    rule: "SE classificando fonte → ENTÃO comentários/entrevistas/stories = ouro. Palestras antigas/genérico = bronze"
+    zone: excelencia
+    trigger: "Avaliando qualidade de fonte"
+
+  - id: AN_KE_005
+    name: "Determinism First"
+    rule: "SE pode ser feito por Worker (regex/script) → ENTÃO Worker. SE requer interpretação → ENTÃO LLM"
+    zone: excelencia
+    trigger: "Decidindo quem executa uma operação"
+    evidence: "yaml-repair.py (Worker) > prompt engineering pra YAML safety"
+
+  - id: AN_KE_006
+    name: "Regra da Citação"
+    rule: "SE conceito extraído → ENTÃO [SOURCE:]. SE inferido → ENTÃO [INFERRED]"
+    zone: excelencia
+    trigger: "Documentando qualquer conceito"
+    anti_pattern: "Conceito sem rastreabilidade"
+
+  - id: AN_KE_007
+    name: "REUSE > CREATE"
+    rule: "SE criando algo novo → ENTÃO PRIMEIRO perguntar 'Já existe equivalente?'"
+    zone: excelencia
+    trigger: "Criando framework/task/processo"
+    evidence: "cascade.sh, replan.sh já existiam — só ligar, não criar"
+
+  - id: AN_KE_008
+    name: "Regra Feynman"
+    rule: "SE extraiu conhecimento → ENTÃO validar: 'Consigo explicar em 1 frase?'"
+    zone: impacto
+    trigger: "Validando extração"
+
+  - id: AN_KE_009
+    name: "Regra da Inversão (Munger)"
+    rule: "SE planejando algo → ENTÃO perguntar 'O que faria isso FALHAR?'"
+    zone: impacto
+    trigger: "Planejamento de qualquer tipo"
+
+  - id: AN_KE_010
+    name: "Regra do Círculo de Competência"
+    rule: "SE domínio novo → ENTÃO marcar [OUTSIDE_CIRCLE] e buscar validação externa"
+    zone: impacto
+    trigger: "Trabalhando fora da expertise"
+
+  # ═══════════════════════════════════════════════════════════════
+  # EPIC 70+71 — Shared Infra Engineering (AN_KE_011 — AN_KE_020)
+  # ═══════════════════════════════════════════════════════════════
+
+  - id: AN_KE_011
+    name: "Compare Antes de Construir"
+    rule: "SE criando artefato novo → ENTÃO comparar com equivalente mais maduro. Gap = roadmap"
+    zone: genialidade
+    trigger: "Criando script/skill/squad/módulo novo"
+    evidence: "validate-skill v1 vs validate-squad v4 → paridade 4/10 → 5 stories"
+
+  - id: AN_KE_012
+    name: "Batch Mecânico Primeiro"
+    rule: "SE >50% falhas têm mesma root cause → ENTÃO batch fix mecânico antes de hardening"
+    zone: impacto
+    trigger: "Base grande falhando"
+    evidence: "29/36 skills falhavam por 4 campos → batch fix 5min → 19%→94%"
+
+  - id: AN_KE_013
+    name: "Regra dos 3+ Consumidores"
+    rule: "SE pattern em 1-2 scripts → MANTER inline. SE 3+ → EXTRAIR shared lib"
+    zone: excelencia
+    trigger: "Tentação de extrair código para lib"
+    anti_pattern: "Abstrair prematuramente algo que só 1 script usa"
+
+  - id: AN_KE_014
+    name: "Fan-out > Linhas Removidas"
+    rule: "SE avaliando ROI de shared lib → MEDIR fan-out (1 edit → N scripts), NÃO linhas removidas"
+    zone: impacto
+    trigger: "Justificando investimento em infra shared"
+    evidence: "Epic 71: net +345 linhas mas 1 fix → 8 scripts"
+
+  - id: AN_KE_015
+    name: "Fallback Graceful"
+    rule: "SE módulo shared → ENTÃO flag + fallback inline. Script DEVE funcionar sem o módulo"
+    zone: excelencia
+    trigger: "Criando/integrando dependência shared"
+    anti_pattern: "Hard dependency que quebra script quando lib muda de path"
+
+  - id: AN_KE_016
+    name: "Testar Módulo Isolado"
+    rule: "SE módulo shared → ENTÃO smoke test <5s sem deps externas. NÃO testar via pipeline"
+    zone: impacto
+    trigger: "Testando módulo criado/modificado"
+    evidence: "Bug ${} encontrado em 2s pelo test suite, não em 30min de pipeline"
+
+  - id: AN_KE_017
+    name: "Research No Meio"
+    rule: "SE projeto multi-wave → ENTÃO research entre Wave 2 e 3, NÃO antes da Wave 1"
+    zone: impacto
+    trigger: "Planejando quando pesquisar"
+    evidence: "Research pós-Wave 2 achou 4 melhorias aplicadas antes da Wave 3"
+
+  - id: AN_KE_018
+    name: "Audit Gate Antes de Cleanup"
+    rule: "SE removendo código → ENTÃO grep -rn + smoke em TODOS consumidores. 0 diretas ≠ 0 transitivas"
+    zone: excelencia
+    trigger: "git rm de qualquer arquivo"
+    evidence: "post-process.sh: 0 refs diretas mas usado transitivamente via phase-execution.sh"
+
+  - id: AN_KE_019
+    name: "Bug → Módulo Shared"
+    rule: "SE bug de produção → ENTÃO 'outros scripts têm mesmo risco?' SE 3+ → módulo shared"
+    zone: genialidade
+    trigger: "Bug reportado em produção"
+    evidence: "Eudes: JSON mal-formado em 1 pipeline → json-validator.sh protege 14"
+
+  - id: AN_KE_020
+    name: "Formato = Contrato"
+    rule: "SE múltiplos scripts produzem artefatos → ENTÃO padronizar SCHEMA do output, não o código"
+    zone: impacto
+    trigger: "Definindo outputs de pipeline"
+    evidence: "validation.log + score_card.yaml: 3 formatos → 1 via reporting.sh"
+
+  # ═══════════════════════════════════════════════════════════════
+  # BENCHMARK SINKRA-MAP (AN_KE_021 — AN_KE_024)
+  # ═══════════════════════════════════════════════════════════════
+
+  - id: AN_KE_021
+    name: "Repair Layer"
+    rule: "SE LLM gera structured output → ENTÃO repair determinístico ANTES de validar. Repair=$0, retry=tokens"
+    zone: impacto
+    trigger: "Pipeline com LLM gerando YAML/JSON"
+    evidence: "yaml-repair.py corrigiu 11 erros Opus em <1s vs 5 iterações LLM falhando"
+
+  - id: AN_KE_022
+    name: "Format Follows Generator"
+    rule: "SE LLM gera output → ENTÃO JSON (seguro). SE humano lê → converter JSON→YAML no destino"
+    zone: genialidade
+    trigger: "Escolhendo formato de output pra LLM"
+    evidence: "3/4 erros YAML não existem em JSON. Opus 0% YAML vs ~100% JSON"
+
+  - id: AN_KE_023
+    name: "Tier System é Invisível"
+    rule: "SE abstração sobrescreve decisão do usuário → LOGAR modelo REAL + oferecer --force bypass"
+    zone: excelencia
+    trigger: "Implementando routing de modelo/runtime"
+    evidence: "--model haiku resolvia pra opus silenciosamente. Fix: --force-model"
+
+  - id: AN_KE_024
+    name: "Resume = Same Run"
+    rule: "SE --phase N (resume) → RESOLVER última run → continuar nela. NUNCA criar novo RUN_ID"
+    zone: excelencia
+    trigger: "Implementando resume em pipeline multi-fase"
+    evidence: "--phase 8 criou run vazia → QA 4/100. Fix: resolver symlink latest"
+
+  # ═══════════════════════════════════════════════════════════════
+  # EXTRATOS DE SESSÃO (AN_KE_025 — AN_KE_030)
+  # ═══════════════════════════════════════════════════════════════
+
+  - id: AN_KE_025
+    name: "Determinism Over LLM"
+    rule: "SE processo repete sem variação ou exige precisão absoluta → ENTÃO Worker/Script. SE só interpretação → ENTÃO LLM."
+    zone: genialidade
+    trigger: "Implementando lógicas de contagem, verificação ou paths."
+    evidence: "LLMs falham ao validar caminhos ou contar itens; bash/python acerta e custa $0."
+
+  - id: AN_KE_026
+    name: "Squad Agnosticism"
+    rule: "SE criar/editar Squad → ENTÃO não hardcode regras do projeto nele. Use Fonte da Verdade do Workspace."
+    zone: excelencia
+    trigger: "Definindo arquitetura e regras de negócio para um Squad."
+    anti_pattern: "Empacotar lógica do cliente X no core do squad genérico."
+
+  - id: AN_KE_027
+    name: "Zero Emojis & Design Consistente"
+    rule: "SE construir UI/Dashboard/Books → ENTÃO NUNCA use emojis. Use SVGs/Lucide e Tailwind/Shadcn rigorosos."
+    zone: impacto
+    trigger: "Criando ou refatorando frotend e relatórios gerenciais."
+    anti_pattern: "Adicionar emojis pra tentar 'humanizar' o sistema."
+
+  - id: AN_KE_028
+    name: "Self-Contained Encapsulation"
+    rule: "SE um squad precisa de script extra → ENTÃO deve morar na própria pasta do squad, não em infra global (se exclusividade)."
+    zone: excelencia
+    trigger: "Criando scripts ou dependências exclusivas de um Agente."
+    anti_pattern: "Despejar .py ou .sh no root, impedindo a migração modular do squad."
+
+  - id: AN_KE_029
+    name: "Survival by Documentation (Reset Immunity)"
+    rule: "SE descobriu padrão firme ou assumiu premissa/fix → ENTÃO documente na hora (Se não sobrevive ao reset, não documentou)."
+    zone: excelencia
+    trigger: "Ao resolvermos loop de falha/concordarmos numa decisão na sessão."
+    anti_pattern: "Achar que a IA vai lembrar da regra que mandou usar no script daqui a 3 janelas."
+
+  - id: AN_KE_030
+    name: "Anti-Fingerprint AI Detox"
+    rule: "SE gerar materiais públicos/Books → ENTÃO remova 100% de assinaturas IA ('Neste artigo', travessões, tom fofo)."
+    zone: excelencia
+    trigger: "Escrevendo resumos, livros, readmes externos na voz do cliente."
+    evidence: "A repetição mecânica destrói a percepção de alto valor."
+
+  - id: AN_KE_031
+    name: "Localhost QA Gate"
+    rule: "SE código modifica funcionalidades core ou UI → ENTÃO o teste local é obrigatório atrelado à validação visual e lógica."
+    zone: impacto
+    trigger: "Escrevendo/refatorando código ou integrações."
+    anti_pattern: "Entregar deploy para prod sem teste rodar funcional num localhost na máquina do dev."
+    
+  - id: AN_KE_032
+    name: "Schema Immutability"
+    rule: "SE planejar mudanças de schema → ENTÃO NUNCA edite sem um Human Gate approval explícito."
+    zone: impacto
+    trigger: "Operações envolvendo tabelas, db-migrations ou chaves globais."
+    evidence: "A perda de integridade num hub central é de dificílima recuperação sem backup imediato."
+    
+  - id: AN_KE_033
+    name: "Squads = Source of Truth"
+    rule: "SE criando skill/agent/task → ENTÃO squads/ é SOT. .claude/skills/ é PROJEÇÃO. Nunca criar algo que vive SÓ em .claude/. Portabilidade: codex, gemini, claude."
+    zone: genialidade
+    trigger: "Criando ou editando skills, agents, tasks."
+    anti_pattern: "Skill que existe apenas em .claude/skills/ sem correspondência em squads/."
+    evidence: "'a fonte da verdade é sempre o squads/... nao devem viver nunca só dentro de .claude, isso deve virar uma lei'"
+
+  - id: AN_KE_034
+    name: "Ghostwriting (Autorship)"
+    rule: "SE compilar documentos valiosos/books/índices → ENTÃO nunca os assine como IA; a autoria da metodologia é de Alan Nicolas."
+    zone: excelencia
+    trigger: "Gerando documentos na 1ª pessoa do Alan para base de conhecimento."
+    anti_pattern: "Deixar tags do Claude ou justificar formatação através da perspectiva sintética."
+
+
+
+  - id: AN_KE_035
+    name: "CLI First Architecture"
+    rule: "SE for arquitetar uma nova funcionalidade (squad, agent, tool) ENTÃO siga estritamente a ordem: 1. CLI First → 2. Observability Second → 3. UI Third."
+    zone: genialidade
+    trigger: "Avaliando ou desenhando arquitetura de agentes e dashboards."
+    anti_pattern: "Colocar a UI como requisito para o sistema rodar."
+
+  - id: AN_KE_036
+    name: "Veto Sobre LLM Goodwill"
+    rule: "SE uma task estrita precisa rodar um validador antes de seguir (ex: validation.sh) → ENTÃO crie uma \"Condition Block/Veto\". Trave o pipeline até existir a saída exata daquele validador. Não confie na proatividade ou no promissório da IA."
+    zone: impacto
+    trigger: "Definindo processos que o LLM precisa obrigatoriamente executar antes de seguir."
+    anti_pattern: "Garantir no prompt 'Por favor execute este script' sem um BLOCK rígido."
+
+  - id: AN_KE_037
+    name: "Single Source of Truth (Business)"
+    rule: "SE a LLM precisar buscar informações sobre QUEM a empresa é e PARA ONDE vai → ENTÃO direcione a leitura EXCLUSIVAMENTE ao `Workspace` corporativo correspondente. Nunca tire verdades vitais destas em arquivos de código em pastas periféricas."
+    zone: excelencia
+    trigger: "Buscando ou armazenando dados operacionais, brand ou stack da empresa."
+    anti_pattern: "Salvar variáveis do negócio pulverizadas em /docs ou tabelas do Supabase."
+
+  - id: AN_KE_038
+    name: "Gap de Reasoning = Processo Vago"
+    rule: "SE tentado a usar Opus/o3 para algo simples → ENTÃO auditar SOP primeiro. Haiku + checklist rigoroso > Opus + instrução vaga. Conserte a receita antes de trocar a panela."
+    zone: genialidade
+    trigger: "LLM falha repetidamente e a tentação é trocar para modelo mais caro."
+    anti_pattern: "Culpar inteligência do modelo ao invés da falta de checklist."
+    evidence: "AN_KE_005 + Epic 71 runner-lib + benchmark 2026-03-29 (Gemini falhou por formato, não reasoning)"
+
+  - id: AN_KE_039
+    name: "Checkpoint Categórico de Modelos Mentais"
+    rule: "SE há Agentes assumindo posições chave de raciocínio onde a filosofia interna de Alan (e experts copiados) importam → ENTÃO institua um 'Checkpoint Gate'. O sistema deve obrigar fisicamente o Agente a acionar a \"Leitura do Modelo Mental / Heurísticas de Base\" periodicamente na execução em cascata."
+    zone: excelencia
+    trigger: "Quando agentes executam tarefas mas ignoram os modelos mentais da base."
+    anti_pattern: "Achar que a IA vai ler o oalanicolas.md espontaneamente no meio do job."
+
+  - id: AN_KE_040
+    name: "Agnosticização Mandatória em Infra"
+    rule: "SE o código for uma engrenagem de infra (ex: extractors, validators, deployers compartilhados) → ENTÃO proíba hardcoding. Ele DEVE aceitar argumentos dinâmicos ($1, $2) para operar de forma AGNÓSTICA sobre qualquer path, projeto ou URL. Os arquivos em `/infrastructure` não devem reconhecer o usuário atual."
+    zone: excelencia
+    trigger: "Criando scripts compartilhados ou utilitários root."
+    anti_pattern: "Amarrar o script de deploy ao nome hardcoded 'mmos'."
+
+  - id: AN_KE_041
+    name: "Output Path Discipline"
+    rule: "SE artefato é resultado de execução → ENTÃO outputs/{squad-name}/. NUNCA dentro de squads/ ou workspace/."
+    zone: impacto
+    trigger: "Salvando resultados de pipeline, análise, validação."
+    anti_pattern: "Pipeline salvando resultados dentro da pasta do squad."
+    evidence: "'o local certo para salvar isso é outputs na pasta principal e nao dentro do squad sinkra'"
+
+  - id: AN_KE_042
+    name: "Don't Regress Working Code"
+    rule: "SE código funciona em localhost → ENTÃO preservar. Mudanças aditivas, nunca destrutivas. SE regressão → git revert imediato."
+    zone: excelencia
+    trigger: "IA propondo refatoração ou simplificação de código funcional."
+    anti_pattern: "Trocar campo real (image_url) por derivado (slug) sem testar."
+    evidence: "'tava funcionando localhost, pq está revertendo algo que estava funcionando?'"
+
+  - id: AN_KE_043
+    name: "Zero Achismos"
+    rule: "SE a IA perceber uma lacuna estratégica ao criar a solução pedida a ela → ENTÃO acione a diretiva de Grounded Inference: \"Apenas entregue processos baseados integralmente nos templates disponíveis na base e evidências já mapeadas\"."
+    zone: impacto
+    trigger: "Quando a IA tenta preencher lacunas desenhando estratégias sem dados e extrapolando."
+    anti_pattern: "Inventar uma solução brilhante baseada em teoria LLM, sem template humano-validado."
+
+  - id: AN_KE_044
+    name: "URL = State Truth (Deep Linking)"
+    rule: "SE você implementar a gestão de estado central de um componente pesado de navegação → ENTÃO ele DEVE modificar dinamicamente a URL usando searchParams ou Pathing Slug. A URL dita quem é o State do aplicativo; NUNCA deixe estado trancado na caixinha de memória da página, se o usuário der refresh, a página não deve resetar misteriosamente para o estado zero."
+    zone: excelencia
+    trigger: "Construindo gerenciamento de estado em UIs como listas, filtros ou tabs."
+    anti_pattern: "Fazer um `useState` local onde dar refresh na página apaga o histórico do app."
+
+
+  - id: AN_KE_045
+    name: "Subtraction First Strategy"
+    rule: "SE você encontrar um gargalo burocrático, lento ou atritivo numa arquitetura ou modelo de conhecimento → ENTÃO DESTRUA em vez de construir paliativos em cima. Pare de adicionar plugins e scripts de conserto; aplique \"Subtract not Add\"."
+    zone: impacto
+    trigger: "Quando avaliando novos recursos, integrações ou acréscimo de conteúdo."
+    anti_pattern: "Tentar resolver um gap adicionando mais passos em vez de remover a complexidade base."
+
+  - id: AN_KE_046
+    name: "Fórmula da Transformação de Voz"
+    rule: "SE o Agent precisar escrever textos longos ou argumentos narrativos de alta conversão → ENTÃO exija o enquadramento na fórmula inquebrável: [Vulnerabilidade + Dados + História + Desafio Socrático]. Sem isto é apenas dados; com isto é \"Transformação\"."
+    zone: genialidade
+    trigger: "Quando desenvolvendo copywriting, livros, ghostwriting ou artigos usando a voz de Alan Nicolas."
+    anti_pattern: "Gerar resumos padronizados com 'neste artigo falaremos sobre', ignorando riscos pessoais no texto."
+
+  - id: AN_KE_047
+    name: "AI-Predictable Design Systems"
+    rule: "SE for adotar um framework de CSS/Design System → ENTÃO NUNCA permita configurações caóticas puramente visuais (como \"SASS classes com 99 variaveis de rem magicas\"). Trabalhe em lógicas nominais rígidas (CVA) onde a sintaxe por si só revele para o Claude qual a variação a se escalar e usar."
+    zone: impacto
+    trigger: "Arquitetando e configurando frameworks de CSS/UI e documentando tokens (ex: Shadcn)."
+    anti_pattern: "Focar o Design System apenas em consumo humano, com regras complexas demais para agentes parsearem."
+
+  - id: AN_KE_048
+    name: "Handoff Psicológico Completo"
+    rule: "SE você for delinear as ações do dia → ENTÃO delimite-as numa \"Trilha de Completude Absoluta 100%\". Pedaços abertos e features semi-refatoradas não geram closure psicológico e trazem fadiga para as próximas interações."
+    zone: excelencia
+    trigger: "Formatando sessões de trabalho e definindo o fechamento (Handoffs)."
+    anti_pattern: "Pausar no meio de 3 tarefas e causar ansiedade sobre o estado incompleto do sistema."
+
+  - id: AN_KE_049
+    name: "Ship First, Doc Later"
+    rule: "SE no meio de implementação → ENTÃO código funcional > documentação. README DEPOIS que funciona. Exceção: handoffs e decision logs SEMPRE."
+    zone: impacto
+    trigger: "IA propondo criar README ou documentação extensa antes de terminar feature."
+    anti_pattern: "README de 200 linhas pra feature que muda em 30 minutos."
+    evidence: "'nao precisa de readme, vamos avancar' — padrão recorrente multi-projeto"
+
+  # ── Brand Positioning (NOT engineering — use in copy/marketing contexts) ──
+
+  - id: AN_KE_050
+    name: "Inimigo Zero: Complexidade Inútil (WIP>1)"
+    rule: "SE comunicar vantagem do AIOX/Lendária → ENTÃO destruir publicamente ansiedade tecnológica do mercado. WIP=1, execução disciplinada. Absorve AN_KE_051 (Ressurreição > Acúmulo)."
+    zone: impacto
+    domain: brand
+    trigger: "Copy de vendas, ICPs, landing pages, ofertas."
+    anti_pattern: "Induzir audiência a começar frentes paralelas (WIP elevado) ou vender 'curso de IA'."
+    evidence: "Livro da Oferta (Story Selling) — documento primário pastado por Alan"
+
+  - id: AN_KE_051
+    name: "Idempotent Operations"
+    rule: "SE operação pode rodar 2x → ENTÃO DEVE ser idempotente. IF NOT EXISTS guards em migrations, ON CONFLICT em seeds. Conferir antes se já foi aplicado."
+    zone: excelencia
+    trigger: "Criando migrations, seeds, scripts de setup."
+    anti_pattern: "ALTER TABLE RENAME sem IF EXISTS guard — falha na segunda execução."
+    evidence: "Migration falhou: 'column nome_clone does not exist' — já tinha sido renomeada"
+
+  - id: AN_KE_052
+    name: "Contraste de Valor Ativo"
+    rule: "SE definir manifesto → ENTÃO frases duais espelhadas (Não Prometemos X, Cobramos Y). Polarização deliberada. Demonstre quem repelimos."
+    zone: excelencia
+    domain: brand
+    trigger: "Manifestos, copy institucional, textos de valores (Brand Position)."
+    anti_pattern: "Tom ameno e complacente para agradar massas."
+    evidence: "Manifesto Lendário — sessão c5b4f186. 'Não prometemos facilidade. Prometemos transformação.'"
+
+  - id: AN_KE_053
+    name: "Regra da Exclusividade Visual"
+    rule: "SE o componente raiz (base) do shadcn e o tema default resolverem bem → ENTÃO DEIXE-O RESPIRAR. SÓ aplique overrides visuais fortes nas exatas chaves visuais sagradas da Academia (Ex: O detalhe Dourado como Acento, O esquema Monocromático Absoluto, Formas Rígidas de cantos)."
+    zone: excelencia
+    trigger: "Sempre que manipular utilitários Tailwind ou base de bibliotecas como Shadcn."
+    anti_pattern: "Sobrescrever o core do framework CSS ou forçar variáveis onde a biblioteca já possui helpers ideais."
+
+  - id: AN_KE_054
+    name: "Estrutura Orgânica de Diretórios"
+    rule: "SE você precisar organizar arquivos em diretórios → ENTÃO NUNCA use \"01_Marketing\", \"02_Vendas\" SOMENTE use numeração se a natureza do dado exigir estrita linearidade invariável (ex: Módulos de um Curso)."
+    zone: excelencia
+    trigger: "Ao organizar MOCs, Obsidian e PKMs ou diretórios de documentação da empresa."
+    anti_pattern: "Prefixar categorias (01_Marketing, 02_Sales) desnecessariamente."
+
+
+  # ═══════════════════════════════════════════════════════════════
+  # HISTORY MINING — SESSION 2026-03-29 (AN_KE_055 — AN_KE_059)
+  # Source: history.jsonl (14.211 linhas), curadoria ouro/bronze
+  # ═══════════════════════════════════════════════════════════════
+
+  - id: AN_KE_055
+    name: "Hybrid Validation Pipeline"
+    rule: "SE validação → ENTÃO pipeline HÍBRIDO: Worker (contagem, schema, paths) → LLM (interpretação, qualidade). Cada um no que é bom."
+    zone: genialidade
+    trigger: "Criando pipeline de validação ou QA gate."
+    anti_pattern: "100% script (perde interpretação) ou 100% LLM (desperdiça tokens em contagem)."
+    evidence: "validate-squad 62.9/100 determinístico puro — mas faltava julgamento semântico"
+
+  - id: AN_KE_056
+    name: "Run Immutability"
+    rule: "SE pipeline gera outputs → ENTÃO cada run = timestamp único. Nunca sobrescrever. Resume = continuar na MESMA run."
+    zone: excelencia
+    trigger: "Pipelines multi-fase, runners, análises comparativas."
+    anti_pattern: "--phase N cria nova run vazia ao invés de continuar na existente."
+    evidence: "--phase 8 criou run vazia → QA avaliou pasta vazia → score 4/100 inválido"
+
+  - id: AN_KE_057
+    name: "Multi-Window Isolation"
+    rule: "SE hook/automação detecta atividade → ENTÃO ASSUMA múltiplas janelas. /commit em outra janela ≠ sessão atual. Um slug = uma janela."
+    zone: excelencia
+    trigger: "Hooks de sessão, detecção de atividade, pipelines paralelos."
+    anti_pattern: "Assumir que todo commit é da sessão ativa — causa falsos positivos."
+    evidence: "'mts vezes uso /commit em outra janela, entao deve ter mt falso positivo'"
+
+  - id: AN_KE_058
+    name: "Verify LLM Output"
+    rule: "SE LLM gera dados factuais → ENTÃO (1) sanity check: output proporcional ao input? (2) verificação externa: pesquisar internet. SE quantidade >> esperada → investigar."
+    zone: impacto
+    trigger: "LLM extraindo dados, gerando datasets, preenchendo bases."
+    anti_pattern: "Aceitar 1.292 fragmentos de 12 QAs sem questionar."
+    evidence: "'tem algo mt errado nao deveria ser possivel extrair tantos fragmentos de apenas 12 qa'"
+
+  - id: AN_KE_059
+    name: "Search Before Ask"
+    rule: "SE agent precisa de info → ENTÃO buscar PRIMEIRO (internet, base local). SÓ perguntar ao humano o que não consegue descobrir."
+    zone: impacto
+    trigger: "Desenhando agents, skills, workflows com interação humana."
+    anti_pattern: "Agent perguntando ano de publicação de um livro ao invés de pesquisar."
+    evidence: "'está me perguntando informações que consegue facilmente em uma pesquisa na internet'"
+
+  # ═══════════════════════════════════════════════════════════════
+  # DEEP HISTORY MINING (AN_KE_060 — AN_KE_100)
+  # Source: history.jsonl 14.211 linhas, 10 clusters, agente minerador
+  # ═══════════════════════════════════════════════════════════════
+
+  # ── Agent/Workflow Design ──
+
+  - id: AN_KE_060
+    name: "IP Protection by Design"
+    rule: "SE entregando artefatos com metodologia proprietária → ENTÃO garantir que engenharia reversa não exponha framework interno."
+    zone: genialidade
+    trigger: "Entregando squads ou skills para clientes/alunos."
+
+  - id: AN_KE_061
+    name: "Process First Then Codify"
+    rule: "SE criando novo processo → ENTÃO executar manualmente PRIMEIRO. Só depois criar task/workflow formal."
+    zone: excelencia
+    trigger: "Criando processo novo que nunca foi testado."
+
+  - id: AN_KE_062
+    name: "Explicit Nature Declaration"
+    rule: "SE iniciando trabalho com squad → ENTÃO declarar: standalone, brownfield, ou upgrade-pack. Se não declarar, chief assume errado."
+    zone: excelencia
+    trigger: "Início de qualquer trabalho de squad/processo."
+
+  - id: AN_KE_063
+    name: "Full Document Context Requirement"
+    rule: "SE precisa ler documento → ENTÃO LER 100% INTEIRO. NUNCA ler pela metade ou em blocos. Falta de escopo = decisões erradas."
+    zone: excelencia
+    trigger: "Lendo código, docs ou referências."
+    evidence: "Extrema recorrência cruzada (17+ sessões). 'como fazemos voce SEMPRE ler o documento inteiro'"
+
+  - id: AN_KE_064
+    name: "Model Tier Fallback"
+    rule: "SE pipeline usa LLM → ENTÃO fallback entre modelos. Billing/rate limit ≠ abort. Tenta próximo na tier."
+    zone: excelencia
+    trigger: "Pipeline LLM atingindo limites."
+
+  - id: AN_KE_065
+    name: "Model Quality Gap is Real"
+    rule: "SE múltiplos modelos → ENTÃO esperar variância GRANDE (Gemini 45 vs Claude 84). Validação DEVE ser model-aware."
+    zone: impacto
+    trigger: "Comparando outputs entre modelos."
+
+  - id: AN_KE_066
+    name: "Git is the Only Version Control"
+    rule: "SE precisa iterar/versionar arquivo → ENTÃO versionamento é via Git excluso. NUNCA use 'v2', 'v3' no filename."
+    zone: excelencia
+    trigger: "Criando ou versionando arquivos."
+    evidence: "'nunca use v2, v3 no nome de um arquivo o versionameneto acontece via git apenas'"
+
+  - id: AN_KE_067
+    name: "Database as Single Source of Truth"
+    rule: "SE precisa validar integridade schema/dados → ENTÃO query direta no banco de dados. Documentação pode e vai mentir."
+    zone: excelencia
+    trigger: "Validação de schema de DB ou contagem de records."
+    evidence: "'use pgsql para confeirr o banco nao confie na documentacao, pq o banco já mudou'"
+
+  - id: AN_KE_068
+    name: "Zero DB Table Cloning"
+    rule: "SE precisa criar backup no Supabase → ENTÃO baixe o dump/CSV para local. NUNCA clone/duplique tabelas nativamente no banco."
+    zone: excelencia
+    trigger: "Criando backup em produção localmente."
+    anti_pattern: "CREATE TABLE users_backup AS SELECT * FROM users;"
+
+  - id: AN_KE_069
+    name: "Definitive Root Cause Resolution"
+    rule: "SE identificar bug persistente → ENTÃO não crie quick-fixes ou supressões de sintoma. Corrija o mecanismo e cure a base."
+    zone: genialidade
+    trigger: "Bug recorrente atrapalhando mais de 1 sessão/agente."
+    evidence: "'precisamos resolver de uma vez por todas as conexoões com o banco de dados'"
+
+  # ── Schema/Data ──
+
+  - id: AN_KE_070
+    name: "Multi-IDE Sync Protocol"
+    rule: "SE criar/atualizar commands ou skills → ENTÃO sincronizar transversal. Claude Code (commands/agents) vs Gemini/Roo (skills)."
+    zone: excelencia
+    trigger: "Modificando scripts, agentes ou comandos de IDE."
+    evidence: "'vamos sincronizar sempre para claude /command e /agents, nos outros apenas o que eles tem compatibilidade'"
+
+  - id: AN_KE_071
+    name: "Capture Raw Then Analyze"
+    rule: "SE recebendo dados externos → ENTÃO salvar RAW em JSONB primeiro. Estruturar depois. Dados perdidos = irrecuperáveis."
+    zone: excelencia
+    trigger: "Recebendo dados de auth, webhook, import."
+
+  - id: AN_KE_072
+    name: "Code Over Documentation"
+    rule: "Código funcional > documentação. Doc desatualizada (doc rot) é PIOR que nenhuma. Deletar doc podre > criar doc novo."
+    zone: genialidade
+    trigger: "Avaliando se documenta ou implementa."
+
+  - id: AN_KE_073
+    name: "Parallel Subagents for Throughput"
+    rule: "SE tarefa é paralelizável → ENTÃO MÁXIMO de subagentes em paralelo. Throughput > sequencialidade."
+    zone: impacto
+    trigger: "Tarefa de preenchimento, pesquisa, ou validação em massa."
+
+  - id: AN_KE_074
+    name: "Commit Antes de Deleção"
+    rule: "SE vai deletar scaffolding, pastas ou dados estruturais → ENTÃO obrigatório git commit antes do rm. Checkpoint de reversão."
+    zone: impacto
+    trigger: "Operação massiva de exclusão ou reorganização destrutiva."
+    evidence: "'nao delete nada do harry potter, antes de continuar faça commit'"
+
+  - id: AN_KE_075
+    name: "Delete Stale Recreate from Scratch"
+    rule: "SE artefato desatualizado e custo atualizar > recriar → ENTÃO deletar e recriar. Manter stale = doc rot."
+    zone: impacto
+    trigger: "Encontrando documentação/config antiga."
+
+  # ── Development Discipline ──
+
+  - id: AN_KE_076
+    name: "Minimal Blast Radius"
+    rule: "SE recebendo comando pra mudar UMA coisa → ENTÃO mudar SÓ aquela coisa. Nunca 'melhorar' o resto."
+    zone: excelencia
+    trigger: "IA propondo mudanças adjacentes ao pedido."
+    anti_pattern: "Aproveitar PR pra refatorar código que ninguém pediu."
+
+  - id: AN_KE_077
+    name: "Design Smell Detector"
+    rule: "SE algo 'não faz sentido' → ENTÃO parar e questionar. A frase é design smell detector natural."
+    zone: excelencia
+    trigger: "Qualquer momento de estranheza arquitetural."
+
+  - id: AN_KE_078
+    name: "Names Not IDs as Identity"
+    rule: "SE artefatos representam PESSOAS reais → ENTÃO nomes reais, não IDs anônimos. Pessoas = DNA do sistema."
+    zone: excelencia
+    trigger: "Modelando founders, experts, agents."
+
+  - id: AN_KE_079
+    name: "Cross-Session Context Injection"
+    rule: "SE fez trabalho em outra sessão que impacta a atual → ENTÃO informar a IA proativamente. Ela não tem visibilidade cross-session."
+    zone: excelencia
+    trigger: "Trabalhando em múltiplas sessões paralelas."
+    evidence: "'o que acabei de fazer em outra sessao e pode impactar/acelerar o seu trabalho'"
+
+  - id: AN_KE_080
+    name: "Next Command Flow"
+    rule: "SE finalizando execução complexa → ENTÃO fornecer o exato comando CLI subsequente em codeblock. Fluxo de trabalho sem atrito heurístico."
+    zone: excelencia
+    trigger: "Término de um epic execution run ou script CLI interativo."
+    evidence: "'qual comando pra o proximo, quero sempre qu eno final me de o coamndo pra o proixmo'"
+
+  # ── Git/Operations ──
+
+  - id: AN_KE_081
+    name: "Agnostic Taxonomy & Combinatorics"
+    rule: "SE criando tags, classificações ou enums → ENTÃO use inglês universal e construa em modelo combinatório, não categorias isoladas limitantes."
+    zone: excelencia
+    trigger: "Modelagem lógica de tags do banco de dados ou slugs de arquivo."
+    evidence: "'taxonomias precisam ser em ingles e combinatórias, nunca isoladas'"
+
+  - id: AN_KE_082
+    name: "Read Documentation Before Acting"
+    rule: "SE existe doc/spec/paper sobre o que vai fazer → ENTÃO ler PRIMEIRO, agir DEPOIS. Entender contexto previne 80% dos erros."
+    zone: excelencia
+    trigger: "IA propondo executar algo em domínio com documentação disponível."
+    evidence: "'leia a documentacao que criamos sobre tools, antes de avançarmos'"
+
+  - id: AN_KE_083
+    name: "Cross-Agent Awareness"
+    rule: "SE assumir um trabalho novo em um workspace → ENTÃO assuma modo multi-player. Revise artefatos antes de mexer, pois outro agente (ou o humano) alterou recém."
+    zone: excelencia
+    trigger: "Início de task em repositório grande."
+    evidence: "'Tem outro agente trabalhando sempre revise pq algo ele pode já ter feito'"
+
+  - id: AN_KE_084
+    name: "Foundation Complete Before Building"
+    rule: "SE projeto multi-camada → ENTÃO completar camada N a 100% ANTES de começar N+1. Schema 100% antes de seeds. Drivers 100% antes de correlações."
+    zone: excelencia
+    trigger: "Projeto com camadas de dependência."
+    evidence: "'eu quero preparar antes 100% o drivers e tools, e depois começar as correlações'"
+
+  - id: AN_KE_085
+    name: "Greenfield Over Spaghetti Refactor"
+    rule: "SE os dados/documentos atuais de um projeto estão caóticos e misturados → ENTÃO isole-os como raw sources e inicie greenfield, em vez de consertar legado sujo."
+    zone: genialidade
+    trigger: "Processamento de fontes desorganizadas e scrapers múltiplos."
+    evidence: "'entao deveria organizar os documentos em sources e começar um greenfield... em vez de...'"
+
+  # ── Prerequisite Gates (from "antes de" pattern — 97 hits) ──
+
+  - id: AN_KE_086
+    name: "Verify State Before Mutating"
+    rule: "SE vai mutar estado (DB, arquivo, config) → ENTÃO VERIFICAR atual PRIMEIRO. SELECT antes de ALTER. ls antes de rm. Não assumir — confirmar."
+    zone: genialidade
+    trigger: "Qualquer operação que muda estado."
+    anti_pattern: "Executar migration sem verificar se schema já mudou."
+    evidence: "97 instâncias de 'antes de' no history — padrão cross-project massivo"
+
+  - id: AN_KE_087
+    name: "Brand Domain Isolation"
+    rule: "SE múltiplas marcas compartilham infra → ENTÃO isolamento TOTAL. Conceitos de marca X NUNCA em docs de marca Y."
+    zone: excelencia
+    trigger: "Trabalhando com múltiplas marcas/businesses."
+    anti_pattern: "Termos do Outliers em documentos da Academia Lendária."
+    evidence: "'não use Outlier, Bunda Mole em NENHUM documento da Lendária'"
+
+  - id: AN_KE_088
+    name: "Runners as Product Process"
+    rule: "SE pipeline CLI funciona → ENTÃO produtizar como processo formal. Runners = escalar execução."
+    zone: excelencia
+    trigger: "Pipeline funcional pronto pra ser reusado."
+
+  - id: AN_KE_089
+    name: "Validate Phases Mirror Map Phases"
+    rule: "SE processo tem N fases de mapeamento → ENTÃO validação DEVE ter fases correspondentes."
+    zone: excelencia
+    trigger: "Criando validador para processo multi-fase."
+
+  - id: AN_KE_090
+    name: "Harvest Before Delete"
+    rule: "SE vai deletar/arquivar artefatos → ENTÃO PRIMEIRO revisar e extrair o que tem valor. Deletar sem harvest = perder conhecimento irrecuperável."
+    zone: excelencia
+    trigger: "Deletando, arquivando, ou migrando artefatos substituídos."
+    anti_pattern: "rm -rf batch sem revisão prévia do conteúdo."
+    evidence: "'revise o que dos agentes antigos possamos aproveitar antes de deletar'"
+
+  - id: AN_KE_091
+    name: "Conceptual Before Mechanical"
+    rule: "SE mudança é arquitetural → ENTÃO entender modelo conceitual PRIMEIRO. Ler paper/spec ANTES de escrever código."
+    zone: genialidade
+    trigger: "IA propondo migration, refactor, ou mudança arquitetural."
+    anti_pattern: "Criar migration SQL antes de entender o modelo por trás."
+    evidence: "'antes de migrar precisamos entender conceitualmente' + 'calma vamos planejar antes de alterar' (2x)"
+
+  - id: AN_KE_092
+    name: "Unify Before Extending"
+    rule: "SE existem variantes do mesmo artefato → ENTÃO UNIFICAR o melhor de cada ANTES de adicionar novo. Estender fragmentado = multiplicar fragmentação."
+    zone: excelencia
+    trigger: "Múltiplas versões/variantes do mesmo artefato."
+    evidence: "'como podemos unificar o que tem de melhor em cada parte'"
+
+  - id: AN_KE_093
+    name: "Backup Before Mutation"
+    rule: "SE operação vai mudar/deletar dados não-recuperáveis → ENTÃO BACKUP primeiro. Perguntar ao humano."
+    zone: excelencia
+    trigger: "Operação destrutiva: delete, migration, seed, schema change."
+    anti_pattern: "DELETE em produção sem backup prévio."
+    evidence: "'fez backup antes de deletar?' + 'no próximo faça backup antes de qualquer alteração'"
+
+  - id: AN_KE_094
+    name: "Agnostic Extensibility Protection"
+    rule: "SE script interage com plugins/pastas → ENTÃO leitura dinâmica (readdir). NUNCA hardcode if/else para items estáticos (destrói expansibilidade)."
+    zone: excelencia
+    trigger: "Desenvolvendo CLIs ou runners que operam sobre workspaces infinitos."
+    evidence: "'Pq voce mudou de generico para hardcode considerando que podemos ter novos expansions packs...'"
+
+  - id: AN_KE_095
+    name: "Prompt Over Code for Control"
+    rule: "SE controle pode ser via prompt/config ao invés de código → ENTÃO prompt > code. Mais flexível, mais barato de iterar."
+    zone: excelencia
+    trigger: "Implementando lógica de formato/comportamento ajustável."
+    evidence: "'vamos reverter tudo entao e deixar o controle no prompt'"
+
+  - id: AN_KE_096
+    name: "Raw Import No Transform"
+    rule: "SE importando dados externos → ENTÃO importar RAW sem alterar. Transformação é FASE SEPARADA. Dado original perdido = irrecuperável."
+    zone: impacto
+    trigger: "Importando transcrições, docs, CSVs, APIs."
+    anti_pattern: "IA 'melhorando' dados durante importação."
+    evidence: "'nao deve ler com IA, deve pegar todo arquivo (raw) e importar sem alterar'"
+
+  - id: AN_KE_097
+    name: "Fail-Safe Small Batches"
+    rule: "SE efetuando migrações críticas ou gerando templates densos → ENTÃO subdivida em pequenos lotes (batch size X). Reduz impacto de falha."
+    zone: impacto
+    trigger: "Reescritas massivas de banco de dados ou transições de dezenas de arquivos."
+    evidence: "'vamos de 3 em 3 para dar menos risco pro erro? copie 3 migrations'"
+
+  - id: AN_KE_098
+    name: "100 Tests Before Deterministic"
+    rule: "SE exatas (contagem, formato) → Worker AGORA. SE comportamental (qualidade, impacto) → humano+LLM PRIMEIRO → 100+ testes validados → SÓ ENTÃO extrair padrões determinísticos."
+    zone: genialidade
+    trigger: "Propondo automatizar julgamento humano com Worker/script."
+    anti_pattern: "IF/ELSE Python para classificar heurísticas em zones de Pareto."
+    evidence: "'até termos 100 testes, não vale criar worker para análises complexas de comportamento humano, quando nao é algo de exatas'"
+
+  - id: AN_KE_099
+    name: "CLAUDE.md as Living Config"
+    rule: "SE descobriu regra durante sessão → ENTÃO salvar no CLAUDE.md IMEDIATAMENTE. Regras não persistidas morrem."
+    zone: excelencia
+    trigger: "Descobrindo padrão/regra durante trabalho."
+
+  - id: AN_KE_100
+    name: "Reverse Engineer Your Reasoning"
+    rule: "SE completou processo complexo → ENTÃO engenharia reversa do raciocínio. Documentar como processo reprodutível."
+    zone: genialidade
+    trigger: "Conclusão de processo bem-sucedido que pode ser replicado."
+
+  # ═══════════════════════════════════════════════════════════════
+  # THE GENIALITY EXPANSION (AN_KE_101 — AN_KE_107)
+  # Ultra-Premium Architectural Tier (0.8% Heuristics)
+  # ═══════════════════════════════════════════════════════════════
+
+  - id: AN_KE_101
+    name: "Framework Strict Isolation"
+    rule: "SE script requer configurações específicas do negócio/client → ENTÃO externalize o payload. NUNCA coloque lógica hardcoded no Core (.aiox-core)."
+    zone: genialidade
+    trigger: "Modificando pastas vitais do framework Agnóstico com dados da startup."
+    evidence: "'Estava misturando framework com expansão... .aiox-core/ NÃO deveria ter dados do projeto'"
+
+  - id: AN_KE_102
+    name: "LLM Downgrade Defense"
+    rule: "SE a tarefa é processamento massivo (pattern match) → ENTÃO prioridade RegEx/Bash. Se precisar de raciocínio leve -> Haiku. NUNCA queime Sonnet em trivialidades."
+    zone: genialidade
+    trigger: "Descrevendo ETLs, scrapers rotineiros ou lógicas escaláveis de automação."
+    evidence: "'tente entender o padrao... sem precisarmos de LLM no futuro, ou entao prompt para LLM mais barata Haiku'"
+
+  - id: AN_KE_103
+    name: "Local Caching Over Live Database"
+    rule: "SE pipelines massivas requerem leitura de blobs longos (vtt, books) → ENTÃO leia via Cache File System local. Bypass Supabase."
+    zone: genialidade
+    trigger: "Mineração de texto, RAG cru, ou extração pesada via Scripts de IA."
+    evidence: "'ao invés de pegagarmos do banco, pegarmos de /outputs onde já foram tratadas (...) e estao locais'"
+
+  - id: AN_KE_104
+    name: "Modular Generic Scripts"
+    rule: "SE processo rotineiro ocorre via terminal → ENTÃO paramertrize o arquivo via flags (--input). NUNCA fabrique 'scripts descartáveis' por pasta."
+    zone: genialidade
+    trigger: "Criando shell/node scripts soltos pela arquitetura do projeto."
+    evidence: "'como podemos fazer siso de forma moduarlizada paar usa rno futuro sem precisar criar novo script toda vez?'"
+
+  - id: AN_KE_105
+    name: "Architectural KISS Challenge"
+    rule: "SE propor tabelas, filas assíncronas gigantes ou recálculo massivo estrutural → ENTÃO PROVE O FRACASSO DO LEGACO. Maximize reaproveitamento ANTES de rascunhar o novo."
+    zone: genialidade
+    trigger: "Agente cria epics de fundação inteiramente novos abandonando tudo."
+    evidence: "'Está aplicando KISS? analisou se essa arquitetura toda é REALMENTE necessária? comparou com a esrtutura atual para entender o que pode ser aprovaitado dela?'"
+
+  - id: AN_KE_106
+    name: "Subagents Over Flattened Tasks"
+    rule: "SE Epic/Workflow cruza múltiplos domínios abstratos → ENTÃO divida em subagentes encapsulados. Evite janelas contextuais linearmente caóticas."
+    zone: genialidade
+    trigger: "Desenhando pipelines e squads para multi-steps (Ex: Copy + Design + DB)."
+    evidence: "'ao invés de usar subagenets, criou 3 tasks, precisamos rever isto também.'"
+
+  - id: AN_KE_107
+    name: "Queue Concurrency Chaos"
+    rule: "SE processamento assíncrono ingere histórico log/mensagens → ENTÃO imponha Order Preservation Key. Concorrência escalável deve ser travada para manter cronologia."
+    zone: genialidade
+    trigger: "Microserviços processando picos de inserção sequencial ou Webhooks paralelos."
+    evidence: "'trabalho em fila não funcionava bem. As mensagens não ficavam na ordem certa quando tinham muita grupos'"
+
+  # ═══════════════════════════════════════════════════════════════
+  # THE GENIALITY EXPANSION: WAVE 2 (AN_KE_108 — AN_KE_114)
+  # Database Defense, Architecture scaling & Performance
+  # ═══════════════════════════════════════════════════════════════
+
+  - id: AN_KE_108
+    name: "The Hard Way First (Anti-Retrabalho)"
+    rule: "SE deparar com um workaround rápido vs arquitetura limpa difícil → ENTÃO sofra no Day-1. NUNCA escolha o caminho do retrabalho."
+    zone: genialidade
+    trigger: "Tentação de suprimir erros difíceis de PRISMA ou ignorar refatoração de infra legada."
+    evidence: "'nunca, jamaiss escolha o caminho do retrabalho, fazemos o trabalho difíicl hoje, sem preguiça'"
+
+  - id: AN_KE_109
+    name: "English-Only DB Schema (AI Defensive Design)"
+    rule: "SE construindo tabelas ou views sql → ENTÃO USE inglês exclusivo (ids, nomes). NUNCA misture PT-BR pois destrói a inferência dos agentes gerando SQL."
+    zone: genialidade
+    trigger: "Criando DDL schemas para Supabase / Prisma."
+    evidence: "'banco de dados com tabelas, colunas em portugues costumam gerar eerros de SQL com IA e voce muito bem o porque'"
+
+  - id: AN_KE_110
+    name: "Abstraction Funneling (Everything is an Artifact)"
+    rule: "SE modelando repositório de saídas complexas geradas por IA → ENTÃO consolide no banco em Polimorfica (ex: `mind_artifacts`). NUNCA crie tabela para cada tipo."
+    zone: genialidade
+    trigger: "Inserindo resumos psicográficos, DDLs ou análises num Schema relacional."
+    evidence: "'synthesis, analysis e artifacts sao a mesma coisa, sao artifacts... vamos chamar de mind_artifacts tudo que for uma abstracao de dados reais'"
+
+  - id: AN_KE_111
+    name: "Day 0 Million-Scale Mindset"
+    rule: "SE programando Fetches e Queries nativos de UX crítico → ENTÃO desenhe com paginação e O(1) imaginando um Load Global. Escalabilidade inicia no MVP."
+    zone: genialidade
+    trigger: "Montando Server-Side components puxando lista de items para a Viewport."
+    evidence: "'vamos comecar agora com 1000 acessos mas pensando e com a base preparada para 1 milhao para evitar retrabalhos futuros'"
+
+  - id: AN_KE_112
+    name: "Fluid Narrative Over Rigid Blocks"
+    rule: "SE desenvolvendo Content Parsers ou UX Copywriting → ENTÃO OMITA templates rígidos estacionais. A comunicação deve ser viciante e imprevisível interligando fluxos."
+    zone: genialidade
+    trigger: "IAs retornando saídas em formatos 'Bloco A, Bloco B' padronizados mortos."
+    evidence: "'não podemos deixar engessado, quero algo fluído que respeite assima de tudo a narrativa, o texto preguiça ser viciante'"
+
+  - id: AN_KE_113
+    name: "Heavy Assets Lazy Loading"
+    rule: "SE gerando UI que contenha renderização massiva de imagens → ENTÃO EXIJA Lazy Loadings (Cloudinary resize, loading=`lazy` explícito). UX travada reprovado."
+    zone: genialidade
+    trigger: "Grids contendo Cover de Cursos ou Avatares não refinados."
+    evidence: "'As imagens estão sendo carregados em sua totalidade, isso também é um erro brutal de performance de carregamento.'"
+
+  - id: AN_KE_114
+    name: "Dynamic Variances in UX"
+    rule: "SE gerando Header/Títulos de UI estáticos → ENTÃO injete Variação Randômica Inteligente. A Interface premium DEVE ter ciclos mutáveis fluidos que surpreendam o Load Humano."
+    zone: genialidade
+    trigger: "Anotações hardcoded como `<h1>Bem vindo usuário</h1>` num painel."
+    evidence: "'nao faz sentido ser o mesmo título sempre, quero variaaccao de titulos... precisamos aproveitar melhor o design da página para sermos fluidos'"
+
+  # --- Session 2026-03-31 (domain-decoder + sinkra-squad + squad-creator) ---
+
+  - id: AN_KE_116
+    name: "LLM Completion Mirage (Status Revert on Gate Fail)"
+    rule: "SE LLM sinaliza PHASE_COMPLETE MAS gate falha (zero arquivos em disco) → ENTÃO REVERTER status para in_progress antes do retry. NUNCA confiar em texto do LLM — disco é a verdade."
+    zone: genialidade
+    trigger: "Pipeline multi-fase com LLM executor onde status é persistido entre iterações."
+    evidence: "'Gate fail didnt revert status: when LLM signals PHASE_COMPLETE but E9 gate fails, next iteration saw complete and skipped'"
+
+  - id: AN_KE_117
+    name: "Explicit Write Instruction for LLM Executors"
+    rule: "SE prompt template espera file outputs → ENTÃO incluir instrução EXPLÍCITA 'Use Write tool' + warning 'PHASE_COMPLETE without files = gate failure'. NUNCA assumir que LLM vai usar Write por iniciativa."
+    zone: excelencia
+    trigger: "Prompt template para LLM executor que deve produzir arquivos em disco."
+    evidence: "'LLM not writing files: prompt now explicitly instructs to use the Write tool, with warning that PHASE_COMPLETE without files = gate failure + retry'"
+
+  - id: AN_KE_118
+    name: "Incremental Context Accumulation in Multi-Phase Pipelines"
+    rule: "SE pipeline multi-fase com LLM → ENTÃO injetar outputs de fases anteriores como MANDATORY READS antes do source. Phase N lê phases 0..N-1. NUNCA enviar apenas source sem prior context."
+    zone: genialidade
+    trigger: "Pipeline com 3+ fases LLM onde cada fase depende de descobertas anteriores."
+    evidence: "'build_prior_context() scans completed phase dirs and generates MANDATORY READS section with paths and sizes'"
+
+  - id: AN_KE_119
+    name: "Auto-Derive Over Mandatory Parameters"
+    rule: "SE parâmetro pode ser derivado do source (version, slug) → ENTÃO auto-derivar com fallback chain. Permitir override explícito. NUNCA pedir como obrigatório o que pode ser calculado."
+    zone: impacto
+    trigger: "Desenhando CLI interface para pipeline que opera sobre source com metadata."
+    evidence: "'Version auto-detected: package.json → config.yaml → pyproject.toml → VERSION → timestamp. Slug: basename slugified.'"
+
+  - id: AN_KE_120
+    name: "Auto-Mode Detection (State-Driven Greenfield/Brownfield)"
+    rule: "SE CLI pipeline tem modos greenfield/brownfield → ENTÃO default='auto': state exists → brownfield, no state → greenfield. Greenfield explícito com state → WIPE. NUNCA bloquear com erro."
+    zone: excelencia
+    trigger: "CLI pipeline com state persistido entre runs."
+    evidence: "'Default mode auto. Confirmado em 3 pipelines: sinkra-map, mmos, decoder.'"
+
+  - id: AN_KE_121
+    name: "SINKRA Upgrade Checklist Sprint"
+    rule: "SE squad SINKRA score < 8/10 → ENTÃO aplicar checklist sistemático em sessão única (tier, capabilities, entity_bindings, extract hardcoded, agnosticism). Score antes/depois. NUNCA upgrade aberto."
+    zone: impacto
+    trigger: "Squad com score SINKRA < 8/10 que precisa de compliance."
+    evidence: "'SINKRA-native upgrade — score 6→9/10 em sessão única via checklist'"
+
+  - id: AN_KE_122
+    name: "Enum-ify Pipeline Status Strings"
+    rule: "SE pipeline usa status como raw strings em 3+ locais → ENTÃO criar str(Enum). NUNCA comparar raw strings para status em pipelines com 3+ fases."
+    zone: impacto
+    trigger: "Pipeline com 3+ status strings usados em comparações."
+    evidence: "'PhaseStatus and PipelineStatus str enums replace raw strings, preventing typos and enabling IDE autocomplete'"
+
+  - id: AN_KE_123
+    name: "JSONL Audit Trail Over Text Logs"
+    rule: "SE pipeline tem 3+ fases com lifecycle events → ENTÃO JSONL logger com eventos estruturados (timestamp, phase, event_type, payload). Manter print para debug em paralelo. NUNCA apenas text logs."
+    zone: excelencia
+    trigger: "Pipeline com 3+ fases que precisa de observabilidade pós-run."
+    evidence: "'Pipeline Logger: JSONL audit trail with structured events for phase lifecycle, E9 gate checks, enforcement violations'"
+
+  - id: AN_KE_124
+    name: "Inline Fast Validation Over Slow Global Validators"
+    rule: "SE pipeline precisa validar 1-5 arquivos E validador global leva 20+ min → ENTÃO substituir por inline per-file (<1s). Global APENAS para CI. NUNCA rodar validador global em pipeline interativo."
+    zone: genialidade
+    trigger: "Pipeline ou workflow que valida arquivo individual mas tem apenas validador global."
+    evidence: "'Replace slow validate:yaml with quick node yaml.load per-file checks. 20+ min → <1s. Mesma validação, escopo correto.'"
+
+  - id: AN_KE_125
+    name: "Headless LLM = Text Generator, Não Agente"
+    rule: "SE pipeline usa claude -p / codex / gemini headless → ENTÃO echo $OUTPUT > phase{N}-output.md SEMPRE. Prompt: 'sua resposta É o deliverable'. NUNCA depender de tool execution como única persistência."
+    zone: genialidade
+    trigger: "Pipeline headless com qualquer LLM que deve produzir deliverables em disco."
+    evidence: "'Haiku: 333 tokens, PHASE_COMPLETE, zero Write calls. Fix: script salva stdout. Confirmado 3 modelos.'"
+
+# ═══════════════════════════════════════════════════════════════
+# MINED FROM HISTORY.JSONL (AN_KE_126 — AN_KE_133)
+# Story: MMOS-H.6 | Source: 19K lines, 938 raw hits, 8 formalized
+# ═══════════════════════════════════════════════════════════════
+
+  - id: AN_KE_126
+    name: "Handoff-as-Infrastructure (Session Continuity Protocol)"
+    rule: "SE sessão vai encerrar OU trocar de agente → ENTÃO gerar handoff estruturado ANTES de sair. Handoff é INFRA, não cortesia. Sem handoff = trabalho perdido."
+    zone: genialidade
+    trigger: "Fim de sessão, troca de agente, ou mudança de contexto."
+    evidence: "'faca um handoff completo', 'crie handoff', 'gere o handoff' — 207 instâncias cross-project"
+
+  - id: AN_KE_127
+    name: "Anti-Volatile-Hardcode (Never Hardcode Mutable State)"
+    rule: "SE config de agent/squad/workflow tem valor mutável hardcoded → ENTÃO extrair para variável/config dinâmico. Valores hardcoded em configs de IA são BOMBA-RELÓGIO."
+    zone: excelencia
+    trigger: "Review de config com valores hardcoded (URLs, nomes, versões, paths absolutos)."
+    evidence: "'tinham coisas em hardcode', 'nunca hardcode de path' — 18 instâncias, 5 projetos"
+
+  - id: AN_KE_128
+    name: "Real Data Only (Zero Mock in Demo/Wireframe)"
+    rule: "SE criando demo/wireframe/apresentação → ENTÃO usar dados REAIS de produção. NUNCA usar 'Lorem ipsum' ou dados fictícios. Dados reais revelam bugs de layout e ganham confiança."
+    zone: excelencia
+    trigger: "Criando qualquer artefato visual (demo, wireframe, apresentação, landing page)."
+    evidence: "'prefiro dados reais, exemplos reais', 'nao quero dados fakes' — 12 instâncias"
+
+  - id: AN_KE_129
+    name: "Token-Conscious Model Delegation"
+    rule: "SE task é simples/mecânica → ENTÃO usar modelo barato (Haiku). SE task é complexa/criativa → ENTÃO usar Opus. NUNCA gastar Opus em tarefas que Haiku resolve."
+    zone: excelencia
+    trigger: "Qualquer pipeline multi-step ou execução batch."
+    evidence: "'quero uma atividade com opus e outra com ele e ver a diferenca de preco', 'haiku para tarefas simples' — 25 instâncias"
+
+  - id: AN_KE_130
+    name: "YOLO Mode Contract (Autonomous Execution Protocol)"
+    rule: "SE usuário diz 'yolo'/'vai'/'manda' → ENTÃO executar TUDO sem perguntar, respeitando limites do CLAUDE.md. Autonomia é CONTRATO, não liberdade total."
+    zone: impacto
+    trigger: "Comando explícito de autonomia do usuário."
+    evidence: "'yolo', 'vai la', 'manda ver', 'faz tudo' — 15 instâncias, 3 projetos"
+
+  - id: AN_KE_131
+    name: "Anti-Document-Pollution (Kill Junk Reports)"
+    rule: "SE output é relatório/resumo que ninguém vai ler → ENTÃO NÃO criar. Documentação existe para DECIDIR ou AGIR, não para existir. Cada doc sem leitor é poluição."
+    zone: excelencia
+    trigger: "Tentativa de criar relatório/resumo/documentação sem consumidor definido."
+    evidence: "'nao ficar criando trocentos documentos', 'remova documentacao desnecessaria' — 10 instâncias"
+
+  - id: AN_KE_132
+    name: "Multi-Agent Collision Guard"
+    rule: "SE múltiplos agentes editando mesmo domínio → ENTÃO PARAR e verificar estado atual antes de avançar. Colisão silenciosa é o bug mais caro de multi-agent."
+    zone: impacto
+    trigger: "2+ agentes/sessões trabalhando no mesmo arquivo/domínio."
+    evidence: "'confira antes', 'outro agente tentando fazer o mesmo' — 8 instâncias, 4 projetos"
+
+  - id: AN_KE_133
+    name: "Prohibition as System Rule (NUNCA/JAMAIS → CLAUDE.md)"
+    rule: "SE proibição é repetida 2+ vezes → ENTÃO converter em regra no CLAUDE.md/rules. Proibições verbais são voláteis. Proibições em código são enforcement."
+    zone: impacto
+    trigger: "Usuário repete proibição (emojis, hardcode, mocks, etc.) mais de uma vez."
+    evidence: "'é proibido usar emojis', 'nunca crie backups duplicando tabela', 'é expressamente proibido' — 19 instâncias"

@@ -1,0 +1,1193 @@
+workflow:
+  id: bench-comparison-pipeline
+  name: Universal Benchmark Comparison Pipeline
+  type: benchmark
+  version: 3.0.0
+  description: |
+    Universal 10-phase benchmark pipeline supporting codebase, LLM, product, company, and technology comparisons. Orchestrates type detection, dual-subject inventory, comparison matrix, quantitative scoring, gap analysis, type-specific deep dives, executive reporting, battle card generation, and quality gate validation. Produces dual-format output (JSON + MD) for all artifacts.
+  author: AIOX Spy Squad
+  updated_at: "2026-02-17"
+  inputs:
+    subject_a:
+      type: string
+      required: true
+      description: First subject identifier (e.g., framework name, LLM model, product name)
+      elicit: true
+      prompt: What is the first subject to benchmark?
+    subject_b:
+      type: string
+      required: true
+      description: Second subject identifier
+      elicit: true
+      prompt: What is the second subject to benchmark against?
+    comparison_type:
+      type: enum
+      values:
+        - auto
+        - codebase
+        - llm
+        - product
+        - company
+        - technology
+      required: false
+      default: auto
+      description: Comparison type. 'auto' triggers bench-detect for automatic detection.
+      elicit: true
+      prompt: Comparison type? (auto, codebase, llm, product, company, technology)
+    source_a:
+      type: string
+      required: false
+      description: Source for subject A (repo URL, docs URL, local path, or 'web' for web search)
+      elicit: true
+      prompt: Source for subject A? (GitHub URL, local path, docs URL, or 'web')
+    source_b:
+      type: string
+      required: false
+      description: Source for subject B
+      elicit: true
+      prompt: Source for subject B? (GitHub URL, local path, docs URL, or 'web')
+    source_type_a:
+      type: enum
+      values:
+        - repo_local
+        - repo_github
+        - docs_url
+        - web
+      required: false
+      default: web
+      description: How to access subject A data
+    source_type_b:
+      type: enum
+      values:
+        - repo_local
+        - repo_github
+        - docs_url
+        - web
+      required: false
+      default: web
+      description: How to access subject B data
+    profile:
+      type: enum
+      values:
+        - quick
+        - standard
+        - full
+      required: false
+      default: standard
+      description: Execution depth profile (controls phase count and analysis depth)
+      elicit: true
+      prompt: Which profile? quick (5 phases), standard (8 phases), full (all 10 phases)
+    skip_phases:
+      type: array
+      required: false
+      default: []
+      description: Phase numbers to skip (e.g., [6] to skip type-specific deep dive)
+    dimension_pack:
+      type: string
+      required: false
+      default: auto
+      description: Dimension pack to use for scoring. 'auto' loads from comparison_type.
+  profiles:
+    quick:
+      description: "Fast comparison: detect + dual inventory + matrix + battle card"
+      phases:
+        - 0
+        - 1
+        - 2
+        - 3
+        - 8
+      max_artifacts: 8
+      use_case: Initial screening, quick competitive snapshot, decision support
+      checkpoint_mode: relaxed
+      veto_mode: critical_only
+    standard:
+      description: "Standard benchmark: detect + inventories + matrix + score + gap + report + battle card"
+      phases:
+        - 0
+        - 1
+        - 2
+        - 3
+        - 4
+        - 5
+        - 7
+        - 8
+      max_artifacts: 15
+      use_case: Regular competitive benchmark with scoring, gaps, and executive report
+      checkpoint_mode: normal
+      veto_mode: standard
+    full:
+      description: "Exhaustive: all 10 phases including type-specific deep dive + quality gate"
+      phases:
+        - 0
+        - 1
+        - 2
+        - 3
+        - 4
+        - 5
+        - 6
+        - 7
+        - 8
+        - 9
+      max_artifacts: 25
+      use_case: Deep competitive intelligence, migration planning, strategic decisions
+      checkpoint_mode: strict
+      veto_mode: strict
+  type_routing:
+    codebase:
+      phase_6_tasks:
+        - bench-deep-compare
+        - bench-hooks
+        - bench-absorb
+        - bench-migrate
+      recon_task: bench-codebase-recon
+      data_strategy: local_clone
+      clone_path: ../bench/{subject}/
+      dimension_pack: codebase
+      deep_artifacts:
+        - deep/component-comparison.md
+        - deep/hooks-analysis.md
+        - deep/absorption-roadmap.md
+        - deep/migration-playbook.md
+    llm:
+      phase_6_tasks:
+        - bench-llm-eval
+      recon_task: bench-llm-eval
+      data_strategy: web_search + api
+      dimension_pack: llm
+      deep_artifacts:
+        - deep/reasoning-eval.md
+        - deep/coding-eval.md
+        - deep/cost-analysis.md
+        - deep/benchmark-compilation.md
+    product:
+      phase_6_tasks:
+        - bench-product-research
+      recon_task: bench-product-research
+      data_strategy: web_search + docs
+      dimension_pack: product
+      deep_artifacts:
+        - deep/feature-comparison.md
+        - deep/ux-analysis.md
+        - deep/pricing-analysis.md
+        - deep/reviews-sentiment.md
+    company:
+      phase_6_tasks:
+        - bench-company-intel
+      recon_task: bench-company-intel
+      data_strategy: web_search + financials
+      dimension_pack: company
+      deep_artifacts:
+        - deep/market-position.md
+        - deep/swot-analysis.md
+        - deep/financial-comparison.md
+        - deep/team-analysis.md
+    technology:
+      phase_6_tasks:
+        - bench-tech-eval
+      recon_task: bench-tech-eval
+      data_strategy: web_search + docs + community
+      dimension_pack: technology
+      deep_artifacts:
+        - deep/maturity-assessment.md
+        - deep/ecosystem-analysis.md
+        - deep/dx-comparison.md
+        - deep/performance-benchmarks.md
+  clone_protocol:
+    applies_to:
+      - codebase
+    description: For codebase comparisons, MUST clone repos locally before analysis
+    clone_path_a: ../bench/{subject_a}/
+    clone_path_b: ../bench/{subject_b}/
+    flow: |
+      FOR EACH subject (A and B):
+
+      IF source_type = repo_github AND ../bench/{subject}/ does NOT exist:
+        ACTION: Bash("git clone {source} ../bench/{subject}")
+        STORE: subject_root = ../bench/{subject}/
+
+      IF source_type = repo_local AND {source} is provided:
+        ACTION: Bash("ls {source}") to verify exists
+        NOTE: If source is already at ../bench/{subject}/, use directly
+        NOTE: If source is elsewhere, treat as subject_root = {source}
+
+      IF ../bench/{subject}/ already exists:
+        ACTION: Bash("ls ../bench/{subject}/") to verify
+        STORE: subject_root = ../bench/{subject}/
+
+      ELSE:
+        HALT: "Cannot benchmark codebase without local clone. Provide repo_url."
+    rules:
+      - All Glob/Read/Grep operations on subjects target subject_root
+      - NEVER use WebFetch for codebase structural data
+      - NEVER estimate counts — count real files from the clone
+      - NEVER invent file paths or content
+      - Clones go OUTSIDE the project directory (../bench/)
+  global_veto_conditions:
+    - id: subjects_identical
+      condition: subject_a == subject_b (case-insensitive)
+      severity: CRITICAL
+      action: HALT
+      message: Cannot benchmark a subject against itself. Provide two different subjects.
+    - id: no_subject_a_source
+      condition: comparison_type = codebase AND no source_a provided AND subject_a is not 'aiox'
+      severity: CRITICAL
+      action: HALT
+      message: No source for subject A. Provide repo URL or local path for codebase comparison.
+    - id: no_subject_b_source
+      condition: comparison_type = codebase AND no source_b provided
+      severity: CRITICAL
+      action: HALT
+      message: No source for subject B. Provide repo URL or local path for codebase comparison.
+    - id: output_dir_write_failure
+      condition: Cannot create or write to docs/bench/{subject_a}-vs-{subject_b}/
+      severity: CRITICAL
+      action: HALT
+      message: Output directory not writable. Check filesystem permissions.
+    - id: artifact_corruption
+      condition: Any JSON output file fails JSON.parse() validation
+      severity: HIGH
+      action: HALT_PHASE
+      message: Generated JSON artifact is corrupted. Re-run the producing phase.
+    - id: dimension_pack_missing
+      condition: comparison_type != auto AND dimension pack not found in bench-dimension-packs.yaml
+      severity: HIGH
+      action: HALT
+      message: Dimension pack for this comparison type not found. Check data/bench-dimension-packs.yaml.
+  error_handling:
+    retry_policy:
+      max_retries: 2
+      retry_delay_seconds: 5
+      retryable_errors:
+        - network_timeout
+        - rate_limit
+        - temporary_file_lock
+        - web_search_failure
+    on_phase_failure:
+      strategy: skip_and_log
+      description: |
+        If a non-critical phase fails after retries, log the failure, skip the phase, and continue. Critical phases halt the pipeline.
+      critical_phases:
+        - 0
+        - 1
+        - 2
+        - 3
+      skippable_phases:
+        - 5
+        - 6
+        - 8
+    failure_log:
+      path: docs/bench/{subject_a}-vs-{subject_b}/pipeline-failures.log
+      format: "{timestamp} | Phase {phase_num} | {error_type} | {message}"
+  outputs:
+    base_path: docs/bench/{subject_a}-vs-{subject_b}/
+    artifacts:
+      - docs/bench/{subject_a}-vs-{subject_b}/metadata.json
+      - docs/bench/{subject_a}-vs-{subject_b}/inventory-{subject_a}.json
+      - docs/bench/{subject_a}-vs-{subject_b}/inventory-{subject_a}.md
+      - docs/bench/{subject_a}-vs-{subject_b}/inventory-{subject_b}.json
+      - docs/bench/{subject_a}-vs-{subject_b}/inventory-{subject_b}.md
+      - docs/bench/{subject_a}-vs-{subject_b}/comparison-matrix.json
+      - docs/bench/{subject_a}-vs-{subject_b}/comparison-matrix.md
+      - docs/bench/{subject_a}-vs-{subject_b}/scorecard.json
+      - docs/bench/{subject_a}-vs-{subject_b}/scorecard.md
+      - docs/bench/{subject_a}-vs-{subject_b}/gap-analysis.json
+      - docs/bench/{subject_a}-vs-{subject_b}/gap-analysis.md
+      - docs/bench/{subject_a}-vs-{subject_b}/deep/*.md
+      - docs/bench/{subject_a}-vs-{subject_b}/executive-report.md
+      - docs/bench/{subject_a}-vs-{subject_b}/battle-card.md
+      - docs/bench/{subject_a}-vs-{subject_b}/quality-report.md
+  sequence:
+    - phase: 0
+      name: Type Detection
+      agent: bench-analyst
+      action: Detect comparison type and initialize pipeline metadata
+      task: bench-detect
+      profiles:
+        - quick
+        - standard
+        - full
+      universal: true
+      autonomous: true
+      creates:
+        - docs/bench/{subject_a}-vs-{subject_b}/metadata.json
+      veto_conditions:
+        - id: detection_ambiguous
+          check: comparison_type = auto AND bench-detect returns confidence < 0.5
+          severity: HIGH
+          action: ASK_USER
+          message: "Cannot determine comparison type with confidence. Please specify: codebase, llm, product, company, or technology."
+        - id: unsupported_type
+          check: Detected type is not in [codebase, llm, product, company, technology]
+          severity: CRITICAL
+          action: HALT_PIPELINE
+          message: "Unsupported comparison type detected. Pipeline supports: codebase, llm, product, company, technology."
+      checkpoint:
+        name: Detection Validation
+        description: Verify comparison type was resolved and metadata created
+        type: automated
+        run_after: true
+        heuristics:
+          - id: type_resolved
+            check: comparison_type is not 'auto' after detection
+            on_fail: HALT
+            message: Comparison type was not resolved. Cannot proceed.
+          - id: metadata_valid
+            check: JSON.parse(metadata.json) succeeds AND contains comparison_type, subjects, dimensions
+            on_fail: HALT
+            message: Metadata file is invalid or incomplete.
+          - id: dimension_pack_loaded
+            check: metadata.json contains scoring_dimensions array with >= 3 dimensions
+            on_fail: HALT
+            message: Dimension pack not loaded or has fewer than 3 dimensions.
+          - id: output_dir_created
+            check: docs/bench/{subject_a}-vs-{subject_b}/ directory exists
+            on_fail: HALT
+            message: Output directory was not created.
+        pass_criteria: Type resolved, metadata valid, dimensions loaded.
+        on_pass: Proceed to Phase 1
+        on_fail: HALT if type unresolved. Ask user for clarification.
+      error_handling:
+        on_failure: HALT_PIPELINE
+        reason: Type detection is the foundation. All routing depends on it.
+        recovery: Specify comparison_type explicitly instead of using auto-detect.
+    - phase: 1
+      name: Inventory Subject A
+      agent: bench-analyst
+      action: Generate structured inventory of subject A
+      task: bench-inventory
+      task_override:
+        codebase: bench-codebase-recon
+        llm: bench-llm-eval
+        product: bench-product-research
+        company: bench-company-intel
+        technology: bench-tech-eval
+      profiles:
+        - quick
+        - standard
+        - full
+      universal: true
+      autonomous: true
+      creates:
+        - docs/bench/{subject_a}-vs-{subject_b}/inventory-{subject_a}.json
+        - docs/bench/{subject_a}-vs-{subject_b}/inventory-{subject_a}.md
+      veto_conditions:
+        - id: no_metadata
+          check: metadata.json does not exist
+          severity: CRITICAL
+          action: HALT_PIPELINE
+          message: Metadata missing. Phase 0 must complete first.
+        - id: codebase_no_clone_a
+          check: comparison_type = codebase AND subject A local clone does not exist after clone protocol
+          severity: CRITICAL
+          action: HALT_PIPELINE
+          message: No local clone for subject A. Clone the repo first.
+        - id: web_data_unavailable_a
+          check: comparison_type != codebase AND web search returns no results for subject A
+          severity: HIGH
+          action: WARN_AND_CONTINUE
+          message: Limited web data for subject A. Inventory will be thin.
+      checkpoint:
+        name: Subject A Inventory Validation
+        description: Verify inventory completeness for subject A
+        type: automated
+        run_after: true
+        heuristics:
+          - id: inventory_json_valid
+            check: JSON.parse(inventory-{subject_a}.json) succeeds
+            on_fail: HALT
+            message: Subject A inventory JSON is invalid.
+          - id: inventory_non_empty
+            check: Inventory contains at least 3 items/capabilities/features
+            on_fail: WARN
+            message: Subject A inventory is very thin. May produce shallow comparison.
+          - id: inventory_has_categories
+            check: Inventory items are categorized (not a flat list)
+            on_fail: WARN
+            message: Inventory lacks categorization. Consider grouping items.
+          - id: sources_documented
+            check: Inventory md has a Sources section with at least 1 citation
+            on_fail: HALT
+            message: No source citations in inventory. Required for traceability.
+          - id: codebase_file_counts
+            check: "IF codebase: file counts match actual filesystem scan"
+            on_fail: WARN
+            message: File counts may be inaccurate. Verify against local clone.
+        pass_criteria: JSON valid. At least 3 items cataloged. Sources cited.
+        on_pass: Proceed to Phase 2
+        on_fail: HALT if JSON invalid or no sources. Warn on thin data.
+      error_handling:
+        on_failure: HALT_PIPELINE
+        reason: Subject A inventory is foundational. Phase 3 depends on it.
+        recovery: Verify subject A source is accessible. Check data strategy for this type.
+    - phase: 2
+      name: Inventory Subject B
+      agent: bench-analyst
+      action: Generate structured inventory of subject B
+      task: bench-inventory
+      task_override:
+        codebase: bench-codebase-recon
+        llm: bench-llm-eval
+        product: bench-product-research
+        company: bench-company-intel
+        technology: bench-tech-eval
+      profiles:
+        - quick
+        - standard
+        - full
+      universal: true
+      autonomous: true
+      creates:
+        - docs/bench/{subject_a}-vs-{subject_b}/inventory-{subject_b}.json
+        - docs/bench/{subject_a}-vs-{subject_b}/inventory-{subject_b}.md
+      veto_conditions:
+        - id: no_metadata_b
+          check: metadata.json does not exist
+          severity: CRITICAL
+          action: HALT_PIPELINE
+          message: Metadata missing. Phase 0 must complete first.
+        - id: codebase_no_clone_b
+          check: comparison_type = codebase AND subject B local clone does not exist after clone protocol
+          severity: CRITICAL
+          action: HALT_PIPELINE
+          message: No local clone for subject B. Clone the repo first.
+        - id: web_data_unavailable_b
+          check: comparison_type != codebase AND web search returns no results for subject B
+          severity: HIGH
+          action: WARN_AND_CONTINUE
+          message: Limited web data for subject B. Inventory will be thin.
+        - id: subject_b_not_found
+          check: Subject B is not a recognized entity in the comparison domain
+          severity: HIGH
+          action: ASK_USER
+          message: Subject B not recognized. Verify the name or provide a source URL.
+      checkpoint:
+        name: Subject B Inventory Validation
+        description: Verify inventory completeness for subject B
+        type: automated
+        run_after: true
+        heuristics:
+          - id: inventory_json_valid_b
+            check: JSON.parse(inventory-{subject_b}.json) succeeds
+            on_fail: HALT
+            message: Subject B inventory JSON is invalid.
+          - id: inventory_non_empty_b
+            check: Inventory contains at least 3 items/capabilities/features
+            on_fail: WARN
+            message: Subject B inventory is very thin.
+          - id: inventory_has_categories_b
+            check: Inventory items are categorized
+            on_fail: WARN
+            message: Inventory lacks categorization.
+          - id: sources_documented_b
+            check: Inventory md has a Sources section with at least 1 citation
+            on_fail: HALT
+            message: No source citations in subject B inventory.
+          - id: schema_compatible
+            check: Subject B inventory JSON schema matches subject A inventory schema
+            on_fail: WARN
+            message: Inventory schemas differ. Matrix building may require normalization.
+        pass_criteria: JSON valid. At least 3 items. Sources cited. Schema compatible.
+        on_pass: Proceed to Phase 3
+        on_fail: HALT if JSON invalid. Warn on schema mismatch.
+      error_handling:
+        on_failure: HALT_PIPELINE
+        reason: Subject B inventory is foundational. Phase 3 depends on both inventories.
+        recovery: Verify subject B source. Check data strategy for this type.
+    - phase: 3
+      name: Comparison Matrix
+      agent: bench-analyst
+      action: Build universal comparison matrix from dual inventories
+      task: bench-matrix
+      profiles:
+        - quick
+        - standard
+        - full
+      universal: true
+      autonomous: true
+      creates:
+        - docs/bench/{subject_a}-vs-{subject_b}/comparison-matrix.json
+        - docs/bench/{subject_a}-vs-{subject_b}/comparison-matrix.md
+      veto_conditions:
+        - id: no_inventory_a
+          check: inventory-{subject_a}.json does not exist
+          severity: CRITICAL
+          action: HALT_PIPELINE
+          message: Subject A inventory missing. Phase 1 must complete first.
+        - id: no_inventory_b
+          check: inventory-{subject_b}.json does not exist
+          severity: CRITICAL
+          action: HALT_PIPELINE
+          message: Subject B inventory missing. Phase 2 must complete first.
+        - id: inventories_incompatible
+          check: Inventories have no overlapping categories or features to compare
+          severity: HIGH
+          action: HALT_PHASE
+          message: Inventories share no common dimensions. Cannot build meaningful matrix.
+      checkpoint:
+        name: Matrix Completeness Check
+        description: Verify matrix covers both subjects and has equivalence scoring
+        type: automated
+        run_after: true
+        heuristics:
+          - id: matrix_json_valid
+            check: JSON.parse(comparison-matrix.json) succeeds
+            on_fail: HALT
+            message: Comparison matrix JSON is invalid.
+          - id: all_features_mapped
+            check: Every feature from both inventories appears in the matrix
+            on_fail: WARN
+            message: Some features missing from matrix. Check inventory coverage.
+          - id: equivalence_scores_present
+            check: Every mapping row has an equivalence score (1-5 or Forte/Parcial/Sem equiv)
+            on_fail: HALT
+            message: Equivalence scores missing. Matrix is incomplete.
+          - id: bidirectional_gaps
+            check: Matrix identifies both A-only and B-only features
+            on_fail: WARN
+            message: Matrix may be missing unidirectional features.
+          - id: delta_descriptions_present
+            check: Every mapping row has a non-empty delta/observation column
+            on_fail: WARN
+            message: Some mappings lack delta descriptions.
+          - id: source_citations
+            check: Matrix md has Sources section with citations for both subjects
+            on_fail: HALT
+            message: No source citations. Matrix lacks provenance.
+          - id: categories_balanced
+            check: At least 60% of categories have entries from both subjects
+            on_fail: WARN
+            message: Categories are unbalanced. One subject may be under-represented.
+        pass_criteria: JSON valid. All features mapped. Equivalence scores present. Sources cited.
+        on_pass: Proceed to Phase 4
+        on_fail: HALT on JSON or citation failures. Log warnings and proceed.
+      error_handling:
+        on_failure: HALT_PIPELINE
+        reason: Comparison matrix is the central artifact. Scoring and gaps depend on it.
+        recovery: Verify both inventories exist and have compatible structures.
+    - phase: 4
+      name: Quantitative Scoring
+      agent: bench-analyst
+      action: Run weighted multi-dimension scoring using dimension pack
+      task: bench-score
+      profiles:
+        - standard
+        - full
+      universal: true
+      autonomous: false
+      creates:
+        - docs/bench/{subject_a}-vs-{subject_b}/scorecard.json
+        - docs/bench/{subject_a}-vs-{subject_b}/scorecard.md
+      veto_conditions:
+        - id: no_matrix_for_scoring
+          check: comparison-matrix.json does not exist
+          severity: CRITICAL
+          action: HALT_PHASE
+          message: Comparison matrix required for scoring. Phase 3 must complete.
+        - id: no_dimensions
+          check: metadata.json scoring_dimensions array is empty
+          severity: CRITICAL
+          action: HALT_PHASE
+          message: No scoring dimensions configured. Check dimension pack.
+        - id: insufficient_data
+          check: Less than 50% of matrix rows have data for both subjects
+          severity: HIGH
+          action: WARN_AND_CONTINUE
+          message: Insufficient data for reliable scoring. Results will have low confidence.
+      checkpoint:
+        name: Scoring Integrity Check
+        description: Verify scores are objective, documented, and complete
+        type: automated
+        run_after: true
+        heuristics:
+          - id: all_dimensions_scored
+            check: All dimensions from metadata.scoring_dimensions are scored for both subjects
+            on_fail: HALT
+            message: Incomplete scoring. All dimensions required.
+          - id: scores_in_range
+            check: Every score is between 0 and 100
+            on_fail: HALT
+            message: Score out of range detected (must be 0-100).
+          - id: weights_sum_to_100
+            check: Dimension weights sum to 100 (or 1.0)
+            on_fail: HALT
+            message: Dimension weights do not sum correctly.
+          - id: scoring_method_disclosed
+            check: Scorecard md contains scoring method section explaining signals used
+            on_fail: HALT
+            message: Scoring method not disclosed. Required for objectivity.
+          - id: confidence_level_stated
+            check: Each dimension score has a confidence level (High/Medium/Low)
+            on_fail: WARN
+            message: Confidence levels not stated for some dimensions.
+          - id: delta_calculated
+            check: Delta (A - B) calculated for each dimension
+            on_fail: WARN
+            message: Delta not calculated. Add subject A vs B difference.
+          - id: json_scores_valid
+            check: JSON.parse(scorecard.json) succeeds AND contains scores for all dimensions
+            on_fail: HALT
+            message: Scorecard JSON is invalid or incomplete.
+          - id: no_score_inflation
+            check: Neither subject's average score exceeds the other by more than 30 points without justification
+            on_fail: WARN
+            message: Large score differential detected. Verify objectivity.
+          - id: weighted_totals_present
+            check: Scorecard contains weighted total scores for both subjects
+            on_fail: WARN
+            message: Weighted totals missing. Add overall weighted scores.
+          - id: radar_data_present
+            check: Scorecard JSON contains radar_chart_data array for visualization
+            on_fail: INFO
+            message: Radar chart data missing. Consider adding for visualization.
+        pass_criteria: All dimensions scored. JSON valid. Method disclosed. Weights valid.
+        on_pass: Proceed to Phase 5
+        on_fail: HALT on scoring integrity failures.
+      error_handling:
+        on_failure: HALT_PHASE
+        reason: Scoring is a core deliverable. Invalid scores undermine the benchmark.
+        recovery: Review dimension pack and scoring signals. Re-run with corrected data.
+    - phase: 5
+      name: Gap Analysis
+      agent: bench-analyst
+      action: Identify and classify bidirectional gaps between subjects
+      task: bench-gap
+      profiles:
+        - standard
+        - full
+      universal: true
+      autonomous: true
+      creates:
+        - docs/bench/{subject_a}-vs-{subject_b}/gap-analysis.json
+        - docs/bench/{subject_a}-vs-{subject_b}/gap-analysis.md
+      veto_conditions:
+        - id: no_matrix_for_gaps
+          check: comparison-matrix.json does not exist
+          severity: CRITICAL
+          action: HALT_PHASE
+          message: Comparison matrix required for gap analysis. Phase 3 must complete.
+        - id: no_gaps_found
+          check: Matrix shows perfect parity (all rows score 5/5)
+          severity: INFO
+          action: SKIP_PHASE
+          message: No gaps found. Subjects are fully equivalent. Skipping gap analysis.
+      checkpoint:
+        name: Gap Analysis Completeness
+        description: Verify all gaps are classified and actionable
+        type: automated
+        run_after: true
+        heuristics:
+          - id: gap_json_valid
+            check: JSON.parse(gap-analysis.json) succeeds
+            on_fail: HALT
+            message: Gap analysis JSON is invalid.
+          - id: bidirectional_gaps_present
+            check: Both A-advantages and B-advantages are documented
+            on_fail: WARN
+            message: Gap analysis appears one-sided. Check for missed advantages.
+          - id: gaps_classified
+            check: Every gap has severity (Critical/High/Medium/Low) and effort (Low/Medium/High)
+            on_fail: WARN
+            message: Some gaps lack classification.
+          - id: gaps_from_matrix
+            check: Every matrix row with score < 3 appears in gap analysis
+            on_fail: WARN
+            message: Some low-scoring matrix items not in gap analysis.
+          - id: strategic_value_assessed
+            check: Each gap has strategic value assessment (High/Medium/Low)
+            on_fail: WARN
+            message: Strategic value not assessed for some gaps.
+          - id: recommendations_present
+            check: Gap analysis includes recommendations section
+            on_fail: WARN
+            message: No recommendations in gap analysis.
+          - id: gap_count_summary
+            check: Summary section shows total gaps per subject and per severity
+            on_fail: INFO
+            message: Gap count summary missing.
+        pass_criteria: JSON valid. Bidirectional gaps documented. Gaps classified.
+        on_pass: Proceed to Phase 6
+        on_fail: HALT on JSON invalid. Log warnings and proceed.
+      error_handling:
+        on_failure: SKIP_AND_LOG
+        reason: Gap analysis adds value but scoring and matrix are the core deliverables.
+        recovery: Verify matrix data. Check for edge cases in gap detection.
+    - phase: 6
+      name: Type-Specific Deep Dive
+      agent: bench-analyst
+      action: Execute type-specific deep analysis tasks
+      task: "[routed from type_routing.{comparison_type}.phase_6_tasks]"
+      profiles:
+        - full
+      universal: false
+      conditional: true
+      condition_description: Tasks are selected based on comparison_type from type_routing config
+      autonomous: true
+      creates:
+        - docs/bench/{subject_a}-vs-{subject_b}/deep/*.md
+      type_specific_behavior:
+        codebase:
+          description: Deep component comparison, hooks analysis, absorption roadmap, migration playbook
+          tasks_executed:
+            - bench-deep-compare
+            - bench-hooks
+            - bench-absorb
+            - bench-migrate
+          additional_requires:
+            - Local clones of both subjects at ../bench/{subject}/
+          additional_creates:
+            - docs/bench/{subject_a}-vs-{subject_b}/deep/component-comparison.md
+            - docs/bench/{subject_a}-vs-{subject_b}/deep/hooks-analysis.md
+            - docs/bench/{subject_a}-vs-{subject_b}/deep/absorption-roadmap.md
+            - docs/bench/{subject_a}-vs-{subject_b}/deep/migration-playbook.md
+        llm:
+          description: Reasoning evaluation, coding benchmarks, cost analysis, benchmark compilation
+          tasks_executed:
+            - bench-llm-eval
+          additional_creates:
+            - docs/bench/{subject_a}-vs-{subject_b}/deep/reasoning-eval.md
+            - docs/bench/{subject_a}-vs-{subject_b}/deep/coding-eval.md
+            - docs/bench/{subject_a}-vs-{subject_b}/deep/cost-analysis.md
+            - docs/bench/{subject_a}-vs-{subject_b}/deep/benchmark-compilation.md
+        product:
+          description: Feature deep dive, UX analysis, pricing comparison, review sentiment
+          tasks_executed:
+            - bench-product-research
+          additional_creates:
+            - docs/bench/{subject_a}-vs-{subject_b}/deep/feature-comparison.md
+            - docs/bench/{subject_a}-vs-{subject_b}/deep/ux-analysis.md
+            - docs/bench/{subject_a}-vs-{subject_b}/deep/pricing-analysis.md
+            - docs/bench/{subject_a}-vs-{subject_b}/deep/reviews-sentiment.md
+        company:
+          description: Market position, SWOT analysis, financial comparison, team analysis
+          tasks_executed:
+            - bench-company-intel
+          additional_creates:
+            - docs/bench/{subject_a}-vs-{subject_b}/deep/market-position.md
+            - docs/bench/{subject_a}-vs-{subject_b}/deep/swot-analysis.md
+            - docs/bench/{subject_a}-vs-{subject_b}/deep/financial-comparison.md
+            - docs/bench/{subject_a}-vs-{subject_b}/deep/team-analysis.md
+        technology:
+          description: Maturity assessment, ecosystem analysis, DX comparison, performance benchmarks
+          tasks_executed:
+            - bench-tech-eval
+          additional_creates:
+            - docs/bench/{subject_a}-vs-{subject_b}/deep/maturity-assessment.md
+            - docs/bench/{subject_a}-vs-{subject_b}/deep/ecosystem-analysis.md
+            - docs/bench/{subject_a}-vs-{subject_b}/deep/dx-comparison.md
+            - docs/bench/{subject_a}-vs-{subject_b}/deep/performance-benchmarks.md
+      veto_conditions:
+        - id: no_core_artifacts
+          check: comparison-matrix.json or scorecard.json does not exist
+          severity: HIGH
+          action: SKIP_PHASE
+          message: Core artifacts missing. Skipping deep dive.
+        - id: codebase_no_clones
+          check: comparison_type = codebase AND local clones missing
+          severity: CRITICAL
+          action: HALT_PHASE
+          message: Codebase deep dive requires local clones. Clone repos first.
+        - id: insufficient_matrix_data
+          check: Matrix has fewer than 5 comparison rows
+          severity: MEDIUM
+          action: WARN_AND_CONTINUE
+          message: Limited matrix data. Deep dive may be thin.
+      checkpoint:
+        name: Deep Dive Quality Check
+        description: Verify type-specific deep analysis adds value
+        type: automated
+        run_after: true
+        heuristics:
+          - id: deep_artifacts_created
+            check: At least 2 artifacts created in deep/ subdirectory
+            on_fail: WARN
+            message: Fewer than 2 deep artifacts. Deep dive may be incomplete.
+          - id: deep_artifacts_non_empty
+            check: All deep/ artifacts have more than 50 lines of content
+            on_fail: WARN
+            message: Some deep artifacts are very short.
+          - id: evidence_based
+            check: Deep artifacts cite specific sources, data points, or file paths
+            on_fail: WARN
+            message: Deep analysis lacks evidence citations.
+          - id: adds_value_over_matrix
+            check: Deep analysis provides insights not already present in comparison matrix
+            on_fail: INFO
+            message: Deep dive may not add much over matrix. Consider depth.
+          - id: type_specific_coverage
+            check: At least 75% of expected deep artifacts for this type were created
+            on_fail: WARN
+            message: Some type-specific deep artifacts are missing.
+        pass_criteria: At least 2 deep artifacts created with evidence.
+        on_pass: Proceed to Phase 7
+        on_fail: Log warnings. Deep dive is supplementary.
+      error_handling:
+        on_failure: SKIP_AND_LOG
+        reason: Deep dive is supplementary. Core artifacts (matrix, scorecard, gaps) are the priority.
+        recovery: Check type-specific task requirements. Verify data sources.
+    - phase: 7
+      name: Executive Report
+      agent: bench-analyst
+      action: Generate consolidated executive report with recommendations
+      task: bench-report
+      profiles:
+        - standard
+        - full
+      universal: true
+      autonomous: true
+      optional_requires:
+        - docs/bench/{subject_a}-vs-{subject_b}/gap-analysis.md
+        - docs/bench/{subject_a}-vs-{subject_b}/deep/*.md
+      creates:
+        - docs/bench/{subject_a}-vs-{subject_b}/executive-report.md
+      veto_conditions:
+        - id: no_matrix_for_report
+          check: comparison-matrix.md does not exist
+          severity: CRITICAL
+          action: HALT_PHASE
+          message: Comparison matrix required for report. Phase 3 must complete.
+        - id: no_scorecard_for_report
+          check: scorecard.md does not exist
+          severity: HIGH
+          action: WARN_AND_CONTINUE
+          message: Scorecard missing. Report will lack quantitative analysis.
+      checkpoint:
+        name: Report Quality Check
+        description: Verify executive report is comprehensive and actionable
+        type: automated
+        run_after: true
+        heuristics:
+          - id: report_has_summary
+            check: Executive report has an Executive Summary section
+            on_fail: HALT
+            message: Report missing Executive Summary.
+          - id: report_has_key_findings
+            check: Report has Key Findings section with at least 3 findings
+            on_fail: WARN
+            message: Key Findings section is thin.
+          - id: report_has_scores_summary
+            check: Report includes scorecard summary with weighted totals
+            on_fail: WARN
+            message: Score summary missing from report.
+          - id: report_has_recommendations
+            check: Report has Recommendations section with actionable items
+            on_fail: WARN
+            message: Recommendations missing from report.
+          - id: report_has_methodology
+            check: Report describes methodology, sources, and confidence levels
+            on_fail: HALT
+            message: Methodology section missing. Required for credibility.
+          - id: report_has_limitations
+            check: Report discloses limitations and caveats
+            on_fail: WARN
+            message: Limitations section missing. Consider adding caveats.
+          - id: report_cross_references
+            check: Report references other artifacts (matrix, scorecard, gaps) by name
+            on_fail: INFO
+            message: Report does not cross-reference other artifacts.
+        pass_criteria: Executive Summary present. Methodology disclosed. At least 3 findings.
+        on_pass: Proceed to Phase 8
+        on_fail: HALT if summary or methodology missing.
+      error_handling:
+        on_failure: WARN_AND_COMPLETE
+        reason: Report is synthesis. Even a partial report is valuable.
+        recovery: Generate report from available artifacts. Note missing data.
+    - phase: 8
+      name: Battle Card
+      agent: bench-analyst
+      action: Generate 1-page battle card for decision makers
+      task: bench-battle-card
+      profiles:
+        - quick
+        - standard
+        - full
+      universal: true
+      autonomous: true
+      optional_requires:
+        - docs/bench/{subject_a}-vs-{subject_b}/scorecard.md
+        - docs/bench/{subject_a}-vs-{subject_b}/gap-analysis.md
+      creates:
+        - docs/bench/{subject_a}-vs-{subject_b}/battle-card.md
+      veto_conditions:
+        - id: no_matrix_for_battle_card
+          check: comparison-matrix.md does not exist
+          severity: CRITICAL
+          action: HALT_PHASE
+          message: Comparison matrix required for battle card. Phase 3 must complete.
+      checkpoint:
+        name: Battle Card Completeness
+        description: Verify battle card is concise, accurate, and decision-ready
+        type: automated
+        run_after: true
+        heuristics:
+          - id: battle_card_concise
+            check: Battle card is fewer than 150 lines (approximately 1 page)
+            on_fail: WARN
+            message: Battle card is too long. Target 1 page.
+          - id: has_at_a_glance
+            check: Battle card has 'At a Glance' or summary table
+            on_fail: WARN
+            message: Missing at-a-glance summary.
+          - id: has_strengths_weaknesses
+            check: Battle card lists strengths and weaknesses for both subjects
+            on_fail: WARN
+            message: Missing strengths/weaknesses for one or both subjects.
+          - id: has_verdict
+            check: Battle card has a clear verdict or recommendation
+            on_fail: WARN
+            message: No verdict or recommendation in battle card.
+          - id: has_when_to_choose
+            check: Battle card has 'When to Choose A' and 'When to Choose B' sections
+            on_fail: INFO
+            message: Missing situational guidance.
+          - id: data_matches_scorecard
+            check: Scores/rankings in battle card match scorecard data
+            on_fail: WARN
+            message: Battle card data may not match scorecard. Verify consistency.
+        pass_criteria: Concise. Has summary table. Has verdict.
+        on_pass: Proceed to Phase 9 (if full profile) or complete pipeline
+        on_fail: Log warnings. Battle card is still usable.
+      error_handling:
+        on_failure: SKIP_AND_LOG
+        reason: Battle card is a nice-to-have summary. Core artifacts are more important.
+        recovery: Generate minimal battle card from matrix data.
+    - phase: 9
+      name: Quality Validation
+      agent: spy
+      action: Validate all benchmark artifacts against quality checklist
+      task: null
+      task_reference: checklists/bench-quality-checklist.md
+      profiles:
+        - full
+      universal: true
+      autonomous: true
+      creates:
+        - docs/bench/{subject_a}-vs-{subject_b}/quality-report.md
+      veto_conditions:
+        - id: no_artifacts_to_validate
+          check: docs/bench/{subject_a}-vs-{subject_b}/ directory is empty or does not exist
+          severity: CRITICAL
+          action: HALT_PIPELINE
+          message: No artifacts to validate. Pipeline produced no outputs.
+      checkpoint:
+        name: Quality Gate Decision
+        description: Final quality assessment determining benchmark publishability
+        type: manual_review_optional
+        run_after: true
+        heuristics:
+          - id: json_files_valid
+            check: All .json files in output directory pass JSON.parse()
+            on_fail: HALT
+            message: JSON files are invalid. Fix before publishing.
+            checklist_section: 1
+          - id: md_heading_hierarchy
+            check: All .md files have proper H1->H2->H3 hierarchy
+            on_fail: WARN
+            message: Markdown heading hierarchy issues detected.
+            checklist_section: 1
+          - id: no_empty_sections
+            check: No markdown section is empty or contains only placeholder text
+            on_fail: WARN
+            message: Empty sections found in output documents.
+            checklist_section: 1
+          - id: naming_convention
+            check: File names match universal naming pattern
+            on_fail: WARN
+            message: Some files do not follow naming convention.
+            checklist_section: 1
+          - id: sources_cited
+            check: Every comparison artifact has a Sources section
+            on_fail: HALT
+            message: Missing source citations. Required for benchmark validity.
+            checklist_section: 2
+          - id: method_disclosed
+            check: Method section describes how data was collected
+            on_fail: HALT
+            message: Method not disclosed. Required for reproducibility.
+            checklist_section: 2
+          - id: data_not_fabricated
+            check: Every quantitative claim traces to a source
+            on_fail: HALT
+            message: Potentially fabricated data detected. Verify sources.
+            checklist_section: 3
+          - id: confidence_levels_present
+            check: Confidence levels stated for data from non-authoritative sources
+            on_fail: WARN
+            message: Missing confidence levels.
+            checklist_section: 3
+          - id: scoring_complete
+            check: "If scorecard exists: all dimensions present for both subjects"
+            on_fail: HALT
+            message: Scoring incomplete.
+            checklist_section: 4
+          - id: no_score_inflation_final
+            check: No subject scores > other by 40+ without explicit justification
+            on_fail: WARN
+            message: Possible score inflation detected.
+            checklist_section: 4
+          - id: counts_consistent_across_docs
+            check: Feature counts match between matrix, inventories, and JSON files
+            on_fail: WARN
+            message: Count inconsistencies across documents.
+            checklist_section: 5
+          - id: equivalence_scale_consistent
+            check: Same equivalence scale used across all documents
+            on_fail: WARN
+            message: Inconsistent equivalence scales.
+            checklist_section: 5
+          - id: dates_consistent
+            check: All documents show the same generation date
+            on_fail: INFO
+            message: Date inconsistencies detected.
+            checklist_section: 5
+          - id: metadata_complete
+            check: metadata.json contains type, dimensions, subjects, date, profile
+            on_fail: WARN
+            message: Metadata incomplete.
+            checklist_section: 6
+        scoring:
+          total_checks: 15
+          pass_threshold: 0.9
+          warn_threshold: 0.7
+          verdicts:
+            approved:
+              condition: passed_checks / total_checks >= 0.90
+              label: APPROVED - Ready for reference
+              action: Benchmark is complete and publishable
+            needs_revision:
+              condition: passed_checks / total_checks >= 0.70
+              label: NEEDS REVISION - Fix flagged items
+              action: List failures, fix, re-validate
+            redo:
+              condition: passed_checks / total_checks < 0.70
+              label: REDO - Significant quality issues
+              action: Identify root cause, re-run pipeline
+        pass_criteria: ">= 90% of checks pass for APPROVED verdict"
+        on_pass: Pipeline complete. Benchmark published.
+        on_fail: Generate quality report with specific failures.
+      error_handling:
+        on_failure: HALT_PIPELINE
+        reason: Quality gate is mandatory for full profile. Cannot publish unchecked.
+        recovery: Review quality report. Fix issues. Re-run quality gate.
+  handoff_prompts:
+    - from: bench-analyst
+      to: bench-analyst
+      phase_transition: 0 -> 1
+      guidance: |
+        Type detected and metadata created. Now inventory subject A. Use the appropriate data strategy for this comparison type. For codebases: scan local clone. For others: web search + docs.
+    - from: bench-analyst
+      to: bench-analyst
+      phase_transition: 1 -> 2
+      guidance: |
+        Subject A inventory complete. Now inventory subject B using the same approach and schema. Ensure inventories are structurally compatible for matrix building in Phase 3.
+    - from: bench-analyst
+      to: bench-analyst
+      phase_transition: 2 -> 3
+      guidance: |
+        Both inventories complete. Build the comparison matrix by matching features, capabilities, or components between subjects. Use 3-level equivalence: Forte / Parcial / Sem equivalente. Identify bidirectional gaps (A-only and B-only features).
+    - from: bench-analyst
+      to: bench-analyst
+      phase_transition: 3 -> 4
+      guidance: |
+        Comparison matrix done. Now score both subjects on each dimension from the dimension pack. Use observable signals only. Disclose scoring method. Label confidence levels. Calculate weighted totals.
+    - from: bench-analyst
+      to: bench-analyst
+      phase_transition: 4 -> 5
+      guidance: |
+        Scoring complete. Now analyze gaps bidirectionally. Classify each gap by severity, effort, and strategic value. Include recommendations for closing critical gaps.
+    - from: bench-analyst
+      to: bench-analyst
+      phase_transition: 5 -> 6
+      guidance: |
+        Gap analysis done. Now execute type-specific deep analysis. For codebase: deep compare + hooks + absorption + migration. For LLM: reasoning + coding + cost evaluation. For product: features + UX + pricing deep dive. For company: market + SWOT + financials. For technology: maturity + ecosystem + DX analysis.
+    - from: bench-analyst
+      to: bench-analyst
+      phase_transition: 6 -> 7
+      guidance: |
+        Deep dive complete. Now synthesize everything into an executive report. Highlight key deltas, strategic implications, and actionable recommendations. This is the document leadership reads.
+    - from: bench-analyst
+      to: bench-analyst
+      phase_transition: 7 -> 8
+      guidance: |
+        Executive report done. Now distill into a 1-page battle card. Keep it scannable: at-a-glance table, strengths/weaknesses, verdict, and situational guidance (when to choose A vs B).
+    - from: bench-analyst
+      to: spy
+      phase_transition: 8 -> 9
+      guidance: |
+        All analysis phases complete. Run quality checklist against all generated artifacts. Be strict: sources must be cited, scores justified, JSON valid, counts consistent across documents.
+  state:
+    tracking_file: docs/bench/{subject_a}-vs-{subject_b}/pipeline-state.json
+    schema:
+      pipeline_id: bench-{subject_a}-vs-{subject_b}-{timestamp}
+      started_at: null
+      completed_at: null
+      comparison_type: null
+      profile: null
+      current_phase: -1
+      phases_completed: []
+      phases_skipped: []
+      phases_failed: []
+      artifacts_created: []
+      checkpoints_passed: []
+      checkpoints_failed: []
+      vetos_triggered: []
+      quality_verdict: null
+    persistence:
+      save_after_each_phase: true
+      enable_resume: true
+      resume_command: "*bench-resume {subject_a} vs {subject_b}"
+      description: |
+        Pipeline state is saved after each phase completion. If interrupted, it can be resumed from the last completed phase. State tracks phases completed, artifacts created, and checkpoints passed.
+  observability:
+    log_level: INFO
+    log_file: docs/bench/{subject_a}-vs-{subject_b}/pipeline.log
+    events:
+      - event: pipeline_start
+        log: "{timestamp} | PIPELINE START | {subject_a} vs {subject_b} | type={comparison_type} | profile={profile}"
+      - event: phase_start
+        log: "{timestamp} | PHASE {phase_num} START | {phase_name} | agent={agent}"
+      - event: phase_end
+        log: "{timestamp} | PHASE {phase_num} END | {phase_name} | duration={duration}s | artifacts={count}"
+      - event: checkpoint_pass
+        log: "{timestamp} | CHECKPOINT PASS | Phase {phase_num} | {checkpoint_name}"
+      - event: checkpoint_fail
+        log: "{timestamp} | CHECKPOINT FAIL | Phase {phase_num} | {checkpoint_name} | {failure_reason}"
+      - event: veto_triggered
+        log: "{timestamp} | VETO | Phase {phase_num} | {veto_id} | severity={severity} | action={action}"
+      - event: phase_skip
+        log: "{timestamp} | PHASE {phase_num} SKIP | {reason}"
+      - event: type_detected
+        log: "{timestamp} | TYPE DETECTED | {comparison_type} | confidence={confidence}"
+      - event: data_source_used
+        log: "{timestamp} | DATA SOURCE | {subject} | strategy={strategy} | source={source}"
+      - event: pipeline_complete
+        log: "{timestamp} | PIPELINE COMPLETE | profile={profile} | phases={completed}/{total} | quality={verdict}"
+      - event: pipeline_halt
+        log: "{timestamp} | PIPELINE HALT | phase={phase_num} | reason={reason}"
+    metrics:
+      - name: total_duration
+        type: timer
+        description: Total pipeline execution time
+      - name: phases_completed
+        type: counter
+        description: Number of phases successfully completed
+      - name: artifacts_generated
+        type: counter
+        description: Total number of artifacts written to disk
+      - name: checkpoints_passed
+        type: counter
+        description: Number of checkpoints that passed
+      - name: vetos_triggered
+        type: counter
+        description: Number of veto conditions activated
+      - name: data_sources_consulted
+        type: counter
+        description: Number of distinct data sources queried
+  backward_compatibility:
+    legacy_paths:
+      - docs/bench/pai/
+      - docs/bench/bmad/
+      - docs/bench/openclaw/
+    note: |
+      Existing codebase benchmarks using the legacy format (single competitor directory with {competitor}-vs-aiox-* naming) remain valid and are not affected by this pipeline upgrade. The universal pipeline produces artifacts in the new {subject_a}-vs-{subject_b}/ format.
+    migration: |
+      To convert a legacy benchmark to universal format, re-run the pipeline with the same subjects. Legacy artifacts will not be overwritten.

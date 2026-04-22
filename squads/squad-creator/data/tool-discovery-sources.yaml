@@ -1,0 +1,68 @@
+# Tool Discovery Sources — squad-creator
+# Catálogos de referência usados por wf-discover-tools.yaml
+# Centralizado aqui para manter workflows agnósticos de URLs externas.
+version: "1.0.0"
+updated_at: "2026-03-31"
+
+sources:
+  mcp:
+    label: "MCP Servers"
+    priority_1_official:
+      - url: https://github.com/modelcontextprotocol/servers
+        label: "MCP Official Servers"
+      - url: https://github.com/anthropics/anthropic-tools
+        label: "Anthropic Tools"
+      - url: https://glama.ai/mcp/servers
+        label: "Glama MCP Directory"
+
+  api:
+    label: "REST/GraphQL APIs"
+    directories:
+      - url: "https://rapidapi.com/search/{domain}"
+        label: "RapidAPI"
+      - url: https://github.com/public-apis/public-apis
+        label: "Public APIs"
+      - url: https://apilist.fun
+        label: "API List"
+
+  cli:
+    label: "CLI Tools"
+    awesome_lists:
+      - url: https://github.com/agarrharr/awesome-cli-apps
+        label: "Awesome CLI Apps"
+      - url: https://github.com/alebcay/awesome-shell
+        label: "Awesome Shell"
+      - url: "https://github.com/topics/awesome-{domain}"
+        label: "Awesome {domain}"
+      - url: https://github.com/sindresorhus/awesome
+        label: "Awesome Master List"
+
+  github:
+    label: "GitHub Collections & Topics"
+    collections:
+      - url: "https://github.com/collections/{domain}"
+        label: "GitHub Collections"
+      - url: "https://github.com/topics/{domain}"
+        label: "GitHub Topics"
+
+  ai_frameworks:
+    label: "AI Agent Frameworks & Skills"
+    frameworks:
+      - url: https://smith.langchain.com/hub
+        label: "LangChain Hub"
+      - url: https://github.com/crewAIInc/crewAI
+        label: "CrewAI"
+      - url: https://github.com/microsoft/autogen
+        label: "AutoGen"
+      - url: https://github.com/microsoft/semantic-kernel
+        label: "Semantic Kernel"
+    prompts:
+      - url: https://promptbase.com
+        label: "PromptBase"
+      - url: https://flowgpt.com
+        label: "FlowGPT"
+      - url: https://prompthero.com
+        label: "PromptHero"
+    workflows:
+      - url: https://n8n.io/workflows
+        label: "n8n Templates"

@@ -1,0 +1,573 @@
+# ============================================================
+# SQUAD I/O CONTRACT — storytelling v2.0.0
+# CSO Governance | Gap-Zero Enforcement
+# ============================================================
+# Gerado por: CSO (Chief Sinkra Officer)
+# Data: 2026-03-09
+# Tipo: Execution Squad (consome workspace, produz artifacts)
+# Pipeline: 4 fases (Analyze → Structure → Enhance → Validate)
+# ============================================================
+
+squad: storytelling
+version: "2.0.0"
+type: execution
+description: >-
+  Squad de storytelling com 12 mestres narrativos organizados por tier.
+  Transforma ideias brutas em narrativas poderosas usando 12+ frameworks
+  (Hero's Journey, StoryBrand, Sparkline, Story Circle, STRONG, ABT, etc).
+  Pipeline de 4 fases com selecao de framework por contexto.
+
+# ============================================================
+# INPUTS
+# ============================================================
+inputs:
+  # --- Workspace Documents (canonical 5-layer) ---
+  workspace:
+    - doc_id: L0-001
+      path: workspace/{spoke}/L0-identity/company-dna.yaml
+      layer: L0-identity
+      usage: reference
+      min_state: DRAFT
+      description: "DNA da empresa — contexto para business stories e brandscript"
+      consumed_by: [create-business-story, create-brandscript]
+
+    - doc_id: L0-002
+      path: workspace/{spoke}/L0-identity/founder-dna.yaml
+      layer: L0-identity
+      usage: reference
+      min_state: DRAFT
+      description: "DNA do fundador — material para personal stories e public narrative"
+      consumed_by: [craft-personal-story, craft-public-narrative, create-pitch]
+
+    - doc_id: L1-001
+      path: workspace/{spoke}/L1-strategy/icp.yaml
+      layer: L1-strategy
+      usage: reference
+      min_state: DRAFT
+      description: "ICP — audience profiling para narrativas direcionadas"
+      consumed_by: [create-brandscript, craft-ted-talk, apply-abt]
+
+    - doc_id: L2-001
+      path: workspace/{spoke}/L2-tactical/brand/brand-platform.yaml
+      layer: L2-tactical
+      usage: reference
+      min_state: DRAFT
+      description: "Brand platform — voz, personalidade, valores para narrativa"
+      consumed_by: [create-brandscript, create-business-story, apply-abt]
+
+    - doc_id: L2-002
+      path: workspace/{spoke}/L2-tactical/brand/positioning.yaml
+      layer: L2-tactical
+      usage: reference
+      min_state: DRAFT
+      description: "Positioning — diferenciacao e categoria para pitch stories"
+      consumed_by: [create-pitch, create-brandscript]
+
+  # --- Squad Data (internal databases) ---
+  squad_data: []
+  # Nota: storytelling squad nao tem databases internas.
+  # Frameworks sao embutidos nos agent .md files (12+ metodologias).
+
+# ============================================================
+# OUTPUTS
+# ============================================================
+outputs:
+  # --- Workspace (canonical) ---
+  workspace: []
+  # Execution squad: NAO escreve de volta no workspace.
+
+  # --- Artifacts (narrativas e frameworks aplicados) ---
+  artifacts:
+    # Framework Applications
+    - id: heros-journey-map
+      format: markdown
+      description: "Mapa completo 12 estagios + arquetipos + transformacao"
+      produced_by: apply-heros-journey
+      agent: joseph-campbell
+
+    - id: story-circle
+      format: markdown
+      description: "Story Circle 8 beats com timing por formato"
+      produced_by: apply-story-circle
+      agent: dan-harmon
+
+    - id: beat-sheet
+      format: markdown
+      description: "Save the Cat 15 beats com timing"
+      produced_by: apply-beat-sheet
+      agent: blake-snyder
+
+    - id: save-the-cat-structure
+      format: markdown
+      description: "Estrutura completa Save the Cat aplicada"
+      produced_by: apply-save-the-cat
+      agent: blake-snyder
+
+    - id: abt-statement
+      format: markdown
+      description: "Core ABT (15s) + versoes expandidas + aplicacoes"
+      produced_by: apply-abt
+      agent: park-howell
+
+    # Diagnostic
+    - id: story-grid-diagnostic
+      format: markdown
+      description: "Diagnostico Story Grid — genero, cenas obrigatorias, prescricao"
+      produced_by: diagnose-story-grid
+      agent: shawn-coyne
+
+    # Business & Brand
+    - id: brandscript
+      format: markdown
+      description: "StoryBrand SB7 completo + one-liner + messaging guide"
+      produced_by: create-brandscript
+      agent: donald-miller
+
+    - id: business-story
+      format: markdown
+      description: "4 Stories (Foundation/Signature/Customer/Visionary)"
+      produced_by: create-business-story
+      agent: kindra-hall
+
+    # Pitch & Presentation
+    - id: pitch-script
+      format: markdown
+      description: "STRONG method pitch + frame control + hot cognition"
+      produced_by: create-pitch
+      agent: oren-klaff
+
+    - id: ted-talk-outline
+      format: markdown
+      description: "Sparkline + STAR Moments + slide outline (18 min)"
+      produced_by: craft-ted-talk
+      agent: nancy-duarte
+
+    # Personal & Leadership
+    - id: personal-story
+      format: markdown
+      description: "5-second moment + stakes engineering + dinner test"
+      produced_by: craft-personal-story
+      agent: matthew-dicks
+
+    - id: public-narrative
+      format: markdown
+      description: "Story of Self + Us + Now (6-8 min integrated)"
+      produced_by: craft-public-narrative
+      agent: marshall-ganz
+
+    # Creative
+    - id: improvised-story
+      format: markdown
+      description: "Historia improvisada com platform/tilt/reincorporation"
+      produced_by: improvise-story
+      agent: keith-johnstone
+
+# ============================================================
+# AGENTS
+# ============================================================
+agents:
+  # Orchestrator
+  - id: story-chief
+    tier: orchestrator
+    role: "Diretor de Narrativas — seleciona framework, sequencia agents, valida"
+    commands: ["*story", "*help", "*exit"]
+    dispatches_to: [joseph-campbell, shawn-coyne, donald-miller, nancy-duarte, dan-harmon, blake-snyder, oren-klaff, kindra-hall, matthew-dicks, marshall-ganz, park-howell, keith-johnstone]
+    framework_selection:
+      pitch_investment: [oren-klaff, donald-miller]
+      presentation: [nancy-duarte, park-howell]
+      ted_talk: [nancy-duarte, matthew-dicks]
+      brand_positioning: [donald-miller, kindra-hall]
+      personal_story: [matthew-dicks, joseph-campbell]
+      leadership: [marshall-ganz, nancy-duarte]
+      video_screenplay: [blake-snyder, dan-harmon]
+      series_content: [dan-harmon, joseph-campbell]
+      quick_communication: [park-howell, donald-miller]
+      creative_unblocking: [keith-johnstone, matthew-dicks]
+      structural_diagnosis: [shawn-coyne, joseph-campbell]
+
+  # Tier 0: Foundational (Diagnostic / Framework Creators)
+  - id: joseph-campbell
+    tier: 0
+    role: "Hero's Journey, Monomyth"
+    tasks: [apply-heros-journey]
+    frameworks: ["12-Stage Monomyth", "Archetypes"]
+    deliverables: [heros-journey-map]
+
+  - id: shawn-coyne
+    tier: 0
+    role: "Story Grid, Genre Analysis"
+    tasks: [diagnose-story-grid]
+    frameworks: ["Story Grid", "Foolscap", "Obligatory Scenes"]
+    deliverables: [story-grid-diagnostic]
+
+  # Tier 1: Masters (Proven Methodologies)
+  - id: donald-miller
+    tier: 1
+    role: "StoryBrand, Business Narrative"
+    tasks: [create-brandscript]
+    frameworks: ["SB7 Framework", "One-Liner"]
+    deliverables: [brandscript]
+
+  - id: nancy-duarte
+    tier: 1
+    role: "Presentation Storytelling"
+    tasks: [craft-ted-talk]
+    frameworks: ["Sparkline", "STAR Moment", "Resonate"]
+    deliverables: [ted-talk-outline]
+    shared_with: [acceleration-squad]
+
+  - id: dan-harmon
+    tier: 1
+    role: "Story Circle, TV Writing"
+    tasks: [apply-story-circle]
+    frameworks: ["8-Beat Story Circle"]
+    deliverables: [story-circle]
+
+  - id: blake-snyder
+    tier: 1
+    role: "Screenwriting Structure"
+    tasks: [apply-beat-sheet, apply-save-the-cat]
+    frameworks: ["Save the Cat 15 Beats"]
+    deliverables: [beat-sheet, save-the-cat-structure]
+
+  # Tier 2: Specialists
+  - id: oren-klaff
+    tier: 2
+    role: "Pitch Storytelling, Neurofinance"
+    tasks: [create-pitch]
+    frameworks: ["STRONG Method", "Frame Control", "Croc Brain"]
+    deliverables: [pitch-script]
+    shared_with: [acceleration-squad]
+
+  - id: kindra-hall
+    tier: 2
+    role: "Strategic Storytelling, Business"
+    tasks: [create-business-story]
+    frameworks: ["4 Stories (Foundation/Signature/Customer/Visionary)"]
+    deliverables: [business-story]
+
+  - id: matthew-dicks
+    tier: 2
+    role: "Personal Storytelling, Moth"
+    tasks: [craft-personal-story]
+    frameworks: ["5-Second Moment", "Stakes Engineering", "Dinner Test"]
+    deliverables: [personal-story]
+
+  - id: marshall-ganz
+    tier: 2
+    role: "Public Narrative, Leadership"
+    tasks: [craft-public-narrative]
+    frameworks: ["Story of Self/Us/Now", "Challenge-Choice-Outcome"]
+    deliverables: [public-narrative]
+
+  - id: park-howell
+    tier: 2
+    role: "Brand Storytelling"
+    tasks: [apply-abt]
+    frameworks: ["ABT (And-But-Therefore)", "5 Primal Elements", "Lean-In Test"]
+    deliverables: [abt-statement]
+
+  - id: keith-johnstone
+    tier: 2
+    role: "Improvisational Storytelling"
+    tasks: [improvise-story]
+    frameworks: ["Platform/Tilt/Reincorporation", "Status Theory", "Yes-And"]
+    deliverables: [improvised-story]
+
+# ============================================================
+# TASKS
+# ============================================================
+tasks:
+  # Framework Applications
+  - id: apply-heros-journey
+    file: tasks/apply-heros-journey.md
+    agent: joseph-campbell
+    complexity: high
+    duration: "2-4 horas"
+    inputs: [story_premise, protagonist, world_setup, call, mentor, stakes]
+    outputs: [heros-journey-map]
+
+  - id: apply-story-circle
+    file: tasks/apply-story-circle.md
+    agent: dan-harmon
+    complexity: medium-high
+    duration: "1-3 horas"
+    inputs: [story_type, format_duration, protagonist, genre]
+    outputs: [story-circle]
+
+  - id: apply-beat-sheet
+    file: tasks/apply-beat-sheet.md
+    agent: blake-snyder
+    complexity: medium-high
+    duration: "1-2 horas"
+    inputs: [story_concept, genre, protagonist]
+    outputs: [beat-sheet]
+
+  - id: apply-save-the-cat
+    file: tasks/apply-save-the-cat.md
+    agent: blake-snyder
+    complexity: medium-high
+    duration: "1-2 horas"
+    inputs: [story_concept, genre, protagonist]
+    outputs: [save-the-cat-structure]
+
+  - id: apply-abt
+    file: tasks/apply-abt.md
+    agent: park-howell
+    complexity: medium
+    duration: "15-45 min"
+    inputs: [communication_goal, audience, context, desired_action]
+    outputs: [abt-statement]
+
+  # Diagnostic
+  - id: diagnose-story-grid
+    file: tasks/diagnose-story-grid.md
+    agent: shawn-coyne
+    complexity: medium-high
+    duration: "30-60 min"
+    inputs: [story_draft_or_outline, word_count, genre, concerns]
+    outputs: [story-grid-diagnostic]
+
+  # Business & Brand
+  - id: create-brandscript
+    file: tasks/create-brandscript.md
+    agent: donald-miller
+    complexity: medium
+    duration: "60-120 min"
+    inputs: [company_offering, customer_avatar, problems_3_levels, messaging]
+    outputs: [brandscript]
+    workspace_refs: [L0-001, L1-001, L2-001, L2-002]
+
+  - id: create-business-story
+    file: tasks/create-business-story.md
+    agent: kindra-hall
+    complexity: medium
+    duration: "45-90 min"
+    inputs: [business_context, audience, message, challenge, stakeholders]
+    outputs: [business-story]
+    workspace_refs: [L0-001, L2-001]
+
+  # Pitch & Presentation
+  - id: create-pitch
+    file: tasks/create-pitch.md
+    agent: oren-klaff
+    complexity: high
+    duration: "60-120 min"
+    inputs: [offer, audience_profile, credibility, ask, competition, uvp]
+    outputs: [pitch-script]
+    workspace_refs: [L0-002, L2-002]
+
+  - id: craft-ted-talk
+    file: tasks/craft-ted-talk.md
+    agent: nancy-duarte
+    complexity: high
+    duration: "45-90 min"
+    inputs: [topic, audience_7dim, time_limit, desired_outcome, constraints]
+    outputs: [ted-talk-outline]
+    workspace_refs: [L1-001]
+
+  # Personal & Leadership
+  - id: craft-personal-story
+    file: tasks/craft-personal-story.md
+    agent: matthew-dicks
+    complexity: medium
+    duration: "45-90 min"
+    inputs: [raw_memory, transformation_moment, vulnerability]
+    outputs: [personal-story]
+    workspace_refs: [L0-002]
+
+  - id: craft-public-narrative
+    file: tasks/craft-public-narrative.md
+    agent: marshall-ganz
+    complexity: high
+    duration: "45-90 min"
+    inputs: [cause, community, personal_values, leadership_context]
+    outputs: [public-narrative]
+    workspace_refs: [L0-002]
+
+  # Creative
+  - id: improvise-story
+    file: tasks/improvise-story.md
+    agent: keith-johnstone
+    complexity: medium
+    duration: "10-30 min"
+    inputs: [first_thoughts, character_concept, routine]
+    outputs: [improvised-story]
+
+# ============================================================
+# WORKFLOWS
+# ============================================================
+workflows:
+  - id: story-creation
+    file: workflows/story-creation.yaml
+    description: "Pipeline de criacao narrativa em 4 fases"
+    phases:
+      - phase: 0
+        name: ANALYZE
+        tier: 0
+        agents: [joseph-campbell, shawn-coyne]
+        purpose: "Identificar tipo, genero, potencial narrativo, framework ideal"
+        outputs: [story_type, recommended_framework, narrative_analysis]
+
+      - phase: 1
+        name: STRUCTURE
+        tier: 1
+        agents: [donald-miller, nancy-duarte, dan-harmon, blake-snyder]
+        purpose: "Aplicar framework selecionado, definir beats, mapear arcos"
+        selection_logic:
+          marketing: donald-miller
+          presentation: nancy-duarte
+          episodic: dan-harmon
+          screenplay: blake-snyder
+        outputs: [story_structure, beat_sheet, character_map]
+
+      - phase: 2
+        name: ENHANCE
+        tier: 2
+        agents: [oren-klaff, kindra-hall, matthew-dicks, marshall-ganz, park-howell, keith-johnstone]
+        purpose: "Adicionar tecnicas especializadas, emocao, polish"
+        selection_logic:
+          pitch: oren-klaff
+          business: kindra-hall
+          personal: matthew-dicks
+          leadership: marshall-ganz
+          brand: park-howell
+          improv: keith-johnstone
+        outputs: [enhanced_story, technique_notes]
+
+      - phase: 3
+        name: VALIDATE
+        tier: orchestrator
+        agents: [story-chief]
+        purpose: "Validar coerencia, arco emocional, clareza de mensagem"
+        checklist: checklists/story-quality-checklist.md
+        scoring: "7 dimensoes, media >= 7/10 = PASS"
+        outputs: [final_narrative, framework_attribution, usage_notes]
+
+# ============================================================
+# CROSS-DOMAIN
+# ============================================================
+cross_domain:
+  bridges:
+    - target: c-level
+      direction: consumes
+      interface: "L0 (company-dna, founder-dna) como material narrativo"
+      docs: [L0-001, L0-002]
+
+    - target: brand
+      direction: consumes
+      interface: "L2 (brand-platform, positioning) para brandscript e brand stories"
+      docs: [L2-001, L2-002]
+
+    - target: copy-squad
+      direction: peer
+      interface: "Narrativas alimentam sales copy; copy-squad pode solicitar stories"
+      artifacts: [brandscript, pitch-script, personal-story, business-story]
+      note: "Handoff bidirecional — storytelling cria narrativa, copy transforma em copy"
+
+    - target: acceleration-squad
+      direction: peer
+      interface: "Compartilham nancy-duarte e oren-klaff; pitch narratives"
+      artifacts: [pitch-script, ted-talk-outline]
+      shared_agents: [nancy-duarte, oren-klaff]
+
+    - target: hormozi
+      direction: peer
+      interface: "Narrativas para offer framing e sales scripts"
+      artifacts: [pitch-script, brandscript]
+
+    - target: live-content-squad
+      direction: peer
+      interface: "Story structures para video content e lives"
+      artifacts: [story-circle, beat-sheet, personal-story]
+
+    - target: visual-knowledge-squad
+      direction: peer
+      interface: "Visual storytelling frameworks"
+      shared_agents: [nancy-duarte]
+
+# ============================================================
+# ENFORCEMENT
+# ============================================================
+enforcement:
+  model: framework_selection
+  description: >-
+    Workflow baseado em selecao de framework por contexto.
+    Tier 0 diagnostica, Tier 1 estrutura, Tier 2 especializa.
+    Validacao final por story-chief com checklist 7 dimensoes.
+
+  required_inputs: []
+  # Storytelling squad nao tem required_inputs estrito —
+  # aceita desde raw ideas ate drafts completos.
+  # Cada task define seus proprios pre-conditions.
+
+  recommended_inputs:
+    - doc_id: L0-001
+      min_state: DRAFT
+      reason: "Company DNA enriquece business stories e brandscript"
+    - doc_id: L0-002
+      min_state: DRAFT
+      reason: "Founder DNA e material para personal stories"
+    - doc_id: L1-001
+      min_state: DRAFT
+      reason: "ICP para audience profiling em narrativas"
+    - doc_id: L2-001
+      min_state: DRAFT
+      reason: "Brand platform para voz e tom narrativo"
+
+  quality_gate:
+    checklist: checklists/story-quality-checklist.md
+    dimensions: 7
+    items: 25+
+    pass_threshold: "media >= 7/10"
+    dimensions_list:
+      - structure
+      - character
+      - conflict
+      - emotional_arc
+      - message_theme
+      - framework_compliance
+      - delivery
+
+# ============================================================
+# AUDIT NOTES
+# ============================================================
+audit_notes:
+  audited_by: CSO
+  date: "2026-03-25"
+  migrated_to_hub: "2026-03-25"
+  source_files:
+    config: squads/storytelling/config.yaml
+    agents: "13 agents (1 orchestrator + 2 T0 + 4 T1 + 6 T2)"
+    tasks: "13 tasks em tasks/"
+    workflows: "1 workflow em workflows/"
+    checklists: "1 checklist (story-quality-checklist.md)"
+  findings:
+    - id: ST-001
+      severity: LOW
+      finding: "nancy-duarte e oren-klaff compartilhados com acceleration-squad"
+      recommendation: "Aceitavel — agent prompts independentes por squad"
+    - id: ST-002
+      severity: LOW
+      finding: "Squad nao tem required_inputs — aceita qualquer nivel de input"
+      recommendation: "OK para squad criativo — tasks definem pre-conditions individuais"
+    - id: ST-003
+      severity: LOW
+      finding: "Nenhuma database interna (DNA files, case libraries)"
+      recommendation: "Frameworks embutidos nos agents — adequado para squad de metodologias"
+    - id: ST-004
+      severity: INFO
+      finding: "12 frameworks distintos cobrem praticamente todo contexto narrativo"
+      recommendation: "Squad mais diversificado em metodologias do sistema"
+    - id: ST-005
+      severity: INFO
+      finding: "Workflow de 4 fases com selecao por contexto e best practice"
+      recommendation: "Pattern de framework selection e referencia para outros squads"
+    - id: ST-006
+      severity: INFO
+      finding: "Checklist de qualidade com 7 dimensoes e 25+ items"
+      recommendation: "Modelo de quality gate bem estruturado"
+    - id: ST-007
+      severity: INFO
+      finding: "7 bridges cross-squad — segundo mais conectado apos copy-squad"
+      recommendation: "Hub narrativo do ecossistema"

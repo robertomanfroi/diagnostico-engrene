@@ -1,0 +1,117 @@
+workflow:
+  id: wf-create-from-sop
+  name: Create Squad Artifacts From Workspace SOPs
+  version: "1.0.0"
+  description: >
+    Load canonical SOPs from workspace/businesses/{slug} and transform into
+    squad creation artifacts. Business-aware operationalization with strict
+    environment contract validation (full_workspace_mode required).
+  type: orchestration
+  command: "*create-from-sop --business={slug} --namespace={dir}"
+  state_machine:
+    states: [init, load-classify, map-workflow, generate-brief, complete, failed]
+    transitions:
+      - trigger: start
+        source: init
+        dest: load-classify
+      - trigger: load_classify_complete
+        source: load-classify
+        dest: map-workflow
+      - trigger: load_classify_failed
+        source: load-classify
+        dest: failed
+      - trigger: map_workflow_complete
+        source: map-workflow
+        dest: generate-brief
+      - trigger: map_workflow_failed
+        source: map-workflow
+        dest: failed
+      - trigger: generate_brief_complete
+        source: generate-brief
+        dest: complete
+      - trigger: generate_brief_failed
+        source: generate-brief
+        dest: failed
+      - trigger: fail
+        source: "*"
+        dest: failed
+  sequence:
+    - step: load-classify
+      id: load-classify
+      phase: 1
+      phase_name: LOAD & CLASSIFY
+      agent: pedro-valerio
+      task_ref: create-from-sop-load-classify
+      action: execute_run_loader_validate_classify
+      description: Run loader, validate environment contract, classify sources into 3 classes
+      inputs:
+        - business_slug
+        - namespace
+        - paths
+      outputs:
+        - classified_sources
+      next: map-workflow
+    - step: map-workflow
+      id: map-workflow
+      phase: 2
+      phase_name: MAP & WORKFLOW
+      agent: pedro-valerio
+      task_ref: create-from-sop-map-workflow
+      action: execute_extract_processes_and_synthesize
+      description: Extract processes, synthesize workflows, surface gaps
+      inputs:
+        - classified_sources
+      outputs:
+        - task_inventory
+        - workflow_map
+        - open_questions
+      next: generate-brief
+    - step: generate-brief
+      id: generate-brief
+      phase: 3
+      phase_name: GENERATE BRIEF
+      agent: pedro-valerio
+      task_ref: create-from-sop-brief
+      action: execute_generate_creation_brief
+      description: Generate creation brief with all artifacts for squad creation
+      inputs:
+        - classified_sources
+        - task_inventory
+        - workflow_map
+        - open_questions
+      outputs:
+        - creation_brief
+    - workflow_end:
+        id: complete
+        action: workflow_complete
+  veto_conditions:
+    - id: VETO-CFS-001
+      trigger: Business slug not explicit
+      action: BLOCK
+    - id: VETO-CFS-002
+      trigger: Environment contract not full_workspace_mode
+      action: BLOCK
+    - id: VETO-CFS-003
+      trigger: Source of truth not workspace_canonical
+      action: BLOCK
+    - id: VETO-CFS-004
+      trigger: No SOP selector defined
+      action: BLOCK
+    - id: VETO-CFS-005
+      trigger: Selector resolves outside workspace/businesses/{slug}
+      action: BLOCK
+  inputs:
+    required:
+      - name: business_slug
+        type: string
+        description: Business identifier
+      - name: namespace
+        type: string
+        description: SOP namespace directory
+    optional:
+      - name: paths
+        type: array
+        description: Specific SOP paths to load
+  outputs:
+    primary:
+      - creation_brief

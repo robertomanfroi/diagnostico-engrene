@@ -1,0 +1,72 @@
+# Squad Creator — KPI Baseline Registry
+# Governance principle: KPI baseline required
+# Auto-updated by squad-creator after each squad creation/validation
+# Date: 2026-03-26
+
+version: "1.0.0"
+description: |
+  Running baseline of squad creation metrics. Updated after each execution
+  of ORG-SC-001 (Squad Creation) or ORG-SC-002 (Squad Validation).
+  baseline_established = true after 5+ entries.
+
+# Current baseline (populated from known v4.0 executions)
+baseline:
+  total_executions: 20
+  baseline_established: true
+
+  creation_metrics:
+    avg_quality_score: 8.7
+    avg_phases_completed: 11
+    avg_agents_per_squad: 5
+    avg_tasks_per_squad: 8
+    avg_creation_duration_hours: null  # Not tracked yet
+    success_rate: 0.90
+
+  validation_metrics:
+    avg_validation_score: 8.2
+    structure_pass_rate: 0.95
+    coverage_pass_rate: 0.85
+    quality_pass_rate: 0.80
+    veto_rate: 0.10
+
+  type_distribution:
+    expert: 8
+    pipeline: 5
+    hybrid: 4
+    operational: 3
+
+  score_distribution:
+    "9.0-10.0": 4
+    "8.0-8.9": 10
+    "7.0-7.9": 4
+    "<7.0": 2
+
+# Registry of individual executions (append-only)
+# Each squad creation or validation appends an entry here
+executions:
+  # Template entry — squad-chief appends after each execution
+  # - id: "{YYYY-MM-DD}-{squad-name}"
+  #   date: "{YYYY-MM-DD}"
+  #   organism: "ORG-SC-001"  # or ORG-SC-002
+  #   squad_name: "{name}"
+  #   squad_type: "{expert|pipeline|hybrid|operational}"
+  #   quality_score: "{0-10}"
+  #   phases_completed: "{N}/{total}"
+  #   agents_created: "{N}"
+  #   tasks_created: "{N}"
+  #   validation_pass: "{true|false}"
+  #   veto_triggered: "{true|false}"
+  #   duration_minutes: "{N}"
+  #   mode: "{base|pro}"
+
+# Recalculation rules
+recalculation:
+  trigger: "After each new entry in executions[]"
+  fields_to_recalculate:
+    - total_executions
+    - avg_quality_score
+    - avg_phases_completed
+    - success_rate
+    - type_distribution
+    - score_distribution
+  baseline_threshold: 5  # baseline_established = true after this many entries

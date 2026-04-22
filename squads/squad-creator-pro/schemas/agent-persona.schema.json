@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agent-persona-pro.schema.json",
+  "title": "AIOX Agent Persona Pro Schema",
+  "description": "Validates pro agent persona files (.md with YAML block) — governance framework compliance. Extends base with voice_dna, thinking_dna, knowledge_extraction sections.",
+  "type": "object",
+  "required": ["agent", "persona"],
+  "properties": {
+    "agent": {
+      "type": "object",
+      "required": ["name", "id", "title"],
+      "properties": {
+        "name": { "type": "string", "minLength": 2 },
+        "id": { "type": "string", "pattern": "^[a-z][a-z0-9_-]*$" },
+        "title": { "type": "string" },
+        "aliases": { "type": "array", "items": { "type": "string" } },
+        "whenToUse": { "type": "string" }
+      }
+    },
+    "persona": {
+      "type": "object",
+      "required": ["role", "style", "focus"],
+      "properties": {
+        "role": { "type": "string" },
+        "style": { "type": "string" },
+        "identity": { "type": "string" },
+        "focus": { "type": "string" }
+      }
+    },
+    "commands": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "description"],
+        "properties": {
+          "name": { "type": "string" },
+          "description": { "type": "string" }
+        }
+      }
+    },
+    "squad": { "type": "string" },
+    "tier": { "type": "integer", "minimum": 0, "maximum": 3 },
+    "version": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
+    "voice_dna": {
+      "type": "object",
+      "description": "Extracted voice patterns from real expert — pro-exclusive",
+      "properties": {
+        "sentence_starters": { "type": "array", "items": { "type": "string" } },
+        "power_words": { "type": "array", "items": { "type": "string" }, "minItems": 10 },
+        "never_use": { "type": "array", "items": { "type": "string" } },
+        "metaphors": { "type": "array", "items": { "type": "string" } },
+        "signature_phrases": { "type": "array", "items": { "type": "string" }, "minItems": 5 },
+        "tone_markers": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "thinking_dna": {
+      "type": "object",
+      "description": "Extracted cognitive patterns from real expert — pro-exclusive",
+      "properties": {
+        "frameworks": { "type": "array", "items": { "type": "string" } },
+        "heuristics": { "type": "array", "items": { "type": "string" } },
+        "red_flags": { "type": "array", "items": { "type": "string" } },
+        "decision_patterns": { "type": "array", "items": { "type": "string" } },
+        "anti_patterns": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "knowledge_extraction": {
+      "type": "object",
+      "description": "Source provenance for mind cloning — pro-exclusive",
+      "properties": {
+        "sources_count": { "type": "integer" },
+        "extraction_date": { "type": "string" },
+        "fidelity_score": { "type": "number", "minimum": 0, "maximum": 1 },
+        "source_types": { "type": "array", "items": { "type": "string" } }
+      }
+    }
+  }
+}

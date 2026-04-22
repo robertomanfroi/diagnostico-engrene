@@ -1,0 +1,141 @@
+workflow:
+  id: wf-upgrade-squad
+  name: Upgrade Squad Pipeline (Pro Overlay)
+  version: "1.0.0"
+  purpose: "Canonical direct-command workflow for squad upgrades in the pro pack. Inherits structural upgrade logic from the base squad and adds qualitative remediation."
+  orchestrator: "@squad-chief"
+  type: orchestration
+  state_machine:
+    states: [init, inventory, gap, plan, qualitative, apply, verify, complete, failed]
+    transitions:
+      - trigger: start
+        source: init
+        dest: inventory
+      - trigger: inventory_complete
+        source: inventory
+        dest: gap
+      - trigger: inventory_failed
+        source: inventory
+        dest: failed
+      - trigger: gap_complete
+        source: gap
+        dest: plan
+      - trigger: gap_complete_audit
+        source: gap
+        dest: complete
+        condition: mode == audit
+      - trigger: gap_failed
+        source: gap
+        dest: failed
+      - trigger: plan_complete
+        source: plan
+        dest: qualitative
+      - trigger: plan_complete_plan_only
+        source: plan
+        dest: complete
+        condition: mode == plan
+      - trigger: plan_failed
+        source: plan
+        dest: failed
+      - trigger: qualitative_complete
+        source: qualitative
+        dest: apply
+      - trigger: qualitative_failed
+        source: qualitative
+        dest: failed
+      - trigger: apply_complete
+        source: apply
+        dest: verify
+      - trigger: apply_failed
+        source: apply
+        dest: failed
+      - trigger: verify_complete
+        source: verify
+        dest: complete
+      - trigger: verify_failed
+        source: verify
+        dest: failed
+      - trigger: fail
+        source: "*"
+        dest: failed
+  mode_contract:
+    audit:
+      execute_steps: [inventory, gap]
+    plan:
+      execute_steps: [inventory, gap, plan]
+    execute:
+      execute_steps: [inventory, gap, plan, qualitative, apply, verify]
+    auto:
+      execute_steps: [inventory, gap, plan, qualitative, apply, verify]
+  sequence:
+    - id: inventory
+      phase: 1
+      phase_name: INVENTORY
+      agent: squad-chief
+      action: inventory_squad
+      task_ref: upgrade-squad-inventory
+      next: gap
+    - id: gap
+      phase: 2
+      phase_name: GAP
+      agent: squad-chief
+      action: analyze_upgrade_gaps
+      task_ref: upgrade-squad-gap
+      next: plan
+    - id: plan
+      phase: 3
+      phase_name: PLAN
+      agent: squad-chief
+      action: generate_upgrade_plan
+      task_ref: upgrade-squad-plan
+      next: qualitative
+    - id: qualitative
+      phase: 4
+      phase_name: QUALITATIVE
+      agent: squad-chief
+      action: resolve_qualitative_track
+      task_ref: upgrade-squad-qualitative
+      next: apply
+    - id: apply
+      phase: 5
+      phase_name: APPLY
+      agent: squad-chief
+      action: apply_upgrade_plan
+      task_ref: upgrade-squad-apply
+      next: verify
+    - id: verify
+      phase: 6
+      phase_name: VERIFY
+      agent: squad-chief
+      action: verify_upgrade_integrity
+      task_ref: upgrade-squad-verify
+    - workflow_end:
+        id: complete
+        action: workflow_complete
+
+  quality_gates:
+    - id: SCP_UPG_001
+      phase: apply
+      type: hybrid
+      placement: entry
+      severity: blocking
+      description: "Apply gate — dry-run diff required before structural mutations"
+      criteria:
+        - field: upgrade_plan
+          operator: "!="
+          value: null
+        - field: dry_run_executed
+          operator: "=="
+          value: true
+      on_fail: block
+    - id: SCP_UPG_002
+      phase: verify
+      type: automated
+      placement: exit
+      severity: blocking
+      description: "Verification gate — score must improve after upgrade"
+      criteria:
+        - field: score_delta
+          operator: ">="
+          value: 0.5
+      on_fail: warn

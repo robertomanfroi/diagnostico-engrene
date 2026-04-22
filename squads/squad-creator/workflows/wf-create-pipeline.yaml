@@ -1,0 +1,60 @@
+workflow:
+  id: wf-create-pipeline
+  name: Create Pipeline Scaffolding Pipeline
+  version: 1.0.0
+  description: Orquestra a qualificação, o design, a renderização, a persistência e a validação do scaffold de pipeline multi-fase.
+  type: orchestration
+  agent_mapping:
+    agents:
+      squad-chief: orchestrator
+  state_machine:
+    states: [init, qualify, design, render, persist, validate, complete, failed]
+    transitions:
+      - { trigger: start, source: init, dest: qualify }
+      - { trigger: qualify_complete, source: qualify, dest: design }
+      - { trigger: design_complete, source: design, dest: render }
+      - { trigger: render_complete, source: render, dest: persist }
+      - { trigger: persist_complete, source: persist, dest: validate }
+      - { trigger: validate_complete, source: validate, dest: complete }
+      - { trigger: fail, source: "*", dest: failed }
+  sequence:
+    - phase: qualify
+      id: qualify
+      agent: squad-chief
+      task_ref: create-pipeline-qualify
+      action: qualify_pipeline_need
+      inputs: [squad_name, requirements, phase_definitions]
+      outputs: [pipeline_qualification_contract]
+      on_complete: { trigger: qualify_complete }
+    - phase: design
+      id: design
+      agent: squad-chief
+      task_ref: create-pipeline-design
+      action: design_pipeline_contract
+      inputs: [squad_name, pipeline_qualification_contract, phase_definitions, item_noun]
+      outputs: [pipeline_design_contract]
+      on_complete: { trigger: design_complete }
+    - phase: render
+      id: render
+      agent: squad-chief
+      task_ref: create-pipeline-render
+      action: render_pipeline_bundle
+      inputs: [pipeline_design_contract]
+      outputs: [pipeline_render_bundle]
+      on_complete: { trigger: render_complete }
+    - phase: persist
+      id: persist
+      agent: squad-chief
+      task_ref: create-pipeline-persist
+      action: persist_pipeline_bundle
+      inputs: [squad_name, pipeline_design_contract, pipeline_render_bundle]
+      outputs: [pipeline_persist_report]
+      on_complete: { trigger: persist_complete }
+    - phase: validate
+      id: validate
+      agent: squad-chief
+      task_ref: create-pipeline-validate
+      action: validate_pipeline_scaffold
+      inputs: [squad_name, pipeline_design_contract, pipeline_persist_report]
+      outputs: [pipeline_scaffolding_report]
+      on_complete: { trigger: validate_complete }

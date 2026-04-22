@@ -1,0 +1,111 @@
+workflow:
+  id: wf-clone-review
+  name: Clone Review
+  version: "1.0.0"
+  description: >
+    Complete review of an existing clone: sources, trinity, stages, fidelity.
+    Equivalent to a general audit. Hybrid execution -- worker script 90% + agent
+    interpretation 10%. MANDATORY PREFLIGHT via clone-review.sh.
+  type: orchestration
+  command: "*clone-review {clone_path}"
+  state_machine:
+    states: [init, source-trinity, stages-fidelity, report, complete, failed]
+    transitions:
+      - trigger: start
+        source: init
+        dest: source-trinity
+      - trigger: source_trinity_complete
+        source: source-trinity
+        dest: stages-fidelity
+      - trigger: source_trinity_failed
+        source: source-trinity
+        dest: failed
+      - trigger: stages_fidelity_complete
+        source: stages-fidelity
+        dest: report
+      - trigger: stages_fidelity_failed
+        source: stages-fidelity
+        dest: failed
+      - trigger: report_complete
+        source: report
+        dest: complete
+      - trigger: report_failed
+        source: report
+        dest: failed
+      - trigger: fail
+        source: "*"
+        dest: failed
+  sequence:
+    - step: source-trinity
+      id: source-trinity
+      phase: 1
+      phase_name: SOURCE & TRINITY
+      agent: oalanicolas
+      task_ref: an-clone-review-source-trinity
+      action: execute_source_checkpoints_and_trinity_verification
+      description: Source checkpoints (5 per source) + Trinity verification (15 checkpoints)
+      inputs:
+        - clone_path
+        - preflight_yaml
+      outputs:
+        - source_quality_scores
+        - trinity_scores
+      next: stages-fidelity
+    - step: stages-fidelity
+      id: stages-fidelity
+      phase: 2
+      phase_name: STAGES & FIDELITY
+      agent: oalanicolas
+      task_ref: an-clone-review-stages-fidelity
+      action: execute_stage_architecture_and_fidelity
+      description: Stage architecture review (5 checkpoints) + quick fidelity check (5 checkpoints)
+      inputs:
+        - clone_path
+        - preflight_yaml
+      outputs:
+        - stage_score
+        - quick_fidelity_score
+      next: report
+    - step: report
+      id: report
+      phase: 3
+      phase_name: REPORT
+      agent: oalanicolas
+      task_ref: an-clone-review-report
+      action: execute_generate_consolidated_review_report
+      description: Generate consolidated review report with verdicts and priority actions
+      inputs:
+        - source_quality_scores
+        - trinity_scores
+        - stage_score
+        - quick_fidelity_score
+      outputs:
+        - clone_review_report
+    - workflow_end:
+        id: complete
+        action: workflow_complete
+  inputs:
+    required:
+      - name: clone_path
+        type: string
+        description: Path to the clone agent file
+    optional:
+      - name: sources_dir
+        type: string
+        description: Path to sources directory
+  outputs:
+    primary:
+      - clone_review_report
+
+  quality_gates:
+    - id: SCP_CRV_001
+      phase: report
+      type: automated
+      placement: exit
+      severity: warning
+      description: "Clone review report must include source trinity and fidelity assessment"
+      criteria:
+        - field: clone_review_report
+          operator: "!="
+          value: null
+      on_fail: warn

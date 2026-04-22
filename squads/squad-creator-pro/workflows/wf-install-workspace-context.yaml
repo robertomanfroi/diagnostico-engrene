@@ -1,0 +1,764 @@
+# WF: Install Workspace Context
+# Duration: 1-2 sessions
+# Best for: Squads with workspace_integration.level >= controlled_runtime_consumer that need full context stack
+# Key Agents: squad-chief
+# Schema: Pattern A (workflow-yaml-schema v1.1.0)
+
+workflow:
+  id: wf-install-workspace-context
+  name: "Install Workspace Context Stack"
+  version: "1.2.0"
+  orchestrator: "squad-chief"
+  type: enhancement
+  duration: "1-2 sessions"
+  state_machine:
+    states: [init, eligibility-audit, install-scripts, create-greeting, install-next-action, e2e-validation, complete, failed]
+    transitions:
+      - trigger: start
+        source: init
+        dest: eligibility-audit
+      - trigger: eligibility_audit_complete
+        source: eligibility-audit
+        dest: install-scripts
+      - trigger: eligibility_audit_failed
+        source: eligibility-audit
+        dest: failed
+      - trigger: install_scripts_complete
+        source: install-scripts
+        dest: create-greeting
+      - trigger: install_scripts_failed
+        source: install-scripts
+        dest: failed
+      - trigger: create_greeting_complete
+        source: create-greeting
+        dest: install-next-action
+      - trigger: create_greeting_failed
+        source: create-greeting
+        dest: failed
+      - trigger: install_next_action_complete
+        source: install-next-action
+        dest: e2e-validation
+      - trigger: install_next_action_failed
+        source: install-next-action
+        dest: failed
+      - trigger: e2e_validation_complete
+        source: e2e-validation
+        dest: complete
+      - trigger: e2e_validation_failed
+        source: e2e-validation
+        dest: failed
+      - trigger: fail
+        source: "*"
+        dest: failed
+  description: |
+    Instala o stack completo de contexto em um squad existente:
+    context scripts + greeting determinístico + next action.
+
+    Pipeline sequencial de 3 tasks existentes que, juntas,
+    transformam um squad com greeting estático em um squad com
+    contexto ativo, greeting determinístico e next action inferido.
+
+    Este workflow NÃO faz parte do brownfield upgrade porque nem
+    todo squad precisa de context stack. Aplicar cirurgicamente
+    nos squads elegíveis (workspace_integration.level >= controlled_runtime_consumer).
+
+    Produces:
+    - 5 context scripts (runtime-paths, discover, set, load, show)
+    - 1 greeting script determinístico
+    - Next Action com heurística de gaps
+    - Entry agent atualizado
+    - Config atualizado
+
+  best_for:
+    - "Squads com workspace_integration.level >= controlled_runtime_consumer"
+    - "Squads que precisam de greeting contextual com next action"
+    - "Squads que consomem dados do workspace (business profiles, operations, products)"
+    - "Pós-criação ou pós-upgrade de squads que interagem com workspace"
+
+  eligibility:
+    required_level: "controlled_runtime_consumer"
+    check: |
+      Ler config.yaml do squad alvo.
+      Se workspace_integration.level < controlled_runtime_consumer:
+        ABORT com mensagem: "Squad {name} tem level '{level}'. Context stack requer >= controlled_runtime_consumer."
+    eligible_levels:
+      - controlled_runtime_consumer
+      - workspace_first
+    ineligible_levels:
+      - none
+      - read_only
+
+  decision_matrix_fit:
+    awareness: "n/a"
+    sophistication: "n/a"
+    price_point: "n/a"
+    traffic_temp: "n/a"
+    primary_output: "Context-aware squad with deterministic greeting and next action"
+
+  clone_combinations:
+    primary: "squad-chief"
+    secondary: []
+
+# ===============================================================================
+# EXECUTABLE SEQUENCE (canonical contract per workflow-yaml-schema v1.1.0)
+# ===============================================================================
+# Agent names MUST NOT use @ prefix.
+# requires/next reference step IDs as strings.
+
+  sequence:
+    - step: "eligibility-audit"
+      id: "eligibility-audit"
+      phase: 1
+      phase_name: "Eligibility & Audit"
+      agent: squad-chief
+      action: check_eligibility_and_audit
+      task_ref: ics-audit
+      description: |
+        Verificar se o squad é elegível (workspace_integration.level) e
+        auditar quais scripts já existem vs faltam. Mapear domínio do squad
+        (entidades, paths canônicos, session schema).
+
+        Fases 1-2 da task install-context-stack.md:
+        - Ler config.yaml, extrair workspace_integration
+        - Verificar eligibility gate (VETO-CS-001)
+        - Inventariar scripts existentes vs faltantes (VETO-CS-002, VETO-CS-005)
+        - Mapear domínio: primary_entity, session_schema, read/write paths
+      outputs:
+        - "audit-report (existing/missing/partial scripts)"
+        - "domain-mapping (primary entity, session schema, read/write paths)"
+      checkpoint:
+        criteria:
+          - "workspace_integration.level >= controlled_runtime_consumer"
+          - "config.yaml parseável e entry_agent identificado"
+          - "Audit report gerado com lista de scripts existentes vs faltantes"
+          - "Domain mapping completo (primary_entity + session_schema definidos)"
+        human_review: false
+        message: "Eligibility check is deterministic. Auto-advance if all criteria pass."
+      veto_conditions:
+        - "Squad sem workspace_integration ou level < controlled_runtime_consumer -> ABORT (VETO-CS-001)"
+        - "config.yaml não existe ou não parseável -> ABORT"
+      next: "install-scripts"
+
+    - step: "install-scripts"
+      id: "install-scripts"
+      phase: 2
+      phase_name: "Install Context Stack"
+      agent: squad-chief
+      task: install-context-stack.md
+      task_ref: install-context-stack
+      description: |
+        Gerar os 5 scripts de contexto que faltam, adaptados ao domínio do squad.
+        Preservar scripts existentes. Integrar no config.yaml e entry agent.
+
+        Fases 3-9 da task install-context-stack.md:
+        - Gerar runtime-paths.cjs (namespace adaptado)
+        - Gerar discover-context.cjs (entidades do domínio)
+        - Gerar set-active-context.cjs (flags CLI do domínio)
+        - Gerar load-context.cjs (enriquecer com workspace data)
+        - Gerar show-context.cjs (formatação markdown)
+        - Registrar scripts no config.yaml
+        - Adicionar *show-context e *set-context no entry agent
+        - Smoke test cada script (exit code 0)
+
+        Referências canônicas: squads/aiox-copy/scripts/ (READ-ONLY)
+      requires: "eligibility-audit"
+      outputs:
+        - "squads/{squad}/scripts/runtime-paths.cjs"
+        - "squads/{squad}/scripts/discover-context.cjs"
+        - "squads/{squad}/scripts/set-active-context.cjs"
+        - "squads/{squad}/scripts/load-context.cjs"
+        - "squads/{squad}/scripts/show-context.cjs"
+        - "config.yaml atualizado com seção scripts"
+        - "entry agent atualizado com *show-context e *set-context"
+      checkpoint:
+        criteria:
+          - "Todos os 5 scripts existem em squads/{squad}/scripts/"
+          - "Todos retornam exit code 0 com input válido"
+          - "set-active-context cria session-context.yaml em .aiox/squad-runtime/"
+          - "load-context retorna objeto com business_slug e readiness.status"
+          - "show-context produz markdown legível"
+          - "Nenhum script existente sobrescrito sem avaliação (VETO-CS-002)"
+          - "Scripts 100% determinísticos, zero dependência LLM (VETO-CS-003)"
+        human_review: true
+        message: "Review generated scripts before proceeding to greeting creation."
+      veto_conditions:
+        - "Script existente sobrescrito sem backup -> BLOCK (VETO-CS-002)"
+        - "Script gerado depende de LLM -> BLOCK (VETO-CS-003)"
+        - "Script duplica funcionalidade existente -> BLOCK (VETO-CS-005)"
+        - "Session context salvo fora de .aiox/squad-runtime/ -> BLOCK (VETO-CS-004)"
+      next: "create-greeting"
+
+    - step: "create-greeting"
+      id: "create-greeting"
+      phase: 3
+      phase_name: "Create Greeting Script"
+      agent: squad-chief
+      task: create-greeting-script.md
+      task_ref: create-greeting-script
+      description: |
+        Gerar o greeting determinístico (.cjs) que consome os context scripts
+        instalados na fase anterior. O greeting mostra contexto ativo,
+        comandos disponíveis e prepara o terreno para o Next Action.
+
+        Seguir task canônica squads/squad-creator/tasks/create-greeting-script.md:
+        - PHASE 1: Discovery (ler config, identificar context sources)
+        - PHASE 2: Gap Map (definir sinais observáveis e prioridades)
+        - PHASE 3: Generation (preencher squads/squad-creator/templates/greeting-script-tmpl.cjs)
+        - PHASE 4: Integration (salvar script, atualizar agent STEP 3.5)
+        - PHASE 5: Validation (executar script, verificar output)
+
+        O greeting script DEVE importar load-context.cjs para dados contextuais.
+      requires: "install-scripts"
+      outputs:
+        - "squads/{squad}/scripts/generate-{squad}-greeting.cjs"
+        - "entry agent atualizado com STEP 3.5 (greeting script execution)"
+      checkpoint:
+        criteria:
+          - "Script de greeting existe e executa sem erro (exit code 0)"
+          - "Output contém bloco de Runtime Directives"
+          - "Output contém seção de contexto ativo"
+          - "Output contém tabela de comandos"
+          - "Script importa load-context.cjs para dados contextuais"
+          - "Entry agent tem STEP 3.5 referenciando greeting script"
+        human_review: true
+        message: "Review greeting output format and content before adding Next Action."
+      veto_conditions:
+        - "Greeting não importa load-context -> BLOCK (greeting sem dados)"
+        - "Greeting hardcoda dados em vez de ler do contexto -> BLOCK"
+        - "Script escrito sem carregar squads/squad-creator/templates/greeting-script-tmpl.cjs primeiro -> BLOCK"
+      next: "install-next-action"
+
+    - step: "install-next-action"
+      id: "install-next-action"
+      phase: 4
+      phase_name: "Install Next Action"
+      agent: squad-chief
+      task: next-action.md
+      task_ref: next-action
+      action: apply
+      flags: "--apply"
+      description: |
+        Adicionar heurística de Next Action no greeting script.
+        Mapear gaps do squad, definir prioridades (blocking > non_blocking > intake),
+        e adicionar CTA final determinístico.
+
+        Seguir task next-action.md com --apply:
+        - Fase 0: Discovery (mapear runtime, greeting, contratos de contexto)
+        - Fase 1: Gap Map (signal -> severity -> next_action)
+        - Fase 2: Implementation (inferNextAction, buildNextActionCallout)
+        - Fase 3: Validation (teste automatizado cobrindo 3 cenários)
+
+        Heurística obrigatória:
+        - P1: Gap bloqueante (remediar) > P2: Gap estrutural (completar) > P3: Intake (operar)
+        - Se blocker existe, NUNCA sugerir CTA genérico como *help ou *triage
+      requires: "create-greeting"
+      outputs:
+        - "inferNextAction() adicionado ao greeting script"
+        - "buildNextActionCallout() adicionado ao greeting script"
+        - "Gap map documentado (signal -> severity -> next_action)"
+        - "Teste automatizado cobrindo 3 cenários"
+      checkpoint:
+        criteria:
+          - "Greeting termina com **Next Action:** `...`"
+          - "Next Action inferido de gaps/contexto, não genérico"
+          - "Gaps bloqueantes priorizados sobre comandos genéricos"
+          - "inferNextAction() implementado no greeting script"
+          - "Teste cobre: no context, blocking gap, ready state"
+        human_review: true
+        message: "Review Next Action heuristics and gap map before final validation."
+      veto_conditions:
+        - "Next Action usa CTA genérico quando blocker existe -> BLOCK (VETO-NA-003)"
+        - "inferNextAction() não existe no greeting -> BLOCK (VETO-NA-001)"
+        - "Sem teste automatizado -> BLOCK (VETO-NA-004)"
+        - "Heurística sem fonte estrutural de contexto -> BLOCK (VETO-NA-002)"
+      next: "e2e-validation"
+
+    - step: "e2e-validation"
+      id: "e2e-validation"
+      phase: 5
+      phase_name: "End-to-End Validation"
+      agent: squad-chief
+      action: validate_full_stack
+      task_ref: ics-validation
+      description: |
+        Validação completa do stack instalado. Executar o greeting script
+        e verificar que o fluxo inteiro funciona: context -> greeting -> next action.
+
+        Testes end-to-end:
+        1. Cenário "fresh start": nenhum contexto ativo
+           - Expected: Next Action = bootstrap ou set-context
+        2. Cenário "blocking gap": contexto ativo com gap crítico
+           - Expected: Next Action = remediação do gap
+        3. Cenário "ready state": contexto completo, tudo ok
+           - Expected: Next Action = comando operacional principal
+
+        Validar integridade completa:
+        - 5 context scripts + 1 greeting script = 6 scripts total
+        - Entry agent com *show-context, *set-context e STEP 3.5
+        - config.yaml com seção scripts completa
+        - Runtime Directives presentes no output
+        - Next Action CTA presente no final do output
+      requires: "install-next-action"
+      outputs:
+        - "validation-report.yaml"
+      checkpoint:
+        criteria:
+          - "Greeting script executa sem erro (exit code 0)"
+          - "Output contém: Runtime Directives + Context + Commands + Next Action"
+          - "3 cenários de teste passam (no context, blocking, ready)"
+          - "Entry agent activation-instructions referencia o greeting script"
+          - "config.yaml tem todos os scripts registrados"
+          - "Todos os veto conditions de todas as fases anteriores permanecem satisfeitos"
+        human_review: true
+        message: "Final review. If all checks pass, the squad is context-aware."
+      veto_conditions:
+        - "Qualquer smoke test falha -> BLOCK até correção"
+        - "Output do greeting não contém Next Action -> BLOCK"
+
+# ===============================================================================
+# HANDOFF PROMPTS (phase-to-phase context passing)
+# ===============================================================================
+
+  handoff_prompts:
+    eligibility_to_install:
+      context: "Audit report com scripts existentes/faltantes e domain mapping"
+      instruction: |
+        Use o audit report para decidir quais scripts gerar.
+        Preserve scripts existentes. Adapte ao domínio mapeado.
+        O domain mapping define primary_entity e session_schema.
+
+    install_to_greeting:
+      context: "5 context scripts instalados e validados (smoke tests passed)"
+      instruction: |
+        O context stack está pronto. Gere o greeting script que IMPORTA
+        load-context.cjs para dados contextuais. Use o template
+        squads/squad-creator/templates/greeting-script-tmpl.cjs como base. Carregar template é obrigatório
+        (template enforcement rule).
+
+    greeting_to_next_action:
+      context: "Greeting script funcional com contexto, sem Next Action"
+      instruction: |
+        O greeting mostra contexto mas ainda não tem Next Action.
+        Aplique a task next-action com --apply para adicionar
+        inferNextAction() e o CTA final. Use o gap map do domínio
+        mapeado na Phase 1.
+
+    next_action_to_validation:
+      context: "Greeting completo com contexto + next action + testes"
+      instruction: |
+        Validação final. Execute o greeting script e verifique que
+        o output completo está correto nos 3 cenários. Compare
+        output contra o padrão dos squads aiox-copy e aiox-design.
+
+# ===============================================================================
+# SUPPLEMENTAL PHASE METADATA (optional, non-executable)
+# ===============================================================================
+
+  phases:
+    - id: PHASE-1
+      name: "Eligibility & Audit"
+      days: "0.5"
+      tier: 0
+      description: |
+        Fase de discovery e gate. Verifica elegibilidade do squad
+        (workspace_integration.level >= controlled_runtime_consumer),
+        audita o estado atual dos scripts de contexto, e mapeia
+        o domínio do squad para adaptação dos scripts.
+
+        Outputs: audit-report, domain-mapping
+        Gate: VETO-CS-001 (ineligible squad)
+
+      tasks:
+        - task_file: install-context-stack.md
+          agent: squad-chief
+          required: true
+          description: "Fases 1-2 da task: audit + domain mapping"
+          output: "audit-report + domain-mapping"
+
+      checkpoint:
+        criteria:
+          - "Level >= controlled_runtime_consumer"
+          - "Scripts inventariados"
+          - "Domain mapping completo"
+        human_review: false
+        message: "Eligibility is deterministic. Auto-advance."
+
+    - id: PHASE-2
+      name: "Install Context Stack"
+      days: "0.5-1"
+      tier: 1
+      description: |
+        Fase core. Gera os 5 scripts de contexto adaptados ao domínio
+        do squad, preservando scripts existentes. Integra no config.yaml
+        e entry agent. Executa smoke tests.
+
+        Referências canônicas: squads/aiox-copy/scripts/
+        Regras: self-contained, determinístico, importar não duplicar
+
+      tasks:
+        - task_file: install-context-stack.md
+          agent: squad-chief
+          required: true
+          description: "Fases 3-9 da task: generate + integrate + validate"
+          output: "5 scripts .cjs + config + agent atualizados"
+
+      checkpoint:
+        criteria:
+          - "5 scripts existem e passam smoke test"
+          - "config.yaml tem seção scripts"
+          - "Entry agent tem *show-context e *set-context"
+        human_review: true
+        message: "Review scripts before greeting creation."
+
+    - id: PHASE-3
+      name: "Create Greeting Script"
+      days: "0.5"
+      tier: 1
+      description: |
+        Gera o greeting determinístico que consome o context stack.
+        O greeting se torna o ponto de entrada visual do squad,
+        mostrando contexto ativo e comandos disponíveis.
+
+        Template obrigatório: squads/squad-creator/templates/greeting-script-tmpl.cjs
+        Padrão: GREETING-CONTINUITY-001
+
+      tasks:
+        - task_file: squads/squad-creator/tasks/create-greeting-script.md
+          agent: squad-chief
+          required: true
+          description: "5 fases: discovery, gap map, generation, integration, validation"
+          output: "generate-{squad}-greeting.cjs + agent STEP 3.5"
+
+      checkpoint:
+        criteria:
+          - "Greeting executa sem erro"
+          - "Output contém Runtime Directives"
+          - "Script importa load-context.cjs"
+        human_review: true
+        message: "Review greeting format before Next Action."
+
+    - id: PHASE-4
+      name: "Install Next Action"
+      days: "0.5"
+      tier: 2
+      description: |
+        Adiciona heurística de Next Action ao greeting.
+        O squad agora sabe qual é o próximo passo e comunica
+        isso ao usuário na ativação.
+
+        Heurística: blocking > non_blocking > intake
+        Padrão: GREETING-CONTINUITY-001
+
+      tasks:
+        - task_file: next-action.md
+          agent: squad-chief
+          required: true
+          description: "3 fases: discovery, gap map, implementation + validation"
+          output: "inferNextAction() + teste 3 cenários"
+
+      checkpoint:
+        criteria:
+          - "Greeting termina com Next Action"
+          - "Bloqueantes priorizados"
+          - "3 cenários testados"
+        human_review: true
+        message: "Review heuristics before final validation."
+
+    - id: PHASE-5
+      name: "End-to-End Validation"
+      days: "0.25"
+      tier: 2
+      description: |
+        Validação final do stack completo. Todos os cenários
+        testados, todos os scripts funcionais. Output comparado
+        com padrão dos squads aiox-copy e aiox-design.
+
+      tasks:
+        - task_file: null
+          agent: squad-chief
+          required: true
+          description: "Execução e2e do greeting + validação 3 cenários"
+          output: "validation-report.yaml"
+
+      checkpoint:
+        criteria:
+          - "Greeting completo (directives + context + commands + next action)"
+          - "3 cenários passam"
+          - "Todos os scripts funcionais"
+        human_review: true
+        message: "Final review. Squad is context-aware if all pass."
+
+# ===============================================================================
+# ERROR HANDLING
+# ===============================================================================
+
+  error_handling:
+    on_phase_failure:
+      - log_error: true
+      - notify_stakeholders: false
+      - create_remediation_task: false
+      - halt_workflow: true
+
+    on_checkpoint_failure:
+      - log_failure_reason: true
+      - return_to_previous_phase: true
+      - max_retries: 2
+
+    on_veto_triggered:
+      - halt_immediately: true
+      - escalate_to: "squad-chief"
+      - document_reason: true
+
+    specific_errors:
+      ineligible_squad:
+        detection: "workspace_integration.level is none or read_only"
+        recovery: "ABORT workflow. Suggest simple greeting without context stack."
+        prevention: "Check eligibility before workflow start."
+
+      script_generation_fails:
+        detection: "Script .cjs não executa (exit code != 0)"
+        recovery: "Revisar código gerado, comparar com referência do aiox-copy."
+        prevention: "Follow script structure contract from install-context-stack.md."
+
+      session_context_not_created:
+        detection: "set-active-context não cria session-context.yaml"
+        recovery: "Verificar paths em runtime-paths.cjs e permissões de diretório."
+        prevention: "Usar mkdir recursive antes de writeFileSync."
+
+      readiness_resolver_missing:
+        detection: "resolve-squad-workspace-readiness.cjs não encontrado"
+        recovery: "Verificar se workspace/scripts/ e squads/c-level/scripts/ estão acessíveis."
+        prevention: "Validate precondition before starting workflow."
+
+      greeting_template_missing:
+        detection: "squads/squad-creator/templates/greeting-script-tmpl.cjs não encontrado"
+        recovery: "Verificar se squads/squad-creator/templates/ está acessível."
+        prevention: "Template enforcement: always Read() template before Write()."
+
+      existing_script_overwrite:
+        detection: "Script já existe e --force não foi usado"
+        recovery: "Criar wrapper que importa o existente em vez de duplicar."
+        prevention: "Always inventory before generating (Phase 1)."
+
+# ===============================================================================
+# COMPLETION SIGNALS
+# ===============================================================================
+
+  completion_signal: "<promise>COMPLETE</promise>"
+  checkpoint_signal: "<promise>CHECKPOINT:PHASE-X</promise>"
+  blocked_signal: "<promise>BLOCKED:PHASE-X</promise>"
+
+# ===============================================================================
+# OUTPUT ARTIFACTS
+# ===============================================================================
+
+  outputs:
+    context_scripts:
+      - "squads/{squad}/scripts/runtime-paths.cjs"
+      - "squads/{squad}/scripts/discover-context.cjs"
+      - "squads/{squad}/scripts/set-active-context.cjs"
+      - "squads/{squad}/scripts/load-context.cjs"
+      - "squads/{squad}/scripts/show-context.cjs"
+    greeting_script:
+      - "squads/{squad}/scripts/generate-{squad}-greeting.cjs"
+    config:
+      - "squads/{squad}/config.yaml (scripts section updated)"
+    agents:
+      - "squads/{squad}/agents/{entry_agent}.md (activation-instructions updated)"
+    tests:
+      - "squads/{squad}/scripts/test-context-stack.cjs"
+    reports:
+      - "validation-report.yaml (e2e test results)"
+
+# ===============================================================================
+# AGENT ASSIGNMENTS BY PHASE
+# ===============================================================================
+
+  agents_by_phase:
+    PHASE-1:
+      primary:
+        - "squad-chief"
+      secondary: []
+    PHASE-2:
+      primary:
+        - "squad-chief"
+      secondary: []
+    PHASE-3:
+      primary:
+        - "squad-chief"
+      secondary: []
+    PHASE-4:
+      primary:
+        - "squad-chief"
+      secondary: []
+    PHASE-5:
+      primary:
+        - "squad-chief"
+      secondary: []
+
+# ===============================================================================
+# QUALITY CHECKLIST
+# ===============================================================================
+
+  quality_checklist:
+    eligibility:
+      - "[ ] Squad config.yaml tem workspace_integration.level >= controlled_runtime_consumer"
+      - "[ ] Entry agent identificado"
+      - "[ ] Domain mapping completo (primary_entity + session_schema)"
+    context_stack:
+      - "[ ] 5 scripts existem em squads/{squad}/scripts/"
+      - "[ ] Todos executam sem erro (exit code 0)"
+      - "[ ] Scripts existentes preservados (não sobrescritos)"
+      - "[ ] session-context.yaml criado em .aiox/squad-runtime/"
+      - "[ ] load-context retorna business_slug + readiness"
+      - "[ ] Scripts são 100% determinísticos (zero LLM)"
+    greeting:
+      - "[ ] Greeting script existe e executa sem erro"
+      - "[ ] Output contém Runtime Directives"
+      - "[ ] Greeting importa load-context.cjs"
+      - "[ ] Entry agent tem STEP 3.5"
+    next_action:
+      - "[ ] inferNextAction() implementado"
+      - "[ ] Greeting termina com **Next Action:** `...`"
+      - "[ ] Blocking gaps priorizados sobre intake genérico"
+      - "[ ] 3 cenários de teste passam"
+    integration:
+      - "[ ] config.yaml tem seção scripts atualizada"
+      - "[ ] Entry agent tem *show-context e *set-context"
+      - "[ ] Entry agent tem STEP 3.5 para greeting script"
+      - "[ ] validation-report.yaml gerado"
+
+# ===============================================================================
+# GOVERNANCE GATE
+# ===============================================================================
+
+  governance_gate:
+    protocol: "squads/squad-creator/protocols/ai-first-governance.md"
+    required_checks:
+      - "Existing scripts audited before generating new ones"
+      - "Canonical references used (aiox-copy, aiox-design)"
+      - "No script duplication (import existing, don't recreate)"
+      - "All scripts deterministic (zero LLM dependency)"
+      - "Template enforcement: squads/squad-creator/templates/greeting-script-tmpl.cjs loaded before Write()"
+
+    ci_policy:
+      blocking_deterministic_only: true
+      deterministic_checks:
+        - "script syntax (node --check)"
+        - "exit code validation"
+        - "session-context.yaml schema"
+        - "Runtime Directives block present in greeting output"
+      semantic_checks_enforced_in_workflow: true
+
+# ===============================================================================
+# CANDIDATE SQUADS (Known eligible — operational reference)
+# ===============================================================================
+# NOTE: This section documents known candidates for operational planning.
+# squad-creator-pro is a meta-squad that operates ON squads, so listing
+# specific squad names here is operational data, not a squad-agnosticism violation.
+
+  candidate_squads:
+    ready:
+      - squad: aiox-sop
+        level: controlled_runtime_consumer
+        existing_scripts: ["load-workspace-context.cjs", "resolve-environment-contract.cjs"]
+        domain: "SOPs por business, backlog prioritizado por wave"
+        session_extras: ["sop_priority", "wave"]
+      - squad: brand
+        level: controlled_runtime_consumer
+        existing_scripts: []
+        domain: "Brand identity por business"
+        session_extras: []
+      - squad: movement
+        level: controlled_runtime_consumer
+        existing_scripts: []
+        domain: "Movement intelligence por business"
+        session_extras: []
+    already_done:
+      - squad: aiox-copy
+        level: controlled_runtime_consumer
+        notes: "Stack completo. Referência canônica."
+      - squad: aiox-design
+        level: controlled_runtime_consumer
+        notes: "Stack completo. Referência canônica."
+    ineligible_examples:
+      - squad: cybersecurity
+        level: none
+        reason: "Não interage com workspace"
+      - squad: storytelling
+        level: read_only
+        reason: "Leitura pontual, sem sessão ativa"
+      - squad: deep-research
+        level: none
+        reason: "Não interage com workspace"
+
+# ===============================================================================
+# INLINE STRUCTURE: Context Script Architecture
+# ===============================================================================
+# Domain-specific guidance for the script generation phase.
+
+  inline_structures:
+    context_script_architecture:
+      description: "Architecture pattern for the 5 context scripts"
+      pattern: |
+        runtime-paths.cjs (FOUNDATION)
+            |
+            v
+        discover-context.cjs ──> set-active-context.cjs
+            (list available)       (select + persist)
+                                       |
+                                       v
+                               load-context.cjs
+                               (read + enrich + readiness)
+                                       |
+                                       v
+                               show-context.cjs
+                               (format as markdown)
+                                       |
+                                       v
+                               generate-{squad}-greeting.cjs
+                               (consumes load-context + inferNextAction)
+
+      dependency_chain:
+        - "runtime-paths: imported by ALL other scripts"
+        - "discover-context: standalone, uses runtime-paths"
+        - "set-active-context: uses runtime-paths + resolve-squad-workspace-readiness"
+        - "load-context: uses runtime-paths, reads session-context.yaml"
+        - "show-context: uses load-context"
+        - "greeting: uses load-context + inferNextAction heuristic"
+
+    session_context_schema:
+      description: "Minimal schema for session-context.yaml"
+      pattern: |
+        # Required fields (all squads)
+        business_slug: "{slug}"
+        set_at: "{ISO timestamp}"
+        set_by: "set-active-context.cjs"
+
+        # Optional fields (domain-specific)
+        product_slug: "{slug or null}"
+        campaign_slug: "{slug or null}"
+        sop_priority: "{P0|P1|P2 or null}"
+        design_system_slug: "{slug or null}"
+
+        # Readiness (computed by set-active-context)
+        readiness:
+          status: "ready|not_ready|partial"
+          reasons: []
+          context_type: "{from config.yaml}"
+
+# ===============================================================================
+# METADATA
+# ===============================================================================
+
+  metadata:
+    version: "1.0.0"
+    framework: "AIOX Squad Creator Pro"
+    created: "2026-03-19"
+    primary_use_case: "Install full workspace context stack in eligible squads"
+    key_difference: |
+      Diferente do brownfield-upgrade que é genérico, este workflow é
+      cirúrgico: só instala o context stack em squads elegíveis.
+      Orquestra 3 tasks existentes (install-context-stack, create-greeting-script,
+      next-action) em sequência com checkpoints entre cada fase.
+      Não faz parte do upgrade padrão porque nem todo squad precisa.

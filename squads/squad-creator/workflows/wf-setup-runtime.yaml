@@ -1,0 +1,86 @@
+workflow:
+  id: wf-setup-runtime
+  name: Setup Runtime Pipeline
+  version: 1.0.0
+  description: Orquestra 5 subtasks atômicas para configurar, validar e persistir conexões de runtime para squads operacionais.
+  type: orchestration
+  agent_mapping:
+    agents:
+      squad-chief: orchestrator
+  state_machine:
+    states:
+      - init
+      - requirements
+      - wizard
+      - validate
+      - persist
+      - handoff
+      - complete
+      - failed
+    transitions:
+      - trigger: start
+        source: init
+        dest: requirements
+      - trigger: requirements_complete
+        source: requirements
+        dest: wizard
+      - trigger: wizard_complete
+        source: wizard
+        dest: validate
+      - trigger: validate_complete
+        source: validate
+        dest: persist
+      - trigger: persist_complete
+        source: persist
+        dest: handoff
+      - trigger: handoff_complete
+        source: handoff
+        dest: complete
+      - trigger: fail
+        source: "*"
+        dest: failed
+  sequence:
+    - phase: requirements
+      id: requirements
+      agent: squad-chief
+      task_ref: setup-runtime-requirements
+      action: load_runtime_requirements
+      outputs: [runtime_requirements]
+      on_complete:
+        trigger: requirements_complete
+    - phase: wizard
+      id: wizard
+      agent: squad-chief
+      task_ref: setup-runtime-wizard
+      action: collect_runtime_credentials
+      inputs: [runtime_requirements]
+      outputs: [runtime_credentials]
+      on_complete:
+        trigger: wizard_complete
+    - phase: validate
+      id: validate
+      agent: squad-chief
+      task_ref: setup-runtime-validate
+      action: validate_runtime_connections
+      inputs: [runtime_credentials, validation_mode]
+      outputs: [runtime_validation]
+      on_complete:
+        trigger: validate_complete
+    - phase: persist
+      id: persist
+      agent: squad-chief
+      task_ref: setup-runtime-persist
+      action: persist_runtime_configuration
+      inputs: [runtime_credentials, runtime_validation, squad_name]
+      outputs: [runtime_persistence]
+      on_complete:
+        trigger: persist_complete
+    - phase: handoff
+      id: handoff
+      agent: squad-chief
+      task_ref: setup-runtime-handoff
+      action: emit_runtime_summary
+      inputs: [runtime_requirements, runtime_validation, runtime_persistence, squad_name]
+      outputs: [runtime_handoff]
+      on_complete:
+        trigger: handoff_complete

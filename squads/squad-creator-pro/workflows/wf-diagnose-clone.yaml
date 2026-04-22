@@ -1,0 +1,115 @@
+workflow:
+  id: wf-diagnose-clone
+  name: Diagnose Clone
+  version: "1.0.0"
+  description: >
+    Diagnose why a clone is weak by mapping symptoms to root causes using lookup
+    tables and prescribing treatment. Hybrid execution with deterministic symptom-cause
+    mapping and LLM for interpretation only.
+  type: orchestration
+  command: "*diagnose-clone {clone_path}"
+  state_machine:
+    states: [init, symptoms-root-cause, verify-trinity, prescribe-report, complete, failed]
+    transitions:
+      - trigger: start
+        source: init
+        dest: symptoms-root-cause
+      - trigger: symptoms_complete
+        source: symptoms-root-cause
+        dest: verify-trinity
+      - trigger: symptoms_failed
+        source: symptoms-root-cause
+        dest: failed
+      - trigger: verify_trinity_complete
+        source: verify-trinity
+        dest: prescribe-report
+      - trigger: verify_trinity_failed
+        source: verify-trinity
+        dest: failed
+      - trigger: prescribe_complete
+        source: prescribe-report
+        dest: complete
+      - trigger: prescribe_failed
+        source: prescribe-report
+        dest: failed
+      - trigger: fail
+        source: "*"
+        dest: failed
+  sequence:
+    - step: symptoms-root-cause
+      id: symptoms-root-cause
+      phase: 1
+      phase_name: SYMPTOMS & ROOT CAUSE
+      agent: oalanicolas
+      task_ref: an-diagnose-clone-symptoms
+      action: execute_identify_symptoms_and_map_causes
+      description: Identify symptoms and map to root causes using lookup table
+      inputs:
+        - clone_path
+        - user_description
+      outputs:
+        - symptoms_list
+        - root_causes
+      next: verify-trinity
+    - step: verify-trinity
+      id: verify-trinity
+      phase: 2
+      phase_name: VERIFY TRINITY
+      agent: oalanicolas
+      task_ref: an-diagnose-clone-verify-trinity
+      action: execute_binary_trinity_check
+      description: Binary trinity check + source quality + fidelity calculation
+      inputs:
+        - clone_path
+      outputs:
+        - trinity_status
+        - source_quality
+        - fidelity_score
+      next: prescribe-report
+    - step: prescribe-report
+      id: prescribe-report
+      phase: 3
+      phase_name: PRESCRIBE & REPORT
+      agent: oalanicolas
+      task_ref: an-diagnose-clone-prescribe
+      action: execute_prescribe_treatment_and_report
+      description: Prescribe treatment from lookup table and generate diagnosis report
+      inputs:
+        - root_causes
+        - trinity_status
+        - fidelity_score
+      outputs:
+        - treatment_plan
+        - diagnosis_report
+    - workflow_end:
+        id: complete
+        action: workflow_complete
+  inputs:
+    required:
+      - name: clone_path
+        type: string
+        description: Path to the clone agent file
+    optional:
+      - name: user_description
+        type: string
+        description: User description of clone problems
+  outputs:
+    primary:
+      - diagnosis_report
+      - treatment_plan
+
+  quality_gates:
+    - id: SCP_DGN_001
+      phase: prescribe
+      type: hybrid
+      placement: exit
+      severity: blocking
+      description: "Diagnosis must produce treatment plan with actionable prescriptions"
+      criteria:
+        - field: diagnosis_report
+          operator: "!="
+          value: null
+        - field: treatment_plan
+          operator: "!="
+          value: null
+      on_fail: block

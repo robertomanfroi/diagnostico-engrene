@@ -1,0 +1,60 @@
+workflow:
+  id: wf-create-template
+  name: Create Template Pipeline
+  version: 1.0.0
+  description: Orquestra 5 subtasks atômicas para criar templates de output com elicitação, validação e registro.
+  type: orchestration
+  agent_mapping:
+    agents:
+      squad-chief: orchestrator
+  state_machine:
+    states: [init, identity, structure, elicitation, validate, register, complete, failed]
+    transitions:
+      - { trigger: start, source: init, dest: identity }
+      - { trigger: identity_complete, source: identity, dest: structure }
+      - { trigger: structure_complete, source: structure, dest: elicitation }
+      - { trigger: elicitation_complete, source: elicitation, dest: validate }
+      - { trigger: validate_complete, source: validate, dest: register }
+      - { trigger: register_complete, source: register, dest: complete }
+      - { trigger: fail, source: "*", dest: failed }
+  sequence:
+    - phase: identity
+      id: identity
+      agent: squad-chief
+      task_ref: create-template-identity
+      action: resolve_template_identity
+      inputs: [template_name, template_id, squad_name, output_format]
+      outputs: [template_identity]
+      on_complete: { trigger: identity_complete }
+    - phase: structure
+      id: structure
+      agent: squad-chief
+      task_ref: create-template-structure
+      action: define_template_structure
+      inputs: [template_identity]
+      outputs: [template_structure]
+      on_complete: { trigger: structure_complete }
+    - phase: elicitation
+      id: elicitation
+      agent: squad-chief
+      task_ref: create-template-elicitation
+      action: configure_template_elicitation
+      inputs: [template_identity, template_structure]
+      outputs: [template_elicitation]
+      on_complete: { trigger: elicitation_complete }
+    - phase: validate
+      id: validate
+      agent: squad-chief
+      task_ref: create-template-validate
+      action: compile_and_validate_template
+      inputs: [template_identity, template_structure, template_elicitation]
+      outputs: [template_validation]
+      on_complete: { trigger: validate_complete }
+    - phase: register
+      id: register
+      agent: squad-chief
+      task_ref: create-template-register
+      action: write_template_and_update_registry
+      inputs: [template_identity, template_validation, squad_name]
+      outputs: [template_registration]
+      on_complete: { trigger: register_complete }

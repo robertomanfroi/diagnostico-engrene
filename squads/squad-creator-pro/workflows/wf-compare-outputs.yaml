@@ -1,0 +1,77 @@
+workflow:
+  id: wf-compare-outputs
+  name: Compare Model Outputs
+  version: "2.0.0"
+  description: >
+    Compare Opus baseline vs Haiku output across 4 evaluation dimensions to
+    determine model qualification. Evaluator Independence -- Opus ONLY.
+    NEVER use Haiku to evaluate Haiku.
+    v2.0.0: De-atomized from 3 steps to 1 consolidated task.
+  type: orchestration
+  command: "*compare-outputs {task_name}"
+  state_machine:
+    states: [init, load-score-report, complete, failed]
+    transitions:
+      - trigger: start
+        source: init
+        dest: load-score-report
+      - trigger: load_score_report_complete
+        source: load-score-report
+        dest: complete
+      - trigger: load_score_report_failed
+        source: load-score-report
+        dest: failed
+      - trigger: fail
+        source: "*"
+        dest: failed
+  sequence:
+    - step: load-score-report
+      id: load-score-report
+      phase: 1
+      phase_name: LOAD, SCORE & REPORT
+      agent: oalanicolas
+      task_ref: an-compare-outputs-score
+      action: execute_load_score_and_report
+      description: >
+        Load both outputs, score 4 dimensions (tier_match, score_variance,
+        checkpoint_match, recommendation_quality), determine verdict, save report
+      inputs:
+        - task_name
+        - opus_baseline
+        - haiku_output
+        - task_file
+      outputs:
+        - qualification_report
+    - workflow_end:
+        id: complete
+        action: workflow_complete
+  inputs:
+    required:
+      - name: task_name
+        type: string
+        description: Task being evaluated
+      - name: opus_baseline
+        type: string
+        description: Path to Opus output file
+      - name: haiku_output
+        type: string
+        description: Path to Haiku output file
+      - name: task_file
+        type: string
+        description: Original task definition
+  outputs:
+    primary:
+      - qualification_report
+
+  quality_gates:
+    - id: SCP_CMP_001
+      phase: score
+      type: automated
+      placement: exit
+      severity: warning
+      description: "Comparison report must include qualification verdict"
+      criteria:
+        - field: qualification_report
+          operator: "!="
+          value: null
+      on_fail: warn

@@ -1,0 +1,22 @@
+workflow:
+  id: wf-create-workflow
+  name: Pro Workflow Creation Router
+  version: 1.0.0
+  purpose: Route direct `*create-workflow` invocations through the pro contract wrapper and delegate execution to the canonical base workflow.
+  orchestrator: "@squad-chief"
+  type: direct_router
+  sequence:
+    - phase: delegate
+      id: delegate
+      agent: "@squad-chief"
+      task: create-workflow
+      task_ref: create-workflow
+      action: delegate_full_creation
+      blocking: true
+      outputs:
+        - "squads/{squad_name}/workflows/wf-{workflow_id}.yaml"
+        - "squads/{squad_name}/config.yaml"
+        - "squads/{squad_name}/README.md"
+  outputs:
+    - "squads/{squad_name}/workflows/wf-{workflow_id}.yaml"
+    - "squads/{squad_name}/config.yaml"

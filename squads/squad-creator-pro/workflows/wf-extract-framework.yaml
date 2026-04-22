@@ -1,0 +1,108 @@
+workflow:
+  id: wf-extract-framework
+  name: Extract Framework (Trinity)
+  version: "1.0.0"
+  description: >
+    Extract the Trinity -- Playbook (O QUE) + Framework (QUANDO/POR QUE) + Swipe File (COMO)
+    -- from expert source material through analysis, deep extraction, and integration.
+  type: orchestration
+  command: "*extract-framework {source}"
+  state_machine:
+    states: [init, source-analysis, trinity-extraction, integration, complete, failed]
+    transitions:
+      - trigger: start
+        source: init
+        dest: source-analysis
+      - trigger: source_analysis_complete
+        source: source-analysis
+        dest: trinity-extraction
+      - trigger: source_analysis_failed
+        source: source-analysis
+        dest: failed
+      - trigger: trinity_extraction_complete
+        source: trinity-extraction
+        dest: integration
+      - trigger: trinity_extraction_failed
+        source: trinity-extraction
+        dest: failed
+      - trigger: integration_complete
+        source: integration
+        dest: complete
+      - trigger: integration_failed
+        source: integration
+        dest: failed
+      - trigger: fail
+        source: "*"
+        dest: failed
+  sequence:
+    - step: source-analysis
+      id: source-analysis
+      phase: 1
+      phase_name: SOURCE ANALYSIS
+      agent: oalanicolas
+      task_ref: an-extract-framework-analyze
+      action: execute_source_classification_and_gap_analysis
+      description: Classify source material and identify gaps before extraction
+      inputs:
+        - source
+      outputs:
+        - source_quality
+        - gap_analysis
+      next: trinity-extraction
+    - step: trinity-extraction
+      id: trinity-extraction
+      phase: 2
+      phase_name: TRINITY EXTRACTION
+      agent: oalanicolas
+      task_ref: an-extract-framework-trinity
+      action: execute_extract_playbook_framework_swipe_file
+      description: Extract Playbook, Framework, and Swipe File from source
+      inputs:
+        - source
+        - source_quality
+      outputs:
+        - playbook
+        - framework
+        - swipe_file
+      next: integration
+    - step: integration
+      id: integration
+      phase: 3
+      phase_name: CROSS-LENS INTEGRATION
+      agent: oalanicolas
+      task_ref: an-extract-framework-integrate
+      action: execute_paradigm_inversions_and_cross_lens
+      description: Identify paradigm inversions and build cross-lens territory map
+      inputs:
+        - playbook
+        - framework
+        - swipe_file
+      outputs:
+        - cross_lens_map
+    - workflow_end:
+        id: complete
+        action: workflow_complete
+  inputs:
+    required:
+      - name: source
+        type: string
+        description: Source material (interview, book, course, post, video)
+  outputs:
+    primary:
+      - playbook
+      - framework
+      - swipe_file
+      - cross_lens_map
+
+  quality_gates:
+    - id: SCP_EFW_001
+      phase: integrate
+      type: automated
+      placement: exit
+      severity: warning
+      description: "Framework extraction must produce integrated framework with trinity validation"
+      criteria:
+        - field: framework_integrated
+          operator: "=="
+          value: true
+      on_fail: warn

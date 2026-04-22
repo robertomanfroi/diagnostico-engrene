@@ -1,0 +1,88 @@
+workflow:
+  id: wf-fidelity-score
+  name: Fidelity Score
+  version: "1.0.0"
+  description: >
+    Calculate clone fidelity score using 8 layers x 5 checkpoints (40 total).
+    95% deterministic via worker script. MANDATORY PREFLIGHT: Run worker script FIRST.
+  type: orchestration
+  command: "*fidelity-score {clone_path}"
+  state_machine:
+    states: [init, orchestrate, calculate-and-report, complete, failed]
+    transitions:
+      - trigger: start
+        source: init
+        dest: orchestrate
+      - trigger: orchestrate_complete
+        source: orchestrate
+        dest: calculate-and-report
+      - trigger: orchestrate_failed
+        source: orchestrate
+        dest: failed
+      - trigger: calculate_complete
+        source: calculate-and-report
+        dest: complete
+      - trigger: calculate_failed
+        source: calculate-and-report
+        dest: failed
+      - trigger: fail
+        source: "*"
+        dest: failed
+  # NOTE: De-atomized in v4.0.0. Previous 3 subtasks (identify, layers, calculate)
+  # merged into an-fidelity-score-calculate (95% deterministic via worker script).
+  # Workflow retains 2-phase structure: orchestrator stub + merged execution.
+  sequence:
+    - step: orchestrate
+      id: orchestrate
+      phase: 1
+      phase_name: ORCHESTRATE
+      agent: oalanicolas
+      task_ref: an-fidelity-score
+      action: execute_fidelity_orchestrator
+      description: Orchestrator stub — delegates to merged calculate task
+      inputs:
+        - clone_path
+      outputs:
+        - clone_files
+        - preflight_scores
+      next: calculate-and-report
+    - step: calculate-and-report
+      id: calculate-and-report
+      phase: 2
+      phase_name: IDENTIFY, LAYERS, CALCULATE & REPORT
+      agent: oalanicolas
+      task_ref: an-fidelity-score-calculate
+      action: execute_identify_layers_calculate_report
+      description: "Merged task: identify clone files, run worker script, execute 8 layer checklists, calculate score, classify tier, generate report"
+      inputs:
+        - clone_path
+        - preflight_scores
+      outputs:
+        - fidelity_report
+    - workflow_end:
+        id: complete
+        action: workflow_complete
+  inputs:
+    required:
+      - name: clone_path
+        type: string
+        description: Path to the clone agent file
+  outputs:
+    primary:
+      - fidelity_report
+
+  quality_gates:
+    - id: SCP_FID_001
+      phase: calculate-and-report
+      type: automated
+      placement: exit
+      severity: blocking
+      description: "Fidelity report must include score >= 6.0, classification, and gaps"
+      criteria:
+        - field: fidelity_score
+          operator: ">="
+          value: 6.0
+        - field: layers_evaluated
+          operator: ">="
+          value: 8
+      on_fail: block

@@ -1,0 +1,44 @@
+# Bench Output Formats v1.0
+# Available output formats for benchmark reports
+# Referenced by: bench-comparison-pipeline.yaml, bench-report.md
+#
+# Each format defines:
+#   - description: what the format produces
+#   - template: markdown template file to use
+#   - when: conditions under which this format is generated
+
+formats:
+  matrix:
+    description: "Feature/capability comparison table"
+    template: bench-matrix-tmpl.md
+    when: "Always (core output)"
+
+  scorecard:
+    description: "Weighted multi-dimension scoring (Forrester-style)"
+    template: bench-scorecard-tmpl.md
+    when: "Always (core output)"
+
+  battle_card:
+    description: "1-page quick comparison for decision makers"
+    template: bench-battle-card-tmpl.md
+    when: "Always (core output)"
+
+  executive_report:
+    description: "Full narrative report with recommendations"
+    template: bench-report-tmpl.md
+    when: "Standard and Full profiles"
+
+  quadrant:
+    description: "2-axis positioning map (Gartner-style)"
+    template: bench-quadrant-tmpl.md
+    when: "Company and Product types"
+
+  radar:
+    description: "4-ring recommendation radar (ThoughtWorks-style)"
+    template: bench-radar-tmpl.md
+    when: "Technology type"
+
+  gap_analysis:
+    description: "Bidirectional gap identification"
+    template: bench-gap-tmpl.md
+    when: "Standard and Full profiles"

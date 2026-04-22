@@ -1,0 +1,110 @@
+workflow:
+  id: wf-refresh-registry
+  name: Refresh Squad Registry
+  version: "1.0.0"
+  description: >
+    Hybrid pipeline that scans all squads via Python script for deterministic counts
+    and enriches entries with LLM for semantic metadata before writing the registry.
+  type: orchestration
+  command: "*refresh-registry"
+  state_machine:
+    states: [init, scan-collect, enrich-entries, write-validate, complete, failed]
+    transitions:
+      - trigger: start
+        source: init
+        dest: scan-collect
+      - trigger: scan_collect_complete
+        source: scan-collect
+        dest: enrich-entries
+      - trigger: scan_collect_failed
+        source: scan-collect
+        dest: failed
+      - trigger: enrich_entries_complete
+        source: enrich-entries
+        dest: write-validate
+      - trigger: enrich_entries_failed
+        source: enrich-entries
+        dest: failed
+      - trigger: write_validate_complete
+        source: write-validate
+        dest: complete
+      - trigger: write_validate_failed
+        source: write-validate
+        dest: failed
+      - trigger: fail
+        source: "*"
+        dest: failed
+  sequence:
+    - step: scan-collect
+      id: scan-collect
+      phase: 1
+      phase_name: SCAN & COLLECT
+      agent: squad-chief
+      task_ref: refresh-registry-scan
+      action: execute_run_script_and_collect
+      description: Run Python script to collect deterministic counts and metadata
+      inputs:
+        - squads_path
+      outputs:
+        - script_output
+      next: enrich-entries
+    - step: enrich-entries
+      id: enrich-entries
+      phase: 2
+      phase_name: ENRICH ENTRIES
+      agent: squad-chief
+      task_ref: refresh-registry-enrich
+      action: execute_llm_enrichment
+      description: LLM enrichment to add domain, keywords, highlights, example_use
+      inputs:
+        - script_output
+        - preserve_manual
+      outputs:
+        - enriched_entries
+      next: write-validate
+    - step: write-validate
+      id: write-validate
+      phase: 3
+      phase_name: WRITE & VALIDATE
+      agent: squad-chief
+      task_ref: refresh-registry-write
+      action: execute_write_domain_index_and_validate
+      description: Build domain index, write registry file, validate output
+      inputs:
+        - enriched_entries
+        - update_gaps
+      outputs:
+        - registry_file
+    - workflow_end:
+        id: complete
+        action: workflow_complete
+  inputs:
+    optional:
+      - name: squads_path
+        type: string
+        default: "squads/"
+        description: Base path to scan
+      - name: preserve_manual
+        type: boolean
+        default: true
+        description: Keep manual highlights and quality_reference
+      - name: update_gaps
+        type: boolean
+        default: false
+        description: Re-analyze gaps
+  outputs:
+    primary:
+      - registry_file
+
+  quality_gates:
+    - id: SCP_RFR_001
+      phase: write
+      type: automated
+      placement: exit
+      severity: warning
+      description: "Registry refresh must update squad-registry.yaml with current inventory"
+      criteria:
+        - field: registry_updated
+          operator: "=="
+          value: true
+      on_fail: warn

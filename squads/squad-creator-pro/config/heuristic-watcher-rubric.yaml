@@ -1,0 +1,300 @@
+# HEURISTIC WATCHER RUBRIC - Squad-Creator Pro
+# Source patterns: AN_KE_025..034, SC_HE_001..003, quality-gates.yaml
+# Version: 1.0
+# Last Updated: 2026-04-04
+
+heuristic_watcher_rubric:
+  version: "1.0"
+  owner: "@oalanicolas"
+  purpose: |
+    Operational rubric for recurring watchers that audit clone quality and process health
+    using Alan Nicolas heuristics as first-class governance signals.
+
+  philosophy: |
+    "O watcher não resume mudanças. Ele audita aderência heurística."
+    Every round should answer:
+    1. what changed,
+    2. which heuristic was strengthened or violated,
+    3. what evidence supports that judgment,
+    4. what action should happen next.
+
+  scoring:
+    scale: "0-10 per dimension"
+    overall_threshold: 7.5
+    minimum_per_dimension: 6.0
+    veto_dimensions:
+      - "determinism"
+      - "schema_safety"
+    status_rules:
+      pass: "overall >= 7.5 and no veto dimension below threshold"
+      review: "overall 6.0-7.4 OR any non-veto dimension below threshold"
+      veto: "determinism < 6.0 OR schema_safety < 6.0 OR critical violation found"
+
+  report_contract:
+    required_sections:
+      - "executive_summary"
+      - "dimension_scores"
+      - "violations"
+      - "evidence"
+      - "recommended_actions"
+      - "process_improvements"
+    mandatory_output_fields:
+      - "status"
+      - "overall_score"
+      - "critical_findings"
+      - "top_3_actions"
+
+  dimensions:
+    determinism:
+      name: "Determinism Over LLM"
+      heuristic_ref: "AN_KE_025"
+      weight: 1.0
+      threshold: 6.0
+      veto_power: true
+      description: "Checks whether exact validation work is delegated to scripts instead of LLM interpretation."
+      signals_positive:
+        - "worker/script produces exact metrics before narrative synthesis"
+        - "scores come from deterministic parser or validator"
+        - "LLM only interprets already-computed facts"
+      red_flags:
+        - "manual or inferred scoring without script output"
+        - "LLM counting files, keys, paths, or records directly"
+        - "factual validation based on impression rather than parser evidence"
+      validation_questions:
+        - "Daria para medir isso com bash/python em vez de confiar no modelo?"
+        - "O score/claim veio de parser ou de leitura interpretativa?"
+      recommended_actions:
+        - "replace narrative validation with deterministic script"
+        - "persist parser output as watcher evidence artifact"
+
+    agnosticism:
+      name: "Squad Agnosticism"
+      heuristic_ref: "AN_KE_026"
+      weight: 0.9
+      threshold: 6.0
+      veto_power: false
+      description: "Checks if reusable squad/process artifacts remain free from hardcoded business identity."
+      signals_positive:
+        - "business context resolved by workspace/config/environment"
+        - "clone/process rules are reusable across brands or squads"
+      red_flags:
+        - "hardcoded business names in core files"
+        - "literal local machine paths in reusable scripts"
+        - "client-specific logic leaking into generic squad artifacts"
+      validation_questions:
+        - "Isto está puro no core e contextualizado só em binding/config?"
+        - "Esse artefato funcionaria para outro cliente sem surgery?"
+      recommended_actions:
+        - "externalize business-specific values to workspace/config"
+        - "replace literals with bindings or templates"
+
+    encapsulation:
+      name: "Self-Contained Encapsulation"
+      heuristic_ref: "AN_KE_028"
+      weight: 0.8
+      threshold: 6.0
+      veto_power: false
+      description: "Checks if exclusive squad logic stays inside squad boundaries and shared logic only graduates when truly shared."
+      signals_positive:
+        - "exclusive scripts live under squad-local scripts/"
+        - "shared assets moved to root only after multi-consumer evidence"
+      red_flags:
+        - "single-squad helper parked in global infra"
+        - "squad depends on invisible root helper for portability"
+        - "consumer-count rationale absent"
+      validation_questions:
+        - "Quantos squads consomem isso de fato?"
+        - "Se eu clonar só esse squad, ele continua funcional?"
+      recommended_actions:
+        - "move exclusive helper back into squad scope"
+        - "document consumer-threshold rationale when promoting shared infra"
+
+    documentation_survival:
+      name: "Survival by Documentation"
+      heuristic_ref: "AN_KE_029"
+      weight: 0.9
+      threshold: 6.0
+      veto_power: false
+      description: "Checks whether agreements, fixes, and discovered patterns became persistent artifacts."
+      signals_positive:
+        - "new rule became doc/checklist/skill/story update"
+        - "watcher findings generate durable handoff artifacts"
+        - "process improvements survive reset"
+      red_flags:
+        - "same issue rediscovered repeatedly with no artifact created"
+        - "chat-only agreements with no file change"
+        - "watcher reports with recommendations but no persistence target"
+      validation_questions:
+        - "Isso sobrevive a um reset ou está só implícito na conversa?"
+        - "Qual arquivo/imortalização recebeu essa melhoria?"
+      recommended_actions:
+        - "write SOP/checklist/story/skill immediately"
+        - "attach file target for every non-trivial recommendation"
+
+    anti_fingerprint:
+      name: "Anti-Fingerprint AI"
+      heuristic_ref: "AN_KE_030"
+      weight: 0.8
+      threshold: 6.0
+      veto_power: false
+      description: "Checks whether clones and outputs avoid generic, synthetic, low-value AI patterns."
+      signals_positive:
+        - "asymmetry, specific voice, natural phrasing, controlled imperfection"
+        - "absence of generic AI transitions and formulaic openings"
+      red_flags:
+        - "'em resumo', 'certamente', tutorialized transitions, predictable rhythm"
+        - "output feels universally generic instead of expert-specific"
+        - "clone language too polished/symmetrical to feel real"
+      validation_questions:
+        - "Esse clone tem cheiro de especialista ou de modelo?"
+        - "Existe repetição de marcadores sintéticos de alto volume?"
+      recommended_actions:
+        - "run detox pass against forbidden markers"
+        - "inject source-grounded voice quirks and asymmetries"
+
+    authorship_integrity:
+      name: "Ghostwriting Integrity"
+      heuristic_ref: "AN_KE_034"
+      weight: 0.7
+      threshold: 6.0
+      veto_power: false
+      description: "Checks whether public-facing content preserves human authorship and avoids synthetic author claims."
+      signals_positive:
+        - "public-facing copy presented in author voice"
+        - "no synthetic authorship markers in final material"
+      red_flags:
+        - "mentions that AI created, generated, or authored the piece"
+        - "internal runtime voice leaking into publication artifacts"
+      validation_questions:
+        - "Esse output final preserva autoria humana explícita?"
+        - "A máquina aparece como autora em algum lugar?"
+      recommended_actions:
+        - "strip synthetic authorship references"
+        - "rewrite in author voice where appropriate"
+
+    qa_evidence:
+      name: "Localhost / Real QA Evidence"
+      heuristic_ref: "AN_KE_031"
+      weight: 0.9
+      threshold: 6.0
+      veto_power: false
+      description: "Checks whether important changes have real validation evidence instead of confidence theater."
+      signals_positive:
+        - "build/dev/test evidence captured"
+        - "smoke test artifact or runtime check attached"
+        - "watcher can point to logs/results instead of assumptions"
+      red_flags:
+        - "commits or recommendations without test evidence"
+        - "UI/process declared safe without local verification"
+        - "silent failures or missing runtime proof"
+      validation_questions:
+        - "Que evidência real de execução existe?"
+        - "Isso foi validado ou só presumido?"
+      recommended_actions:
+        - "attach build/test/smoke artifact"
+        - "block promotion until proof of execution exists"
+
+    schema_safety:
+      name: "Schema Immutability / Contract Safety"
+      heuristic_ref: "AN_KE_032"
+      weight: 1.0
+      threshold: 6.0
+      veto_power: true
+      description: "Checks whether structural mutations with broad blast radius have approval, deprecation path, and rollback safety."
+      signals_positive:
+        - "schema/contract changes documented with owner and approval"
+        - "impact analysis names downstream consumers"
+        - "migration path and rollback strategy exist"
+      red_flags:
+        - "implicit contract changes"
+        - "core naming/schema drift without approval"
+        - "multiple consumers affected with no handoff or deprecation plan"
+      validation_questions:
+        - "Isso muda contrato, schema, naming estrutural ou source of truth?"
+        - "Quem aprovou e qual o rollback path?"
+      recommended_actions:
+        - "escalate to HITL before mutation"
+        - "document consumer impact and rollback plan"
+
+    chronological_traceability:
+      name: "Chronological Reports"
+      heuristic_ref: "AN_KE_033"
+      weight: 0.6
+      threshold: 5.0
+      veto_power: false
+      description: "Checks whether reports show sequence, causal chain, and drift over time instead of flat snapshots."
+      signals_positive:
+        - "before/after progression visible"
+        - "findings tied to date, run, or iteration"
+        - "report explains what changed since last round"
+      red_flags:
+        - "atemporal summary with no progression"
+        - "cannot distinguish new issue from inherited issue"
+      validation_questions:
+        - "O relatório mostra evolução temporal ou só estado estático?"
+        - "Consegue dizer o que piorou, melhorou ou reapareceu?"
+      recommended_actions:
+        - "add previous-run delta section"
+        - "persist run history with stable identifiers"
+
+    premium_presentation:
+      name: "Zero Emoji / Premium Surface"
+      heuristic_ref: "AN_KE_027"
+      weight: 0.6
+      threshold: 5.0
+      veto_power: false
+      description: "Checks whether client-facing or executive outputs preserve premium presentation conventions."
+      signals_positive:
+        - "clean visual/textual surface"
+        - "icons/text hierarchy used instead of emoji noise"
+      red_flags:
+        - "emoji pollution in executive/client-facing outputs"
+        - "juvenile or noisy formatting in premium surfaces"
+      validation_questions:
+        - "Isso parece produto premium ou improviso visual?"
+        - "Existe emoji ocupando papel de design/semântica?"
+      recommended_actions:
+        - "remove emoji from final-facing artifacts"
+        - "use structured textual hierarchy or icon system"
+
+  watcher_modes:
+    clone_quality_round:
+      focus_dimensions:
+        - "determinism"
+        - "anti_fingerprint"
+        - "authorship_integrity"
+        - "qa_evidence"
+        - "chronological_traceability"
+      expected_outputs:
+        - "clone scorecard"
+        - "top gaps by heuristic"
+        - "next improvement wave"
+
+    process_improvement_round:
+      focus_dimensions:
+        - "determinism"
+        - "agnosticism"
+        - "encapsulation"
+        - "documentation_survival"
+        - "schema_safety"
+        - "qa_evidence"
+      expected_outputs:
+        - "systemic bottlenecks"
+        - "cross-pipeline recommendations"
+        - "guardrail additions"
+
+  final_assessment_template:
+    status: "PASS | REVIEW | VETO"
+    overall_score: 0
+    critical_findings: []
+    dimension_scores:
+      - dimension: "determinism"
+        score: 0
+        evidence: []
+        violations: []
+        action: ""
+    top_3_actions: []
+    process_improvements: []
+    notes: |
+      Every action should point to a concrete file, gate, script, story, checklist,
+      or owner. No generic advice without landing zone.

@@ -1,0 +1,93 @@
+# Squad Creator — Journey Log Template
+# Journey Log Template
+# Records lifecycle events for squad artifacts
+# Date: 2026-03-26
+
+# Usage: squad-chief appends entries after key lifecycle events
+# Location: .aiox/squad-runtime/{squad-name}/journey-log.yaml
+
+journal:
+  entity_type: "{squad | agent | workflow | task}"
+  entity_id: "{entity-name}"
+  entity_path: "{squads/{squad-name}/}"
+  created_by: "squad-creator"
+  created_at: "{YYYY-MM-DD}"
+  status: ACTIVE  # ACTIVE | CONSOLIDATING | CONSOLIDATED | ANALYZED
+
+# SINKRA v1.2 — Lifecycle Triggers
+triggers:
+  on_birth:
+    executor: Worker
+    task: create-squad-design
+    event: birth
+    auto: true
+    description: "Triggered automatically when squad directory is created"
+  on_death:
+    executor: Agent
+    task: validate-final-artifacts
+    event: archived
+    auto: false
+    requires_human_signoff: true
+    description: "Consolidates log when squad is archived or superseded"
+  on_transition:
+    executor: Worker
+    auto: true
+    description: "Appended on every lifecycle state change (draft→validated→approved→consumed)"
+
+# Self-learning designation
+analytics:
+  designated_for_self_learning: true
+  volume_target: "all squad creation events"
+  analysis_agent: squad-analytics
+
+entries: []
+  # Append-only log of lifecycle events
+  #
+  # Birth event (on creation):
+  # - event: birth
+  #   date: "{YYYY-MM-DD}"
+  #   actor: "@squad-chief"
+  #   organism: "ORG-SC-001"
+  #   phase: "{creation phase}"
+  #   details: "{what was created}"
+  #   quality_score: "{0-10}"
+  #   artifact_status: draft
+  #
+  # Validation event:
+  # - event: validated
+  #   date: "{YYYY-MM-DD}"
+  #   actor: "@squad-chief"
+  #   organism: "ORG-SC-002"
+  #   validation_score: "{0-10}"
+  #   verdict: "{PASS|FAIL|CONDITIONAL}"
+  #   artifact_status: "{validated|rejected}"
+  #
+  # Approval event:
+  # - event: approved
+  #   date: "{YYYY-MM-DD}"
+  #   actor: "Human:{approver}"
+  #   details: "Quality gate passed, ready for production"
+  #   artifact_status: approved
+  #
+  # Consumption event (squad activated in production):
+  # - event: consumed
+  #   date: "{YYYY-MM-DD}"
+  #   actor: "Human:{user}"
+  #   details: "Squad activated and used for first time"
+  #   artifact_status: consumed
+  #
+  # Transition event (upgrade, rename, etc.):
+  # - event: transition
+  #   date: "{YYYY-MM-DD}"
+  #   actor: "@squad-chief"
+  #   from_state: "{previous state}"
+  #   to_state: "{new state}"
+  #   reason: "{why}"
+  #
+  # Archival event:
+  # - event: archived
+  #   date: "{YYYY-MM-DD}"
+  #   actor: "Human:{owner}"
+  #   reason: "{superseded|deprecated|merged}"
+  #   successor: "{new-squad-name or null}"
+  #   artifact_status: archived

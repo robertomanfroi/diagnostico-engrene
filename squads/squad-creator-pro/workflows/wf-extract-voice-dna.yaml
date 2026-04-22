@@ -1,0 +1,76 @@
+workflow:
+  id: wf-extract-voice-dna
+  name: Extract Voice DNA Pipeline
+  version: "2.0.0"
+  description: De-atomized pipeline for voice DNA extraction. 3 phases -- collect sources, extract all 7 dimensions in single pass, assemble and quality-check.
+  type: orchestration
+  state_machine:
+    states: [init, collect-sources, extract-dimensions, assemble-output, complete, failed]
+    transitions:
+      - trigger: start
+        source: init
+        dest: collect-sources
+      - trigger: collect_sources_complete
+        source: collect-sources
+        dest: extract-dimensions
+      - trigger: collect_sources_failed
+        source: collect-sources
+        dest: failed
+      - trigger: extract_dimensions_complete
+        source: extract-dimensions
+        dest: assemble-output
+      - trigger: extract_dimensions_failed
+        source: extract-dimensions
+        dest: failed
+      - trigger: assemble_output_complete
+        source: assemble-output
+        dest: complete
+      - trigger: assemble_output_failed
+        source: assemble-output
+        dest: failed
+      - trigger: fail
+        source: "*"
+        dest: failed
+  sequence:
+    - step: collect-sources
+      id: collect-sources
+      phase: 1
+      phase_name: Collect Sources
+      agent: "@squad-chief"
+      action: execute_evd_collect_sources
+      task_ref: evd-collect-sources
+      next: extract-dimensions
+    - step: extract-dimensions
+      id: extract-dimensions
+      phase: 2
+      phase_name: Extract All 7 Dimensions
+      agent: "@squad-chief"
+      action: execute_evd_extract_dimensions
+      task_ref: evd-extract-dimensions
+      next: assemble-output
+    - step: assemble-output
+      id: assemble-output
+      phase: 3
+      phase_name: Assemble Voice DNA
+      agent: "@squad-chief"
+      action: execute_evd_assemble_voice_dna
+      task_ref: evd-assemble-voice-dna
+    - workflow_end:
+        id: complete
+        action: workflow_complete
+
+  quality_gates:
+    - id: SCP_EVD_001
+      phase: assemble-output
+      type: automated
+      placement: exit
+      severity: blocking
+      description: "Voice DNA completeness — all 7 dimensions must be present"
+      criteria:
+        - field: dimensions_extracted
+          operator: ">="
+          value: 7
+        - field: voice_dna_assembled
+          operator: "=="
+          value: true
+      on_fail: block

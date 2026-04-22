@@ -1,0 +1,338 @@
+{
+  "AN_KE_035": {
+    "convergent": [
+      {
+        "id": "PV_PA_019",
+        "title": "Deterministic Assignment (The Worker Rule)",
+        "resonance": "AN eleva CLI (interfaces lineares textuais sem variações estéticas) como superior ao UI para evitar abstrações mutáveis indesejadas que afetam RAGs. PV estipula formalmente que determinismo lógico exige um Worker isolado de UI/Agentes."
+      }
+    ]
+  },
+  "AN_KE_036": {
+    "convergent": [
+      {
+        "id": "PV_PA_003",
+        "title": "Agent Reasoning Gap (Not a Fast Human)",
+        "resonance": "A Desilusão Positiva com a Máquina. AN afirma categoricamente: é proibido confiar na boa vontade (goodwill) e intenção da IA. PV nomeia formalmente esse anti-padrão como a falácia do 'Humano Muito Rápido'. A máquina não julga subtexto moral soziha."
+      },
+      {
+        "id": "PV_PA_037",
+        "title": "The Agent Empathy Fallacy (Human-Fast Trap)",
+        "resonance": "PV detalha que pedir 'bom senso' processual para um LLM quebra o projeto porque não há common sense; AN bloqueia inteiramente lacunas não explícitas para prevenir alucinações de inferência empática."
+      }
+    ]
+  },
+  "AN_KE_038": {
+    "convergent": [
+      {
+        "id": "PV_PA_025",
+        "title": "The Intent vs Process Distinction",
+        "resonance": "Gap Diagnóstico: Quando modelos poderosos tropeçam na inferência, AN detecta que a causa raiz é o processo mal delimitado e não o LLM. PV nomeia formalmente que designar Intenções ('o time cuida disso') no lugar de Processos gera falhas invisíveis em Híbridos."
+      }
+    ]
+  },
+  "AN_KE_040": {
+    "convergent": [
+      {
+        "id": "PV_PA_033",
+        "title": "Executor Transversality",
+        "resonance": "Padrão de Infraestrutura Limpa: Módulos Core do Hub SINKRA (como Service Bus) não ligam se são de AIOX ou Synkra. PV eleva isso ao status de Executor Universal: 'se mudar o agente e a tela não muda, sua infra é transversal de fato'."
+      },
+      {
+        "id": "PV_PA_011",
+        "title": "Optimization Interchangeability (Process Extinction)",
+        "resonance": "Ao modularizar tudo, você alcança o cenário apontado por PV onde modelos de custo alto podem ser sacados e executores baratos instalados na engrenagem sem tocar no fluxo inteiro."
+      }
+    ]
+  },
+  "AN_KE_045": {
+    "convergent": [
+      {
+        "id": "PV_PA_016",
+        "title": "The Hybrid Lean Wastes",
+        "resonance": "Remoção de fricções Lean. AN defende sempre que remover burocracia do pipeline dá mais resultado sintético do que adicionar steps paliativos. PV detecta 'Context Latency' como um novo Lean Waste gerado pelo excesso desnecessário de prompt e etapas redundantes LLM."
+      }
+    ]
+  },
+  "AN_KE_047": {
+    "convergent": [
+      {
+        "id": "PV_PA_021",
+        "title": "Clone Methodology Adherence",
+        "resonance": "UI como Motor Determinista. AN cria sistemas front-end em Shadcn/Tailwind que são perfeitamente parseáveis por IA. PV aponta o rigor de métodos determinísticos a serem seguidos. Ambos recusam variâncias secretas baseadas no 'jeito artesanal' do Dev ou UI Designer."
+      }
+    ]
+  },
+  "AN_KE_050": {
+    "convergent": [
+      {
+        "id": "PV_PA_016",
+        "title": "The Hybrid Lean Wastes",
+        "resonance": "Trabalho Incompleto Acumulado (WIP excessivo) é o Inimigo #1 no manifesto MentorLendaria (AN). PV acopla isso a seu catálogo expandido dos Desperdícios Híbridos: Work in Progress irrestrito causa 'Reprocessing Agent Hallucination' gerando refações sistêmicas que quebram o SLA corporativo."
+      }
+    ]
+  },
+  "AN_KE_051": {
+    "convergent": [
+      {
+        "id": "PV_PA_019",
+        "title": "Deterministic Assignment (The Worker Rule)",
+        "resonance": "Fator Operacional Confiável: AN bloqueia scripts frágeis sem Idempotência. Rodar = O mesmo Resultado Estável para evitar duplicação. PV vincula diretamente essa previsibilidade estática a Workers limpos que assumem cargas que em Agentes levariam à Duplicação caótica orgânica."
+      }
+    ]
+  },
+  "AN_KE_061": {
+    "convergent": [
+      {
+        "id": "PV_PA_025",
+        "title": "The Intent vs Process Distinction",
+        "resonance": "Codificação Subordinada. AN veta qualquer comando do modelo que parte direto pra 'código e scripts' antes de ter uma spec clara da regra comportamental em Markdown. PV combate e taxa a 'intenção de workflow' forçando os papéis mecânicos a terem base procedimental prévia."
+      }
+    ]
+  },
+  "AN_KE_064": {
+    "convergent": [
+      {
+        "id": "PV_PA_026",
+        "title": "The 5-Gate Executor Decision Tree",
+        "resonance": "A lógica do Tópico Finito. AN usa camadas da Complexidade vs Contexto para eleger Modelos GPT-4 vs Claude Haiku e poupar custo. PV formalizou esse escopo no protocolo '5 Gates' para delegar Humanos, Clones, Agentes ou Scripts."
+      }
+    ]
+  },
+  "AN_KE_069": {
+    "convergent": [
+      {
+        "id": "PV_PA_041",
+        "title": "Fragile Automation Ejection (Jeitinho Rule)",
+        "resonance": "AN repele resoluções rápidas (superficiais baseadas em sintoma) exigindo a Morte Pela Causa Raiz. PV ejetou da corporação o remendo nas automações que usavam fuzzy AI para consertar dados vindos lixo ('Jeitinho Rule') a favor de crashes definitivos."
+      }
+    ]
+  },
+  "AN_KE_073": {
+    "convergent": [
+      {
+        "id": "PV_PA_015",
+        "title": "Multi-Executor Handoff Protocol",
+        "resonance": "Velocidade na Especialização. AN desenhou o AIOX sub-agent array para multiplicar output parrudamente sem estourar limites neurais do Context; PV padroniza protocolos entre essas peças para não deixá-las operando em desarmonia de workflow."
+      }
+    ]
+  },
+  "AN_KE_076": {
+    "convergent": [
+      {
+        "id": "PV_PA_023",
+        "title": "Descending Demotion (Intercambiability)",
+        "resonance": "Controle de Radiação: AN força steps controlados de modificação ('blast radius') por camada para não colher regressão destrutiva oculta em sistemas vizinhos. PV gerencia isso reestruturando Tasks de forma democionada controlada sempre que o risco atinge o threshold na estrutura principal."
+      }
+    ]
+  },
+  "AN_KE_082": {
+    "convergent": [
+      {
+        "id": "PV_PA_025",
+        "title": "The Intent vs Process Distinction",
+        "resonance": "AN impede LLMs de executarem comandos de mutação sem internalização completa do spec atual do projeto, barrando alucinações iniciais. PV isola que intenções desestruturadas não formam Processo escalável se as regras de transação não estiverem documentadas."
+      }
+    ]
+  },
+  "AN_KE_083": {
+    "convergent": [
+      {
+        "id": "PV_PA_015",
+        "title": "Multi-Executor Handoff Protocol",
+        "resonance": "AN instrui explicitamente as instâncias Autonômas SINKRA de que elas NÃO estão isoladas, demandando context-checks das actions adjacentes. PV regula via Handoff Formal que outputs devem moldar-se ao input esperado pelo executor vizinho sob pena de Death."
+      },
+      {
+        "id": "PV_PA_010",
+        "title": "The Hidden Handoff (The Execution Boundary)",
+        "resonance": "O Gap Invisível. Toda falha ocorre durante transferências ('a batuta caiu'). Mentes paralelas e Agentes perdem Contexto na Transição sem a verificação documentada."
+      }
+    ]
+  },
+  "AN_KE_086": {
+    "convergent": [
+      {
+        "id": "PV_PA_022",
+        "title": "Primary Validation Coupling (No Auto-Validation)",
+        "resonance": "Ambos confiam apnas na Origem. AN interroga o banco antes de criar arquivos redundantes de base dados via API, confiando apenas no estado estático. PV barra Validações sem checagem de Source de verdade tangível ao fim do ciclo da geração."
+      }
+    ]
+  },
+  "AN_KE_089": {
+    "convergent": [
+      {
+        "id": "PV_PA_031",
+        "title": "Organism Sequencing (Temporal Dimension)",
+        "resonance": "Estruturas Espelhadas. AN estabelece paridade arquitetural explícita: Fases mapeadas num workflow geram fases perfeitamente análogas na Validação Espelho. PV declara Organism como um objeto que domina uma fita de sequência temporal; as camadas seguem o tempo em Ordem unita."
+      }
+    ]
+  },
+  "AN_KE_091": {
+    "convergent": [
+      {
+        "id": "PV_PA_025",
+        "title": "The Intent vs Process Distinction",
+        "resonance": "Modelagem Absoluta antes do Motor: AN e PV repetem que as bases mecânicas falham sem a ancoragem abstrata de negócio documentada formalmente. Não há ação sustentavel sem alinhamento Conceitual."
+      }
+    ]
+  },
+  "AN_KE_094": {
+    "convergent": [
+      {
+        "id": "PV_PA_033",
+        "title": "Executor Transversality",
+        "resonance": "A Extensão Desacoplada: AN bloqueia nomes específicos nos motores SINKRA garantindo Injeção Orgânica autônoma para expansões e novos Agentes. PV define essa lógica formal sob Transversalidade (Executor não define e nem contamina Processo)."
+      }
+    ]
+  },
+  "AN_KE_095": {
+    "convergent": [
+      {
+        "id": "PV_PA_020",
+        "title": "Agent Stochasticity Mandate (Reasoning Context)",
+        "resonance": "Controle Inteligente do Viés. AN entende que em operações puramente estocásticas/comportamentais o Prompt rege os blocos de output com mais fine-tunning do que as condicoes estritas do Codigo. PV designa a Tarefa ao Agente (LLM) sabendo dessa flexibilidade linguistica para extrair valor moral."
+      }
+    ],
+    "tension": [
+      {
+        "id": "PV_PA_004",
+        "title": "Zero-Cost Determinism (Worker First)",
+        "divergence": "Enquanto AN foca em refinar e governar as interações Prompt/Context quando a LLM atua na fronteira, PV força imediatamente a adoção determinística (não-prompt) a todos os fluxos puramente lógicos. Ortogonais: Regem extremos opostos do Espectro Criatividade vs Controle."
+      }
+    ]
+  },
+  "AN_KE_098": {
+    "convergent": [
+      {
+        "id": "PV_PA_039",
+        "title": "Probabilistic Gateway (The Gray Zone)",
+        "resonance": "Ambos recusam hard-rules cegas em domínios abstratos: AN defende 100 observações antes de codificar julgamentos corporativos em booleanos; PV aloca a zona comportamental a sub-agentes geradores probabilísticos com Gateways macios ('Cinza') antes de submeter ao erro sistemico Boolean."
+      },
+      {
+        "id": "PV_PA_005",
+        "title": "Directed Stochasticity (Variance as a Feature)",
+        "resonance": "AN bloqueia uso do Worker Determinístico em operações criativas sem repetição. PV entende isso e eleva a variância natural da IA gerativa a motor central da Tarefa para outputs de Inovação sem barreiras estritas."
+      }
+    ]
+  },
+  "AN_KE_100": {
+    "convergent": [
+      {
+        "id": "PV_PA_007",
+        "title": "Synthetic Waste (Miscalibrated Metrics)",
+        "resonance": "Reflexão Contínua (Compound): AN submete agentes a engenharia reversa para cristalizar intuição procedimental na camada documental após bons resultados. PV estuda a toxidade das métricas do input originárias e faz reverse tracing dos Hand-Offs mal calibrados."
+      }
+    ]
+  },
+  "AN_KE_101": {
+    "convergent": [
+      {
+        "id": "PV_PA_008",
+        "title": "Boundary Rigidity (Compositional Hierarchy)",
+        "resonance": "Isolamento Estrito do Core. AN mantém domínios em silenciamento hermético para manter Agnosticism; PV proíbe o pulo de Camadas e exige respeito ao Contrato de Interfaces."
+      },
+      {
+        "id": "PV_PA_027",
+        "title": "Hierarchical Independence (No Level Skips)",
+        "resonance": "Ambos combatem vazamento. Não há macro-função AIOX sendo invocada num átomo do Hub. Respeitar camada garante Imunidade à regressão."
+      }
+    ]
+  },
+  "AN_KE_102": {
+    "convergent": [
+      {
+        "id": "PV_PA_004",
+        "title": "Zero-Cost Determinism (Worker First)",
+        "resonance": "As Downgrade Defenses: AN rebaixa uso de Opus/4o para tasks brutais repetitivas; PV rebaixa todo Agente LLM para Scripts Workers por padrão na ausência de demandas complexas textuais. Poupança Arquitetural inteligente."
+      },
+      {
+        "id": "PV_PA_026",
+        "title": "The 5-Gate Executor Decision Tree",
+        "resonance": "Toda alocação passa pelos portões (Gates) rigorosos de Capacidade Operacional vs Demanda Funcional."
+      }
+    ]
+  },
+  "AN_KE_104": {
+    "convergent": [
+      {
+        "id": "PV_PA_032",
+        "title": "Template Parametrization",
+        "resonance": "Combate Crônico ao Espaguete. AN força todos os scripts One-Off de parseamentos LLM a adotarem parametrização CLI com reutilização e abstração nativos. PV defende parametrização radical de Organismos via Engine de Templates, anulando o Roteiro Duplicado."
+      },
+      {
+        "id": "PV_PA_033",
+        "title": "Executor Transversality",
+        "resonance": "A ferramenta deve ignorar contextos e executar a conversão perfeitamente."
+      }
+    ]
+  },
+  "AN_KE_105": {
+    "convergent": [
+      {
+        "id": "PV_PA_016",
+        "title": "The Hybrid Lean Wastes",
+        "resonance": "O Complexo de Frankenstein. AN prova que burocracia desmedida ou frameworks ultra complicados causam Over-engineering paralisante ao passo de desenvolvimento. PV caça explicitamente burocracias sob a categoria dos 'Wastes'."
+      }
+    ],
+    "tension": [
+      {
+        "id": "PV_PA_001",
+        "title": "SINKRA Process Hierarchy (The 7 Levels)",
+        "divergence": "O Framework SINKRA de PV de 7 Níveis pode representar um Over-engineering pesado ('não-KISS') para workflows isolados e rápidos; Ponto Central de Fricção Criativa entre Simplicidade Pragmática vs Sistematização Completa SINKRA."
+      }
+    ]
+  },
+  "AN_KE_107": {
+    "convergent": [
+      {
+        "id": "PV_PA_031",
+        "title": "Organism Sequencing (Temporal Dimension)",
+        "resonance": "A Santidade Concorrente Temporal. AN estipula rigor em Preserve Order (cronológico) sob queues assíncronas para não vazar threads. PV confia unicamente na Fase de Nível Organism p/ manter a Chronologia limpa das Tasks isoladas. Tempo importa estruturalmente."
+      }
+    ]
+  },
+  "AN_KE_110": {
+    "convergent": [
+      {
+        "id": "PV_PA_028",
+        "title": "Token Indivisibility",
+        "resonance": "Taxonomia Polimorfica: AN engloba todas resenhas, check-books e output-docs na categoria imutável generalizada 'Artifact' para expurgar duplicação no Prisma. PV garante a forma e estado Atômico em isolador e indivisibilidade absoluta para evitar corrupções em runtime."
+      },
+      {
+        "id": "PV_PA_030",
+        "title": "Molecular Pattern Recognition",
+        "resonance": "Ambos confiam que uma agregação limpa de fragmentos isolados formam moléculas/objetos repetíveis altamente consistentes nas extrações DB."
+      }
+    ]
+  },
+  "AN_KE_111": {
+    "convergent": [
+      {
+        "id": "PV_PA_036",
+        "title": "Input Resilience vs Vanity Cycle Time",
+        "resonance": "O Mindset Sustentável. AN repudia os mocks fáceis de Day 1 ignorando Pagination que custarão juros técnicos depois; PV repudia Cycle Times de baixa qualidade técnica priorizando a resiliência dura do motor vs Dados Ruins. Preparações pesadas p/ fundação massiva."
+      }
+    ]
+  },
+  "AN_KE_115": {
+    "convergent": [
+      {
+        "id": "PV_PA_013",
+        "title": "Task-First Primacy",
+        "resonance": "Ambos convergem de que Inputs e Outputs totalmente isolados justificam a Atribuição; PV subordina o 'Quem' executa à clareza do I/O Singular. AN determina elevação hierárquica à Skill baseado inteiramente nessa propriedade Standalone I/O."
+      },
+      {
+        "id": "PV_PA_004",
+        "title": "Zero-Cost Determinism (Worker First)",
+        "resonance": "O Standalone determina que subjacências previsíveis tornaram Workers viáveis em PV, tal qual formam o critério lógico da abstração pra Skill Isolada em AN."
+      }
+    ],
+    "tension": [
+      {
+        "id": "PV_PA_040",
+        "title": "Transparent Exchange Fallacy",
+        "divergence": "Ponto Tático Lateral: AN usa do I/O Standalone numa abstração Top-Down de Design Time para decidir se isso SAI deste hub para outro; PV aborda isso de baixo pra cima observando em Runtime Time os efeitos colaterais ('O Subtexto Fuzz') nas transferências trocando executor de Humano p/ Maquina."
+      }
+    ]
+  }
+}

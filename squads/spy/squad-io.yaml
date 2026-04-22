@@ -1,0 +1,24 @@
+squad: spy
+version: "1.0.0"
+type: execution
+description: "Squad de inteligencia competitiva e pesquisa de mercado"
+
+inputs:
+  workspace: []
+  squad_data: []
+
+outputs:
+  workspace: []
+  artifacts:
+    - competitive-analysis
+    - player-analysis
+    - benchmark-scorecard
+    - battle-card
+    - cross-domain-handoff
+
+artifacts_produced:
+  - competitive-analysis
+  - player-analysis
+  - benchmark-scorecard
+  - battle-card
+  - cross-domain-handoff

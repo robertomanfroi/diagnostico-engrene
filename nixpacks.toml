@@ -2,7 +2,11 @@
 nixPkgs = ["nodejs_20", "python3", "ffmpeg"]
 
 [phases.install]
-cmds = ["npm ci --only=production"]
+cmds = [
+  "npm ci --only=production",
+  "curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /usr/local/bin/yt-dlp && chmod a+rx /usr/local/bin/yt-dlp",
+  "pip3 install --break-system-packages instagrapi instaloader 2>/dev/null || pip3 install instagrapi instaloader"
+]
 
 [start]
 cmd = "node server.js"

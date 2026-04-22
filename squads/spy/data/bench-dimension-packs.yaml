@@ -1,0 +1,182 @@
+# Bench Dimension Packs v1.0
+# Weighted scoring dimensions per comparison type
+# Referenced by: bench-score.md, bench-analyst.md
+#
+# Each type defines dimensions with:
+#   - id: unique identifier for the dimension
+#   - name: human-readable display name
+#   - weight: 0.0-1.0 (sum to 1.0 per type)
+#   - signals: observable evidence used for scoring
+
+types:
+  codebase:
+    description: "Source code repository comparison"
+    dimensions:
+      - id: arch
+        name: "Architecture"
+        weight: 0.20
+        signals: ["folder structure", "separation of concerns", "modularity"]
+      - id: testing
+        name: "Testing & QA"
+        weight: 0.20
+        signals: ["test files", "coverage config", "CI checks"]
+      - id: docs
+        name: "Documentation"
+        weight: 0.15
+        signals: ["README quality", "inline docs", "API docs"]
+      - id: automation
+        name: "Automation"
+        weight: 0.20
+        signals: ["CI/CD", "scripts", "hooks", "linting"]
+      - id: extensibility
+        name: "Extensibility"
+        weight: 0.15
+        signals: ["plugin system", "config", "API surface"]
+      - id: code_quality
+        name: "Code Quality"
+        weight: 0.10
+        signals: ["linting", "type safety", "patterns"]
+
+  llm:
+    description: "Large Language Model comparison"
+    dimensions:
+      - id: reasoning
+        name: "Reasoning"
+        weight: 0.20
+        signals: ["MMLU", "ARC", "HellaSwag", "chain-of-thought"]
+      - id: coding
+        name: "Coding"
+        weight: 0.15
+        signals: ["HumanEval", "MBPP", "SWE-bench"]
+      - id: knowledge
+        name: "Knowledge"
+        weight: 0.15
+        signals: ["TriviaQA", "domain expertise", "factuality"]
+      - id: safety
+        name: "Safety & Alignment"
+        weight: 0.15
+        signals: ["refusal rate", "toxicity", "bias"]
+      - id: speed
+        name: "Speed & Latency"
+        weight: 0.10
+        signals: ["TTFT", "tokens/sec", "throughput"]
+      - id: cost
+        name: "Cost Efficiency"
+        weight: 0.10
+        signals: ["$/MTok input", "$/MTok output"]
+      - id: context
+        name: "Context Window"
+        weight: 0.15
+        signals: ["max tokens", "NIAH score", "long-context perf"]
+
+  product:
+    description: "Software product comparison"
+    dimensions:
+      - id: features
+        name: "Core Features"
+        weight: 0.25
+        signals: ["feature count", "depth", "unique capabilities"]
+      - id: ux
+        name: "User Experience"
+        weight: 0.20
+        signals: ["onboarding", "UI quality", "learning curve"]
+      - id: pricing
+        name: "Pricing & Value"
+        weight: 0.15
+        signals: ["plans", "free tier", "enterprise pricing"]
+      - id: integrations
+        name: "Integrations"
+        weight: 0.15
+        signals: ["API", "webhooks", "marketplace", "plugins"]
+      - id: support
+        name: "Support & Community"
+        weight: 0.10
+        signals: ["docs", "community", "SLA", "channels"]
+      - id: scalability
+        name: "Scalability"
+        weight: 0.15
+        signals: ["limits", "enterprise features", "multi-tenant"]
+
+  company:
+    description: "Company competitive analysis"
+    dimensions:
+      - id: market
+        name: "Market Position"
+        weight: 0.20
+        signals: ["market share", "brand recognition", "customer base"]
+      - id: innovation
+        name: "Innovation"
+        weight: 0.20
+        signals: ["patents", "R&D spend", "product launches", "tech leadership"]
+      - id: team
+        name: "Team & Talent"
+        weight: 0.15
+        signals: ["headcount", "key hires", "glassdoor", "engineering culture"]
+      - id: growth
+        name: "Growth Trajectory"
+        weight: 0.20
+        signals: ["revenue growth", "user growth", "expansion"]
+      - id: financial
+        name: "Financial Health"
+        weight: 0.15
+        signals: ["funding", "revenue", "profitability", "runway"]
+      - id: ecosystem
+        name: "Ecosystem & Partnerships"
+        weight: 0.10
+        signals: ["partnerships", "developer ecosystem", "community"]
+
+  synergy:
+    description: "Synergy analysis between two previously benchmarked subjects"
+    dimensions:
+      - id: complementarity
+        name: "Complementarity Rate"
+        weight: 0.20
+        signals: ["dimension delta distribution", "exclusive capabilities count", "coverage overlap"]
+      - id: workflow_fit
+        name: "Workflow Fit"
+        weight: 0.20
+        signals: ["output→input chains", "delegation paths", "pipeline viability"]
+      - id: integration_feasibility
+        name: "Integration Feasibility"
+        weight: 0.20
+        signals: ["protocol compatibility", "auth alignment", "data format match", "deployment model"]
+      - id: value_uplift
+        name: "Value Uplift"
+        weight: 0.15
+        signals: ["combined coverage vs best standalone", "net new capabilities", "cost efficiency"]
+      - id: friction
+        name: "Integration Friction (inverse)"
+        weight: 0.15
+        signals: ["language mismatch", "state management gap", "commercial barriers", "architectural coupling"]
+      - id: ecosystem_fit
+        name: "Ecosystem Fit"
+        weight: 0.10
+        signals: ["community overlap", "MCP compatibility", "plugin/skill portability"]
+
+  technology:
+    description: "Technology/framework comparison"
+    dimensions:
+      - id: maturity
+        name: "Maturity"
+        weight: 0.20
+        signals: ["age", "stability", "version history", "breaking changes"]
+      - id: ecosystem
+        name: "Ecosystem"
+        weight: 0.20
+        signals: ["packages", "plugins", "libraries", "tooling"]
+      - id: performance
+        name: "Performance"
+        weight: 0.15
+        signals: ["benchmarks", "resource usage", "scalability"]
+      - id: dx
+        name: "Developer Experience"
+        weight: 0.20
+        signals: ["docs quality", "error messages", "CLI", "IDE support"]
+      - id: community
+        name: "Community"
+        weight: 0.15
+        signals: ["GitHub stars", "contributors", "Stack Overflow", "Discord/Slack"]
+      - id: adoption
+        name: "Adoption"
+        weight: 0.10
+        signals: ["npm downloads", "job postings", "production usage"]

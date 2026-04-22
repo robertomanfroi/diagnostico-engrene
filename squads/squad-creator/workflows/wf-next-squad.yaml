@@ -1,0 +1,60 @@
+workflow:
+  id: wf-next-squad
+  name: Next Squad Recommendation Pipeline
+  version: 1.0.0
+  description: Orquestra 5 subtasks atômicas para recomendar o próximo squad a criar, melhorar ou corrigir.
+  type: orchestration
+  agent_mapping:
+    agents:
+      squad-chief: orchestrator
+  state_machine:
+    states: [init, registry, signals, scoring, ranking, report, complete, failed]
+    transitions:
+      - { trigger: start, source: init, dest: registry }
+      - { trigger: registry_complete, source: registry, dest: signals }
+      - { trigger: signals_complete, source: signals, dest: scoring }
+      - { trigger: scoring_complete, source: scoring, dest: ranking }
+      - { trigger: ranking_complete, source: ranking, dest: report }
+      - { trigger: report_complete, source: report, dest: complete }
+      - { trigger: fail, source: "*", dest: failed }
+  sequence:
+    - phase: registry
+      id: registry
+      agent: squad-chief
+      task_ref: next-squad-registry
+      action: scan_ecosystem_registry
+      inputs: [business_context, priority_domain, mode]
+      outputs: [registry_candidates]
+      on_complete: { trigger: registry_complete }
+    - phase: signals
+      id: signals
+      agent: squad-chief
+      task_ref: next-squad-signals
+      action: collect_workspace_signals
+      inputs: [registry_candidates, business_context, mode]
+      outputs: [demand_signals]
+      on_complete: { trigger: signals_complete }
+    - phase: scoring
+      id: scoring
+      agent: squad-chief
+      task_ref: next-squad-scoring
+      action: score_candidates
+      inputs: [registry_candidates, demand_signals, priority_domain]
+      outputs: [candidate_scores]
+      on_complete: { trigger: scoring_complete }
+    - phase: ranking
+      id: ranking
+      agent: squad-chief
+      task_ref: next-squad-ranking
+      action: rank_and_classify_candidates
+      inputs: [candidate_scores, business_context]
+      outputs: [ranked_candidates]
+      on_complete: { trigger: ranking_complete }
+    - phase: report
+      id: report
+      agent: squad-chief
+      task_ref: next-squad-report
+      action: emit_recommendation_report
+      inputs: [ranked_candidates, mode]
+      outputs: [next_squad_report]
+      on_complete: { trigger: report_complete }

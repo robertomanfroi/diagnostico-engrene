@@ -1,0 +1,80 @@
+# Story Creation Workflow
+# Multi-framework approach to narrative creation
+
+workflow:
+  id: story-creation
+  name: "Story Creation Workflow"
+  version: "1.0.0"
+  description: "Create compelling narratives using storytelling frameworks"
+
+phases:
+  - id: analysis
+    name: "Story Analysis"
+    tier: 0
+    agents:
+      - joseph-campbell
+      - shawn-coyne
+    actions:
+      - Identify story type/genre
+      - Assess narrative potential
+      - Determine best framework
+    outputs:
+      - story_type
+      - recommended_framework
+      - narrative_analysis
+
+  - id: structure
+    name: "Structure Design"
+    tier: 1
+    depends_on: analysis
+    framework_selection:
+      marketing: donald-miller (StoryBrand)
+      presentation: nancy-duarte (Sparkline)
+      episodic: dan-harmon (Story Circle)
+      screenplay: blake-snyder (Save the Cat)
+    actions:
+      - Apply selected framework
+      - Define story beats
+      - Map character arcs
+    outputs:
+      - story_structure
+      - beat_sheet
+      - character_map
+
+  - id: enhancement
+    name: "Enhancement"
+    tier: 2
+    depends_on: structure
+    optional_specialists:
+      pitch: oren-klaff
+      business: kindra-hall
+      personal: matthew-dicks
+      leadership: marshall-ganz
+      brand: park-howell
+      improv: keith-johnstone
+    actions:
+      - Add specialized techniques
+      - Enhance emotional beats
+      - Polish narrative flow
+    outputs:
+      - enhanced_story
+      - technique_notes
+
+  - id: validation
+    name: "Story Validation"
+    depends_on: enhancement
+    actions:
+      - Check story coherence
+      - Validate emotional arc
+      - Ensure message clarity
+    checkpoint:
+      question: "Story ready for delivery?"
+      requires_approval: true
+
+  - id: delivery
+    name: "Final Story"
+    depends_on: validation
+    outputs:
+      - final_narrative
+      - framework_attribution
+      - usage_notes

@@ -1,0 +1,103 @@
+workflow:
+  id: wf-extract-dna
+  name: Extract DNA Mental Pipeline
+  version: "1.0.0"
+  description: Canonical atomic pipeline for source assessment, layer extraction, voice DNA, thinking DNA, and final report assembly.
+  type: extraction
+  state_machine:
+    states: [init, source-assessment, layer-extraction, voice-dna, thinking-dna, report, complete, failed]
+    transitions:
+      - trigger: start
+        source: init
+        dest: source-assessment
+      - trigger: source_assessment_complete
+        source: source-assessment
+        dest: layer-extraction
+      - trigger: source_assessment_failed
+        source: source-assessment
+        dest: failed
+      - trigger: layer_extraction_complete
+        source: layer-extraction
+        dest: voice-dna
+      - trigger: layer_extraction_failed
+        source: layer-extraction
+        dest: failed
+      - trigger: voice_dna_complete
+        source: voice-dna
+        dest: thinking-dna
+      - trigger: voice_dna_failed
+        source: voice-dna
+        dest: failed
+      - trigger: thinking_dna_complete
+        source: thinking-dna
+        dest: report
+      - trigger: thinking_dna_failed
+        source: thinking-dna
+        dest: failed
+      - trigger: report_complete
+        source: report
+        dest: complete
+      - trigger: report_failed
+        source: report
+        dest: failed
+      - trigger: fail
+        source: "*"
+        dest: failed
+  sequence:
+    - step: source-assessment
+      id: source-assessment
+      phase: 1
+      phase_name: Source Assessment
+      agent: "@oalanicolas"
+      action: execute_source_assessment
+      task_ref: an-extract-dna-source-assessment
+      next: layer-extraction
+    - step: layer-extraction
+      id: layer-extraction
+      phase: 2
+      phase_name: Layer Extraction
+      agent: "@oalanicolas"
+      action: execute_layer_extraction
+      task_ref: an-extract-dna-layer-extraction
+      next: voice-dna
+    - step: voice-dna
+      id: voice-dna
+      phase: 3
+      phase_name: Voice DNA
+      agent: "@oalanicolas"
+      action: execute_voice_dna
+      task_ref: an-extract-dna-voice-dna
+      next: thinking-dna
+    - step: thinking-dna
+      id: thinking-dna
+      phase: 4
+      phase_name: Thinking DNA
+      agent: "@oalanicolas"
+      action: execute_thinking_dna
+      task_ref: an-extract-dna-thinking-dna
+      next: report
+    - step: report
+      id: report
+      phase: 5
+      phase_name: Report Assembly
+      agent: "@oalanicolas"
+      action: execute_report_assembly
+      task_ref: an-extract-dna-report
+    - workflow_end:
+        id: complete
+        action: workflow_complete
+  quality_gates:
+    - id: SCP_EDN_001
+      phase: report
+      type: automated
+      placement: exit
+      severity: blocking
+      description: DNA extraction must emit fidelity estimate and final report.
+      criteria:
+        - field: dna_extraction_report
+          operator: "!="
+          value: null
+        - field: fidelity_estimate
+          operator: "!="
+          value: null
+      on_fail: block

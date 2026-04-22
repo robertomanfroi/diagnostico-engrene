@@ -1,0 +1,24 @@
+workflow:
+  id: wf-sync-ide-skills
+  name: Sync IDE Skills Compatibility Wrapper
+  version: 2.0.1
+  description: Wrapper de compatibilidade que executa o Atom canônico `sync-ide-skills` e preserva o surface de workflow.
+  type: orchestration
+  agent_mapping:
+    agents:
+      squad-chief: orchestrator
+  state_machine:
+    states: [init, sync, complete, failed]
+    transitions:
+      - { trigger: start, source: init, dest: sync }
+      - { trigger: sync_complete, source: sync, dest: complete }
+      - { trigger: fail, source: "*", dest: failed }
+  sequence:
+    - phase: sync
+      id: sync
+      agent: squad-chief
+      task_ref: sync-ide-skills
+      action: execute_sync_atom
+      inputs: [type, name, squad, ide, dry_run, force, verbose, output]
+      outputs: [sync_report]
+      on_complete: { trigger: sync_complete }

@@ -1,0 +1,210 @@
+workflow:
+  id: wf-extract-thinking-dna
+  name: Extract Thinking DNA Pipeline
+  version: "3.0.0"
+  description: >
+    Canonical L4 atomic pipeline for thinking DNA extraction. Compressed into 7 phases 
+    without losing epistemic rigor.
+    Pipeline: Discovery → Extract & Classify → Resolve & Consolidate → L4 Card Generation 
+    → Objection Handling → Handoff Triggers → Assemble & Prioritize.
+  type: orchestration
+  state_machine:
+    states:
+      - init
+      - discovery                  # Phase 1: Recognition + Frameworks
+      - extract-and-classify       # Phase 2: 10 Cat Extraction + Epistemic Classification 
+      - resolve-and-consolidate    # Phase 3: Conflict Resolution + Consolidation
+      - l4-card-generation         # Phase 4: Decision Architecture + DUAL Failure Modes
+      - objection-handling         # Phase 5: Objection Handling
+      - handoff-triggers           # Phase 6: Handoff Triggers
+      - assemble-output            # Phase 7: Final Assembly
+      - complete
+      - failed
+    transitions:
+      # Phase 1: Discovery
+      - trigger: start
+        source: init
+        dest: discovery
+      - trigger: discovery_complete
+        source: discovery
+        dest: extract-and-classify
+      - trigger: discovery_failed
+        source: discovery
+        dest: failed
+        
+      # Phase 2: Extract & Classify
+      - trigger: extract_and_classify_complete
+        source: extract-and-classify
+        dest: resolve-and-consolidate
+      - trigger: extract_and_classify_failed
+        source: extract-and-classify
+        dest: failed
+        
+      # Phase 3: Resolve & Consolidate
+      - trigger: resolve_and_consolidate_complete
+        source: resolve-and-consolidate
+        dest: l4-card-generation
+      - trigger: resolve_and_consolidate_failed
+        source: resolve-and-consolidate
+        dest: failed
+        
+      # Phase 4: L4 Card Generation
+      - trigger: l4_card_generation_complete
+        source: l4-card-generation
+        dest: objection-handling
+      - trigger: l4_card_generation_failed
+        source: l4-card-generation
+        dest: failed
+        
+      # Phase 5: Objection Handling
+      - trigger: objection_handling_complete
+        source: objection-handling
+        dest: handoff-triggers
+      - trigger: objection_handling_failed
+        source: objection-handling
+        dest: failed
+        
+      # Phase 6: Handoff Triggers
+      - trigger: handoff_triggers_complete
+        source: handoff-triggers
+        dest: assemble-output
+      - trigger: handoff_triggers_failed
+        source: handoff-triggers
+        dest: failed
+        
+      # Phase 7: Assemble & Prioritize
+      - trigger: assemble_output_complete
+        source: assemble-output
+        dest: complete
+      - trigger: assemble_output_failed
+        source: assemble-output
+        dest: failed
+        
+      - trigger: fail
+        source: "*"
+        dest: failed
+
+  sequence:
+    - step: discovery
+      id: discovery
+      phase: 1
+      phase_name: "Discovery (Recognition + Frameworks)"
+      agent: "@squad-chief"
+      action: execute_etd_discovery
+      task_ref: etd-discovery
+      description: >
+        Single pass through sources to extract both perceptual patterns (instant detection,
+        blind spots, attention triggers) and operational frameworks (primary, secondary, diagnostic).
+      next: extract-and-classify
+
+    - step: extract-and-classify
+      id: extract-and-classify
+      phase: 2
+      phase_name: "Extract & Classify"
+      agent: "@squad-chief"
+      action: execute_etd_extract_and_classify
+      task_ref: etd-extract-and-classify
+      description: >
+        Extract heuristic candidates using 10 L4 categories, then immediately apply epistemic
+        exit gates: 200 Founders Test (distinctiveness filter), evidence classification, and
+        5-question fidelity audit. Discard generic advice securely.
+      next: resolve-and-consolidate
+
+    - step: resolve-and-consolidate
+      id: resolve-and-consolidate
+      phase: 3
+      phase_name: "Resolve & Consolidate"
+      agent: "@squad-chief"
+      action: execute_etd_resolve_and_consolidate
+      task_ref: etd-resolve-and-consolidate
+      description: >
+        Resolve contradictions using the 4-priority protocol, merge semantically redundant cards,
+        map tensions/synergies, and rank surviving mechanics by 5 cognitive power criteria
+        to assign zones (0.8, 4, 20).
+      next: l4-card-generation
+
+    - step: l4-card-generation
+      id: l4-card-generation
+      phase: 4
+      phase_name: "L4 Card Generation"
+      agent: "@squad-chief"
+      action: execute_etd_l4_card_generation
+      task_ref: etd-l4-card-generation
+      description: >
+        Convert the consolidated deck into L4 decision cards. Absorb anti-patterns internally
+        as DUAL Failure Modes (Misapplication + Omission). Generate decision pipeline architecture
+        (stages, weights, risk profile). Produce raw .md cards and decision-cards.yaml map.
+      next: objection-handling
+
+    - step: objection-handling
+      id: objection-handling
+      phase: 5
+      phase_name: Objection Handling
+      agent: "@squad-chief"
+      action: execute_etd_objection_handling
+      task_ref: etd-objection-handling
+      next: handoff-triggers
+
+    - step: handoff-triggers
+      id: handoff-triggers
+      phase: 6
+      phase_name: Handoff Triggers
+      agent: "@squad-chief"
+      action: execute_etd_handoff_triggers
+      task_ref: etd-handoff-triggers
+      next: assemble-output
+
+    - step: assemble-output
+      id: assemble-output
+      phase: 7
+      phase_name: "Assemble & Prioritize"
+      agent: "@squad-chief"
+      action: execute_etd_assemble_output
+      task_ref: etd-assemble-output
+      description: >
+        Final packaging of the cognitive payload, ensuring all L4 constraints are checked
+        and making final sanity audits on the generated artifacts.
+
+    - workflow_end:
+        id: complete
+        action: workflow_complete
+
+  quality_gates:
+    - id: SCP_ETD_001
+      phase: extract-and-classify
+      type: automated
+      placement: exit
+      severity: blocking
+      description: "Zero generic candidates pass. 10 categories swept."
+      criteria:
+        - field: zero_generic_candidates_accepted
+          operator: "=="
+          value: true
+      on_fail: block
+      
+    - id: SCP_ETD_002
+      phase: resolve-and-consolidate
+      type: automated
+      placement: exit
+      severity: blocking
+      description: "Deck must have zero semantic duplicates and tension map."
+      criteria:
+        - field: zero_semantic_duplicates
+          operator: "=="
+          value: true
+      on_fail: block
+      
+    - id: SCP_ETD_003
+      phase: l4-card-generation
+      type: automated
+      placement: exit
+      severity: blocking
+      description: "L4 Epistemic Standards verified inside output texts."
+      criteria:
+        - field: dual_failure_modes_complete
+          operator: "=="
+          value: true
+        - field: min_sources_per_card
+          operator: ">="
+          value: 2
+      on_fail: block

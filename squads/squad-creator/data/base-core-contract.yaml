@@ -1,0 +1,22 @@
+contract:
+  id: squad-creator-base-core-contract
+  version: 1.0.0
+  generated_at: "2026-03-27"
+  scope: base-core
+  purpose: >-
+    Snapshot local do contrato composicional do squad-creator base para
+    reconciliação de inventário, handoffs, quality gates e tokens sem expor
+    dependências metodológicas no código operacional do squad.
+  coverage:
+    tasks: 19
+    handoffs: 5
+    quality_gates: 8
+    tokens: 19
+  boundaries:
+    type: base
+    extension_model: upgrade-pack
+    extension_target: squad-creator-pro
+  references:
+    - data/process-token-map.yaml
+    - workflows/
+    - tasks/

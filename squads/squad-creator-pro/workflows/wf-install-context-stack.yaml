@@ -1,0 +1,88 @@
+workflow:
+  id: wf-install-context-stack
+  name: Install Context Stack Pipeline
+  version: "1.0.0"
+  description: Canonical atomic pipeline for installing the 5-script context stack before greeting and next-action layers.
+  type: orchestration
+  state_machine:
+    states: [init, audit, domain-mapping, generate-scripts, integration, validation, complete, failed]
+    transitions:
+      - trigger: start
+        source: init
+        dest: audit
+      - trigger: audit_complete
+        source: audit
+        dest: domain-mapping
+      - trigger: audit_failed
+        source: audit
+        dest: failed
+      - trigger: domain_mapping_complete
+        source: domain-mapping
+        dest: generate-scripts
+      - trigger: domain_mapping_failed
+        source: domain-mapping
+        dest: failed
+      - trigger: generate_scripts_complete
+        source: generate-scripts
+        dest: integration
+      - trigger: generate_scripts_failed
+        source: generate-scripts
+        dest: failed
+      - trigger: integration_complete
+        source: integration
+        dest: validation
+      - trigger: integration_failed
+        source: integration
+        dest: failed
+      - trigger: validation_complete
+        source: validation
+        dest: complete
+      - trigger: validation_failed
+        source: validation
+        dest: failed
+      - trigger: fail
+        source: "*"
+        dest: failed
+  sequence:
+    - step: audit
+      id: audit
+      phase: 1
+      phase_name: Eligibility Audit
+      agent: squad-chief
+      action: execute_ics_audit
+      task_ref: ics-audit
+      next: domain-mapping
+    - step: domain-mapping
+      id: domain-mapping
+      phase: 2
+      phase_name: Domain Mapping
+      agent: squad-chief
+      action: execute_ics_domain_mapping
+      task_ref: ics-domain-mapping
+      next: generate-scripts
+    - step: generate-scripts
+      id: generate-scripts
+      phase: 3
+      phase_name: Generate Scripts
+      agent: squad-chief
+      action: execute_ics_generate_scripts
+      task_ref: ics-generate-scripts
+      next: integration
+    - step: integration
+      id: integration
+      phase: 4
+      phase_name: Integrate Config and Agent
+      agent: squad-chief
+      action: execute_ics_integration
+      task_ref: ics-integration
+      next: validation
+    - step: validation
+      id: validation
+      phase: 5
+      phase_name: Validate Context Stack
+      agent: squad-chief
+      action: execute_ics_validation
+      task_ref: ics-validation
+    - workflow_end:
+        id: complete
+        action: workflow_complete

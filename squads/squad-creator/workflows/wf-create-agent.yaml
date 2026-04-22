@@ -1,0 +1,252 @@
+workflow:
+  id: wf-create-agent
+  name: Create Squad Agent Pipeline
+  version: 1.0.0
+  description: Orchestrates 5 atomic tasks to create a domain-specific agent through research, persona elicitation, command definition, generation, and quality validation.
+  type: orchestration
+  agent_mapping:
+    agents:
+      squad-chief: orchestrator
+    phase_ownership:
+      research: squad-chief
+      persona: squad-chief
+      commands: squad-chief
+      generate: squad-chief
+      validate: squad-chief
+  state_machine:
+    states:
+      - init
+      - research
+      - persona
+      - commands
+      - generate
+      - validate
+      - publish
+      - complete
+      - failed
+    transitions:
+      - trigger: start
+        source: init
+        dest: research
+      - trigger: research_complete
+        source: research
+        dest: persona
+      - trigger: research_failed
+        source: research
+        dest: failed
+      - trigger: persona_complete
+        source: persona
+        dest: commands
+      - trigger: persona_failed
+        source: persona
+        dest: failed
+      - trigger: commands_complete
+        source: commands
+        dest: generate
+      - trigger: generate_complete
+        source: generate
+        dest: validate
+      - trigger: validate_passed
+        source: validate
+        dest: publish
+      - trigger: publish_complete
+        source: publish
+        dest: complete
+      - trigger: publish_failed
+        source: publish
+        dest: failed
+      - trigger: validate_failed
+        source: validate
+        dest: generate
+        max_retries: 2
+      - trigger: fail
+        source: "*"
+        dest: failed
+  sequence:
+    - phase: research
+      id: research
+      agent: squad-chief
+      task_ref: create-agent-research
+      action: research_domain
+      description: Load agent template, validate target squad exists, research domain expertise
+      inputs:
+        - agent_purpose
+        - domain
+        - squad_name
+      outputs:
+        - template_loaded
+        - squad_validated
+        - domain_research
+    - phase: persona
+      id: persona
+      agent: squad-chief
+      task_ref: create-agent-persona
+      action: elicit_persona
+      description: Elicit identity, scope, voice DNA, and classify agent tier (0-3)
+      blocking: true
+      inputs:
+        - domain_research
+        - agent_purpose
+        - tier_hint
+      outputs:
+        - agent_identity
+        - agent_scope
+        - voice_dna
+        - agent_tier
+      heuristic: SC_ELC_001
+      on_pass:
+        trigger: persona_complete
+      on_fail:
+        trigger: persona_failed
+    - phase: commands
+      id: commands
+      agent: squad-chief
+      task_ref: create-agent-commands
+      action: define_commands
+      description: Define commands, capabilities, dependencies, and handoff protocols
+      inputs:
+        - agent_identity
+        - agent_scope
+        - agent_tier
+      outputs:
+        - command_definitions
+        - capabilities
+        - dependencies
+        - handoff_config
+    - phase: generate
+      id: generate
+      agent: squad-chief
+      task_ref: create-agent-generate
+      action: generate_agent_file
+      description: Fill agent template with persona data, apply voice consistency, save file
+      inputs:
+        - agent_identity
+        - voice_dna
+        - command_definitions
+        - capabilities
+        - dependencies
+      outputs:
+        - agent_file_path
+        - agent_file_content
+    - phase: validate
+      id: validate
+      agent: squad-chief
+      task_ref: create-agent-validate
+      action: validate_agent
+      description: Run SC_AGT_001 quality gate, register in config, generate handoff summary
+      blocking: true
+      inputs:
+        - agent_file_path
+        - agent_file_content
+        - squad_name
+      outputs:
+        - validation_result
+        - validation_score
+        - updated_config
+        - updated_readme
+        - handoff_summary
+      heuristic: SC_AGT_001
+      on_pass:
+        trigger: validate_passed
+      on_fail:
+        trigger: validate_failed
+        action: fix_and_retry
+        max_iterations: 2
+    - phase: publish
+      id: publish
+      agent: squad-chief
+      task_ref: create-agent-publish
+      action: publish_agent_surfaces
+      description: Sync IDE skills, reconcile .aiox-sync.yaml, and refresh core surfaces when applicable
+      blocking: true
+      inputs:
+        - validation_result
+        - validation_score
+        - squad_name
+        - agent_file_path
+      outputs:
+        - publish_result
+        - slash_skill_published
+        - core_surfaces_updated
+      on_pass:
+        trigger: publish_complete
+      on_fail:
+        trigger: publish_failed
+  quality_gates:
+    - id: SC_AGT_001
+      phase: validate
+      type: hybrid
+      placement: exit
+      severity: blocking
+      description: "Agent quality gate — validates persona completeness, voice DNA, and operational depth"
+      criteria:
+        - field: validation_score
+          operator: ">="
+          value: 7.0
+          weight: 0.4
+        - field: has_scope_section
+          operator: "=="
+          value: true
+          weight: 0.2
+        - field: has_decision_heuristics
+          operator: "=="
+          value: true
+          weight: 0.2
+        - field: has_output_examples
+          operator: "=="
+          value: true
+          weight: 0.2
+      on_fail: fix_and_retry
+      max_retries: 2
+    - id: SC_ELC_001
+      phase: persona
+      type: hybrid
+      placement: transition
+      severity: blocking
+      description: "Elicitation quality gate — ensures persona depth before command definition"
+      criteria:
+        - field: agent_identity
+          operator: "!="
+          value: null
+        - field: agent_scope
+          operator: "!="
+          value: null
+        - field: voice_dna
+          operator: "!="
+          value: null
+      on_fail: re_elicit
+  veto_conditions:
+    - id: VETO-AGENT-001
+      condition: Agent references files outside squad path
+      trigger: validate
+      block_behavior: BLOCK until references are internalized
+    - id: VETO-AGENT-002
+      condition: Agent has more than 50% philosophical vs operational content
+      trigger: validate
+      block_behavior: BLOCK until operational content is increased
+    - id: VETO-AGENT-003
+      condition: Agent has no SCOPE, decision heuristics, or output examples
+      trigger: validate
+      block_behavior: BLOCK until minimum sections are present
+  error_handling:
+    on_error:
+      - save_state
+      - log_error
+    recovery:
+      enabled: true
+      strategy: resume_from_last_complete
+    redirects:
+      squad_not_exists: "Suggest *create-squad first"
+      elicitation_incomplete: "Re-elicit from user, research to supplement gaps"
+      validation_fails: "Auto-fix max 2 iterations, save as draft if unresolvable"
+  resume:
+    state_file: .aiox/squad-runtime/create-agent/{squad_name}/state.json
+    supported: true
+    preserve_outputs: true
+    allowed_phases:
+      - research
+      - persona
+      - commands
+      - generate
+      - validate
+      - publish

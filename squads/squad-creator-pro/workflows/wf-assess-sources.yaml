@@ -1,0 +1,62 @@
+workflow:
+  id: wf-assess-sources
+  name: Assess Sources Pipeline
+  version: "2.0.0"
+  description: De-atomized pipeline for source assessment. Collect then score+prioritize+output in single task.
+  type: orchestration
+  state_machine:
+    states: [init, collect, score, complete, failed]
+    transitions:
+      - trigger: start
+        source: init
+        dest: collect
+      - trigger: collect_complete
+        source: collect
+        dest: score
+      - trigger: collect_failed
+        source: collect
+        dest: failed
+      - trigger: score_complete
+        source: score
+        dest: complete
+      - trigger: score_failed
+        source: score
+        dest: failed
+      - trigger: fail
+        source: "*"
+        dest: failed
+  sequence:
+    - step: collect
+      id: collect
+      phase: 1
+      phase_name: Collect Sources
+      agent: "@squad-chief"
+      action: execute_an_assess_sources_collect
+      task_ref: an-assess-sources-collect
+      next: score
+    - step: score
+      id: score
+      phase: 2
+      phase_name: Score, Prioritize & Generate Source Map
+      agent: "@squad-chief"
+      action: execute_an_assess_sources_score
+      task_ref: an-assess-sources-score
+    - workflow_end:
+        id: complete
+        action: workflow_complete
+
+  quality_gates:
+    - id: SCP_ASS_001
+      phase: score
+      type: automated
+      placement: exit
+      severity: warning
+      description: "Source assessment must produce scored and prioritized source map with minimum coverage"
+      criteria:
+        - field: sources_scored_count
+          operator: ">="
+          value: 1
+        - field: source_map_coverage
+          operator: ">="
+          value: 0.8
+      on_fail: warn

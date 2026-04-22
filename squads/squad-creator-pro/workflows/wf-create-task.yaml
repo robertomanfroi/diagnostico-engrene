@@ -1,0 +1,22 @@
+workflow:
+  id: wf-create-task
+  name: Pro Task Creation Router
+  version: 1.0.0
+  purpose: Route direct `*create-task` invocations through the pro contract wrapper and delegate execution to the canonical base workflow.
+  orchestrator: "@squad-chief"
+  type: direct_router
+  sequence:
+    - phase: delegate
+      id: delegate
+      agent: "@squad-chief"
+      task: create-task
+      task_ref: create-task
+      action: delegate_full_creation
+      blocking: true
+      outputs:
+        - "squads/{squad_name}/tasks/{task_id}.md"
+        - "squads/{squad_name}/config.yaml"
+        - "squads/{squad_name}/README.md"
+  outputs:
+    - "squads/{squad_name}/tasks/{task_id}.md"
+    - "squads/{squad_name}/config.yaml"

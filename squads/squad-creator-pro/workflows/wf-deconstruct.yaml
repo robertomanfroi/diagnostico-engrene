@@ -1,0 +1,92 @@
+workflow:
+  id: wf-deconstruct
+  name: Deconstruction Questions
+  version: "1.0.0"
+  description: >
+    Apply Tim Ferriss deconstruction questions to extract hidden frameworks,
+    heuristics, and decision patterns that experts use but do not articulate
+    explicitly. Reveals HOW the expert DECIDES, not just WHAT they do.
+  type: orchestration
+  command: "*deconstruct {source}"
+  state_machine:
+    states: [init, extract, synthesize, complete, failed]
+    transitions:
+      - trigger: start
+        source: init
+        dest: extract
+      - trigger: extract_complete
+        source: extract
+        dest: synthesize
+      - trigger: extract_failed
+        source: extract
+        dest: failed
+      - trigger: synthesize_complete
+        source: synthesize
+        dest: complete
+      - trigger: synthesize_failed
+        source: synthesize
+        dest: failed
+      - trigger: fail
+        source: "*"
+        dest: failed
+  sequence:
+    - step: extract
+      id: extract
+      phase: 1
+      phase_name: EXTRACT RAW ANSWERS
+      agent: squad-chief
+      task_ref: deconstruct-extract
+      action: execute_apply_7_core_questions
+      description: Apply 7 core questions + complementary questions to extract raw answers
+      inputs:
+        - source
+      outputs:
+        - raw_answers
+        - complementary_answers
+      next: synthesize
+    - step: synthesize
+      id: synthesize
+      phase: 2
+      phase_name: SYNTHESIZE FRAMEWORKS
+      agent: squad-chief
+      task_ref: deconstruct-synthesize
+      action: execute_synthesize_frameworks_and_heuristics
+      description: Synthesize frameworks, heuristics, anti-patterns, and citations
+      inputs:
+        - raw_answers
+        - complementary_answers
+      outputs:
+        - frameworks
+        - heuristics
+        - anti_patterns
+        - citations_report
+    - workflow_end:
+        id: complete
+        action: workflow_complete
+  inputs:
+    required:
+      - name: source
+        type: string
+        description: Expert source material (interview, book, podcast, or direct access)
+  outputs:
+    primary:
+      - frameworks
+      - heuristics
+      - anti_patterns
+      - citations_report
+
+  quality_gates:
+    - id: SCP_DCN_001
+      phase: synthesize
+      type: automated
+      placement: exit
+      severity: warning
+      description: "Deconstruction must produce at least 1 framework and 1 heuristic"
+      criteria:
+        - field: frameworks_count
+          operator: ">="
+          value: 1
+        - field: heuristics_count
+          operator: ">="
+          value: 1
+      on_fail: warn

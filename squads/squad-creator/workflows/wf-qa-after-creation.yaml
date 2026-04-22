@@ -1,0 +1,339 @@
+workflow:
+  id: wf-qa-after-creation
+  name: QA After Creation Pipeline
+  version: 1.0.0
+  description: Orchestrates 6 atomic QA checks after squad or component creation. Validates structure, schema, references, completeness, compatibility, and generates a scored report with verdict. Early failures short-circuit the pipeline.
+  type: validation
+  agent_mapping:
+    agents:
+      squad-chief: validator
+    phase_ownership:
+      qa_structure: squad-chief
+      qa_schema: squad-chief
+      qa_references: squad-chief
+      qa_completeness: squad-chief
+      qa_compatibility: squad-chief
+      qa_report: squad-chief
+  state_machine:
+    states:
+      - init
+      - qa_structure
+      - qa_schema
+      - qa_references
+      - qa_completeness
+      - qa_compatibility
+      - qa_report
+      - complete
+      - failed
+    transitions:
+      - trigger: start
+        source: init
+        dest: qa_structure
+      - trigger: structure_passed
+        source: qa_structure
+        dest: qa_schema
+      - trigger: structure_failed
+        source: qa_structure
+        dest: failed
+      - trigger: schema_passed
+        source: qa_schema
+        dest: qa_references
+      - trigger: schema_failed
+        source: qa_schema
+        dest: failed
+      - trigger: references_passed
+        source: qa_references
+        dest: qa_completeness
+      - trigger: references_failed
+        source: qa_references
+        dest: failed
+      - trigger: completeness_scored
+        source: qa_completeness
+        dest: qa_compatibility
+      - trigger: compatibility_passed
+        source: qa_compatibility
+        dest: qa_report
+      - trigger: compatibility_failed
+        source: qa_compatibility
+        dest: failed
+      - trigger: report_generated
+        source: qa_report
+        dest: complete
+      - trigger: fail
+        source: "*"
+        dest: failed
+  sequence:
+    - phase: qa_structure
+      id: qa_structure
+      agent: squad-chief
+      task_ref: qa-check-structure
+      action: check_structure
+      description: Validate directory layout, required files, YAML/MD syntax, and metadata presence
+      blocking: true
+      inputs:
+        - created_component
+        - component_type
+      outputs:
+        - structure_result
+        - structure_errors
+      checks:
+        - directory_layout_valid
+        - required_files_exist
+        - yaml_syntax_valid
+        - markdown_syntax_valid
+        - metadata_present
+      on_pass:
+        trigger: structure_passed
+      on_fail:
+        trigger: structure_failed
+        output: structure_errors
+        short_circuit: true
+    - phase: qa_schema
+      id: qa_schema
+      agent: squad-chief
+      task_ref: qa-check-schema
+      action: check_schema
+      description: Validate field types, required sections, enum values, and schema compliance
+      blocking: true
+      inputs:
+        - created_component
+        - component_type
+      outputs:
+        - schema_result
+        - schema_errors
+      checks:
+        - field_types_correct
+        - required_sections_present
+        - enum_values_valid
+        - schema_version_compatible
+      on_pass:
+        trigger: schema_passed
+      on_fail:
+        trigger: schema_failed
+        output: schema_errors
+        short_circuit: true
+    - phase: qa_references
+      id: qa_references
+      agent: squad-chief
+      task_ref: qa-check-references
+      action: check_references
+      description: Validate cross-references, handoff targets, and dependency chain integrity
+      blocking: true
+      inputs:
+        - created_component
+        - component_type
+      outputs:
+        - references_result
+        - broken_references
+        - dependency_chain
+      checks:
+        - all_references_resolve
+        - handoff_targets_exist
+        - dependency_chain_intact
+        - no_circular_dependencies
+      on_pass:
+        trigger: references_passed
+      on_fail:
+        trigger: references_failed
+        output: broken_references
+        short_circuit: true
+    - phase: qa_completeness
+      id: qa_completeness
+      agent: squad-chief
+      task_ref: qa-check-completeness
+      action: score_completeness
+      description: Score component quality across weighted criteria on 0-10 scale. Includes doom loop awareness advisory check (STORY-109.1).
+      inputs:
+        - created_component
+        - component_type
+        - structure_result
+        - schema_result
+        - references_result
+      outputs:
+        - completeness_score
+        - dimension_scores
+        - improvement_suggestions
+        - doom_loop_advisory
+      scoring:
+        max_score: 10
+        dimensions:
+          structural_completeness: 25
+          content_quality: 25
+          reference_integrity: 20
+          documentation: 15
+          convention_compliance: 15
+      doom_loop_advisory:
+        description: "Advisory check for doom loop awareness in workflows and error handling"
+        type: advisory
+        penalty: -0.5
+        affects_score: false
+        check: "Verify component has retry limits, circuit breakers, or doom-loop-detector reference"
+        script_ref: "scripts/lib/doom-loop-detector.js"
+      on_complete:
+        trigger: completeness_scored
+    - phase: qa_compatibility
+      id: qa_compatibility
+      agent: squad-chief
+      task_ref: qa-check-compatibility
+      action: check_compatibility
+      description: Security scan, governance framework compliance, and naming convention validation
+      inputs:
+        - created_component
+        - component_type
+      outputs:
+        - compatibility_result
+        - security_findings
+        - fw_compliance
+        - convention_violations
+      checks:
+        - no_high_security_issues
+        - fw_compliant
+        - naming_conventions_followed
+        - no_external_references
+      on_pass:
+        trigger: compatibility_passed
+      on_fail:
+        trigger: compatibility_failed
+        condition: high_security_finding
+        short_circuit: true
+    - phase: qa_report
+      id: qa_report
+      agent: squad-chief
+      task_ref: qa-generate-report
+      action: generate_qa_report
+      description: Aggregate all check results, compute final score, determine verdict, write dual report files (markdown + JSON). JSON validated against schemas/validation-report.schema.json (STORY-109.1).
+      inputs:
+        - structure_result
+        - schema_result
+        - references_result
+        - completeness_score
+        - dimension_scores
+        - compatibility_result
+        - security_findings
+        - doom_loop_advisory
+      outputs:
+        - qa_report_md
+        - qa_report_json
+        - final_score
+        - verdict
+        - validation_badge
+        - recommended_actions
+      json_report:
+        schema: "schemas/validation-report.schema.json"
+        validation: "fail-open (warn on schema mismatch, do not block report generation)"
+        output_path: "{component}/docs/qa-report-{date}.json"
+      report_sections:
+        - summary
+        - structure_results
+        - schema_results
+        - reference_results
+        - completeness_breakdown
+        - compatibility_results
+        - verdict_and_score
+        - recommended_actions
+      thresholds:
+        pass: 7.0
+        conditional: 5.0
+        fail: 0.0
+      verdicts:
+        pass: "Mark validated, create VALIDATED.md badge"
+        conditional: "Warn, ask to proceed"
+        fail: "Block, list required fixes"
+      on_complete:
+        trigger: report_generated
+  quality_gates:
+    - id: SC_QA_STRUCT
+      phase: qa_structure
+      type: automated
+      placement: entry
+      severity: blocking
+      criteria:
+        - field: directory_layout_valid
+          operator: "=="
+          value: true
+        - field: required_files_exist
+          operator: "=="
+          value: true
+        - field: yaml_syntax_valid
+          operator: "=="
+          value: true
+      on_fail: short_circuit
+    - id: SC_QA_SCHEMA
+      phase: qa_schema
+      type: automated
+      placement: transition
+      severity: blocking
+      criteria:
+        - field: field_types_correct
+          operator: "=="
+          value: true
+        - field: required_sections_present
+          operator: "=="
+          value: true
+      on_fail: short_circuit
+    - id: SC_QA_REFS
+      phase: qa_references
+      type: automated
+      placement: transition
+      severity: blocking
+      criteria:
+        - field: all_references_resolve
+          operator: "=="
+          value: true
+        - field: no_circular_dependencies
+          operator: "=="
+          value: true
+      on_fail: short_circuit
+    - id: SC_QA_SCORE
+      phase: qa_report
+      type: automated
+      placement: exit
+      severity: blocking
+      criteria:
+        - field: final_score
+          operator: ">="
+          value: 7.0
+      on_fail: block
+      verdicts:
+        pass: "Score >= 7.0 — validated"
+        conditional: "Score 5.0-6.9 — warn, ask to proceed"
+        fail: "Score < 5.0 — block, list fixes"
+    - id: SC_QA_TOKENS
+      phase: qa_references
+      type: automated
+      placement: transition
+      severity: warning
+      description: "Validate token reconciliation via scripts/validate-tokens.sh"
+      script: "scripts/validate-tokens.sh"
+      criteria:
+        - field: token_count
+          operator: "=="
+          value: 19
+        - field: orphan_consumers
+          operator: "=="
+          value: 0
+        - field: task_ref_format
+          operator: "=="
+          value: "no_md_extension"
+      on_fail: warn
+  error_handling:
+    on_error:
+      - save_state
+      - log_error
+    recovery:
+      enabled: true
+      strategy: resume_from_last_complete
+    short_circuit:
+      enabled: true
+      on_abort: generate_partial_report
+  resume:
+    state_file: .aiox/squad-runtime/qa-after-creation/{component_type}/state.json
+    supported: true
+    preserve_outputs: true
+    allowed_phases:
+      - qa_structure
+      - qa_schema
+      - qa_references
+      - qa_completeness
+      - qa_compatibility
+      - qa_report

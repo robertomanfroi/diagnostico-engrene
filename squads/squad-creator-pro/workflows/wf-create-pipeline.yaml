@@ -1,0 +1,19 @@
+workflow:
+  id: wf-create-pipeline
+  name: Pro Pipeline Creation Router
+  version: 1.0.0
+  purpose: Route direct `*create-pipeline` invocations through the pro compatibility wrapper and delegate execution to the canonical base task.
+  orchestrator: "@squad-chief"
+  type: direct_router
+  sequence:
+    - phase: delegate
+      id: delegate
+      agent: "@squad-chief"
+      task: create-pipeline
+      task_ref: create-pipeline
+      action: delegate_full_creation
+      blocking: true
+      outputs:
+        - "squads/{squad_name}/scripts/{squad_name}.sh"
+        - "squads/{squad_name}/templates/pipeline/prompt.md"
+        - "squads/{squad_name}/lib/"

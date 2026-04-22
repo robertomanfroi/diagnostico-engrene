@@ -1,0 +1,17 @@
+version: "1.0.0"
+template_id: "cross-domain-handoff"
+artifact_type: "handoff"
+lifecycle: draft
+source_domain: Strategic
+target_domain: Tactical
+handoff_contract:
+  objective: ""
+  source_artifacts: []
+  target_tasks: []
+  required_decisions: []
+  blockers: []
+  success_threshold:
+    threshold: 0.8
+  escalation:
+    owner: Human:Squad_Operator
+    fallback: "@squad-chief"

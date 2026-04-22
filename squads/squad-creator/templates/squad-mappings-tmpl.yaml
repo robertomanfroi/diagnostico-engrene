@@ -1,0 +1,71 @@
+# {{SQUAD_NAME}} Mappings — Canonical Vocabulary
+# Translation tables for refining vague user requests into professional terminology.
+# All squad agents should consult this file before generating output.
+#
+# Instructions:
+# 1. Replace {{SQUAD_NAME}} with the squad name (e.g., "Copy", "Brand", "Design")
+# 2. Replace {{DOMAIN}} with the domain (e.g., "copywriting", "branding", "design systems")
+# 3. Fill each table with minimum 15 entries
+# 4. Use the format: vague (what users say) → enhanced (professional terminology)
+# 5. Register this file in config.yaml under the data: section
+#
+# Reference implementations:
+# - squads/design-system/data/design-mappings.yaml (8 tables, 50+ entries)
+# - squads/copy/data/copy-mappings.yaml (4 tables, 40+ entries)
+# - squads/brand/data/brand-mappings.yaml (4 tables, 40+ entries)
+# - squads/storytelling/data/story-mappings.yaml (4 tables, 40+ entries)
+
+metadata:
+  version: "1.0.0"
+  squad: "{{SQUAD_NAME_KEBAB}}"
+  created: "{{DATE}}"
+
+# ═══════════════════════════════════════════════════════════════════════════
+# TABLE 1: Domain Terms
+# Translates vague user requests into professional {{DOMAIN}} terminology.
+# Minimum 15 entries.
+# ═══════════════════════════════════════════════════════════════════════════
+domain_terms:
+  # Example entry (replace with real entries):
+  # - vague: "do the thing"
+  #   enhanced: "execute the specific professional process with defined inputs, steps, and outputs"
+  []
+
+# ═══════════════════════════════════════════════════════════════════════════
+# TABLE 2: Style/Tone Descriptors
+# Translates basic style or approach requests into detailed professional direction.
+# Adapt the table name to your domain (e.g., tone_descriptors, atmosphere, approach).
+# Minimum 15 entries.
+# ═══════════════════════════════════════════════════════════════════════════
+style_descriptors:
+  # Example entry (replace with real entries):
+  # - basic: "professional"
+  #   enhanced: "Authoritative, structured, research-backed, with measured claims and formal tone."
+  []
+
+# ═══════════════════════════════════════════════════════════════════════════
+# TABLE 3: Framework/Method Selector
+# Maps user objectives to the recommended framework, methodology, or approach.
+# Adapt to your domain (e.g., framework_selector, method_selector, approach_selector).
+# Minimum 10 entries.
+# ═══════════════════════════════════════════════════════════════════════════
+framework_selector:
+  # Example entry (replace with real entries):
+  # - objective: "achieve X outcome"
+  #   framework: "Framework Name (Author)"
+  #   agent: "agent-id"
+  #   reason: "Why this framework fits this objective"
+  []
+
+# ═══════════════════════════════════════════════════════════════════════════
+# TABLE 4: Context/Audience Mapping
+# Maps context or audience type to the recommended approach.
+# Adapt to your domain (e.g., audience_context, proof_hierarchy, depth_descriptors).
+# Minimum 8 entries.
+# ═══════════════════════════════════════════════════════════════════════════
+context_mapping:
+  # Example entry (replace with real entries):
+  # - context: "enterprise client"
+  #   approach: "Formal, data-heavy, ROI-focused, risk-mitigation language"
+  #   avoid: "Casual tone, unsubstantiated claims, startup jargon"
+  []

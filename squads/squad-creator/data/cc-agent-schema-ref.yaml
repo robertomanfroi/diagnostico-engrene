@@ -1,0 +1,405 @@
+# CC Native Agent Schema Reference
+# Source: Claude Code CLI domain extraction (212 rules, 2026-03-31)
+# Used by: create-agent-checklist.md Phase 5, validate-squad.sh
+# Replaces: custom swarm: block injected by inject-swarm-fields.js
+
+schema_version: "1.0.0"
+created: "2026-04-01"
+source: "outputs/decoded/claude-code-cli/"
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# CC-NATIVE FRONTMATTER FIELDS (all agents)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+cc_native_fields:
+  name:
+    type: string
+    required: true
+    description: "Unique agent identifier (kebab-case). Matches filename without .md"
+    example: "hooks-architect"
+
+  description:
+    type: string
+    required: true
+    description: "1-2 sentences. Used by Claude for skill matching and routing."
+    example: "Designs, audits and orchestrates Claude Code hooks across all 27 lifecycle events."
+
+  tools:
+    type: "array[string]"
+    required: false
+    default: "inherits from squad config.yaml"
+    description: "Explicit allowlist of tools this agent can use."
+    valid_values:
+      file_tools: [Read, Edit, Write, Glob, Grep, NotebookEdit]
+      bash_tool: ["Bash", "Bash(ls)", "Bash(git status)", "Bash(wc)"]
+      agent_tools: [Agent, TaskCreate, TaskStop, TaskUpdate, TaskGet, TaskList, TaskOutput]
+      messaging: [SendMessage, SyntheticOutput]
+      planning: [EnterPlanMode, ExitPlanMode]
+      workspace: [WebSearch, WebFetch, AskUserQuestion]
+      mcp: ["mcp__*"]
+
+  disallowedTools:
+    type: "array[string]"
+    required: false
+    description: "Explicit blocklist — takes precedence over tools allowlist."
+    notes: "Use when you want all tools EXCEPT specific dangerous ones."
+    common_worker_blocks:
+      - AskUserQuestion     # Workers should not halt for user input
+      - TaskOutput          # Blocked for all agent types (CC internal)
+      - ExitPlanMode        # Blocked for all agent types (CC internal)
+      - EnterPlanMode       # Blocked for all agent types (CC internal)
+
+  model:
+    type: string
+    required: false
+    default: "inherits from session"
+    valid_values:
+      - "claude-opus-4-6"
+      - "claude-sonnet-4-6"
+      - "claude-haiku-4-5-20251001"
+    notes: "Only override when task complexity demands a specific tier."
+
+  permissionMode:
+    type: string
+    required: false
+    default: "default"
+    valid_values:
+      default: "Standard permissions — prompts user for sensitive operations"
+      plan: "Plan-first mode — agent proposes before executing (review agents)"
+      bypassPermissions: "Skip all permission prompts (headless pipeline workers)"
+      acceptEdits: "Auto-accept file edits, prompt for other ops"
+      dontAsk: "Auto-accept everything (use sparingly)"
+    notes: |
+      bypassPermissions still fires safety checks for protected files/dirs.
+      Protected: .git, .claude, .vscode, .gitconfig, .zshrc, .mcp.json
+
+  maxTurns:
+    type: integer
+    required: false
+    description: "Hard cap on LLM turns. Prevents infinite loops in headless mode."
+    guidance:
+      worker_single_phase: 50
+      worker_multi_phase: 100
+      leader_coordination: 200
+      unbounded: "omit field"
+    notes: "Without maxTurns in headless mode, LLM may read entire codebase (learned from B12)."
+
+  hooks:
+    type: "map[event → handler_config]"
+    required: false
+    description: "Lifecycle automation. See hook_lifecycle_events below."
+    handler_types: [command, prompt, http, agent]
+
+  skills:
+    type: "array[string]"
+    required: false
+    description: "Skill slugs this agent can invoke."
+    example: ["handoff", "roundtable"]
+
+  memory:
+    type: "array[path]"
+    required: false
+    description: "Memory files loaded into context at agent start."
+    example: [".claude/memory/squad-patterns.md"]
+
+  background:
+    type: boolean
+    required: false
+    default: false
+    description: "true = agent runs in background (non-blocking). false = blocking call."
+
+  isolation:
+    type: string
+    required: false
+    valid_values: [none, worktree]
+    notes: "worktree creates isolated git worktree. DO NOT use in production agents — causes 500 errors and cleanup issues (CLAUDE.md gotcha)."
+
+  effort:
+    type: string
+    required: false
+    valid_values: [low, medium, high]
+    description: "Hint to runtime for resource allocation."
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# ROLE TEMPLATES
+# ═══════════════════════════════════════════════════════════════════════════════
+
+role_templates:
+  worker:
+    description: "Executes a single bounded task. Cannot spawn sub-agents (BR-AGENT-041)."
+    frontmatter:
+      permissionMode: default
+      maxTurns: 50
+      tools: [Read, Edit, Write, Glob, Grep, Bash]
+      disallowedTools: [AskUserQuestion, TaskOutput, ExitPlanMode, EnterPlanMode]
+    veto_conditions:
+      - "Agent tool in tools array"
+      - "SendMessage targeting other agents (workers report results, not coordinate)"
+      - "permissionMode: bypassPermissions without explicit headless justification"
+
+  leader:
+    description: "Coordinates workers via TeamCreate + SendMessage. Spawns via Agent(team_name=...)."
+    frontmatter:
+      permissionMode: default
+      maxTurns: 200
+      tools: [Agent, TaskStop, SendMessage, SyntheticOutput, Read, Grep, Glob]
+    key_rules:
+      - "BR-SWARM-001: TeamCreate does NOT accept members[] — workers spawn separately"
+      - "BR-AGENT-041: Flat roster only — teammates cannot spawn teammates"
+      - "Correct spawn sequence: TeamCreate → Agent(team_name=...) per worker → SendMessage"
+    feature_detection: |
+      # Check BEFORE using swarm primitives
+      if [[ -z "$CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS" ]]; then
+        # Fallback: use Agent() directly (no team coordination)
+      else
+        # Use TeamCreate + SendMessage pattern
+      fi
+
+  readonly:
+    description: "Read-only analysis agent. Cannot modify files."
+    frontmatter:
+      permissionMode: plan
+      maxTurns: 30
+      tools: [Read, Glob, Grep, WebSearch, WebFetch]
+      disallowedTools: [Edit, Write, Bash, Agent, TaskStop]
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# HOOK HANDLER TYPES
+# ═══════════════════════════════════════════════════════════════════════════════
+
+hook_handler_types:
+  command:
+    description: "Shell command. Deterministic, fast, no LLM."
+    timeout_seconds: 60
+    use_when: "Validation, git ops, file checks, env assertions"
+    example: |
+      hooks:
+        PreToolUse:
+          - type: command
+            command: "bash scripts/validate-input.sh"
+
+  prompt:
+    description: "Single-turn LLM call. Returns text, no tools."
+    timeout_seconds: 30
+    use_when: "Classification, summarization, lightweight decisions"
+    example: |
+      hooks:
+        UserPromptSubmit:
+          - type: prompt
+            prompt: "Classify intent: {user_input}"
+
+  http:
+    description: "HTTP POST to external webhook."
+    timeout_seconds: 10
+    use_when: "Telemetry, notifications, AIOX Monitor, external integrations"
+    example: |
+      hooks:
+        SubagentStop:
+          - type: http
+            url: "https://monitor.aiox.internal/events"
+            headers: { "Authorization": "Bearer ${AIOX_TOKEN}" }
+
+  agent:
+    description: "Multi-turn subagent with full tool access. Most powerful, most expensive."
+    timeout_seconds: 300
+    use_when: "Complex validation, automated remediation, cross-file analysis"
+    example: |
+      hooks:
+        TaskCompleted:
+          - type: agent
+            agent: quality-gatekeeper
+            prompt: "Validate outputs against acceptance criteria: {task_id}"
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# 27 LIFECYCLE EVENTS (17 CC-native + 10 AIOX-specific)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+hook_lifecycle_events:
+  cc_native:  # 17 events — documented in Claude Code CLI source
+    - event: SessionStart
+      when: "Session initialization — before any user input"
+      use_for: "Load context, validate env, inject memory"
+
+    - event: UserPromptSubmit
+      when: "User submits a prompt — before LLM sees it"
+      use_for: "Input validation, intent classification, guardrails"
+
+    - event: PreToolUse
+      when: "Before any tool call"
+      use_for: "Permission checks, audit logging, parameter validation"
+
+    - event: PermissionRequest
+      when: "Tool needs explicit permission"
+      use_for: "Auto-approve safe operations, block dangerous ones"
+
+    - event: PostToolUse
+      when: "After successful tool call"
+      use_for: "Output validation, state tracking, post-write checks"
+
+    - event: PostToolUseFailure
+      when: "After failed tool call"
+      use_for: "Error recovery, fallback routing, alerting"
+
+    - event: Notification
+      when: "System or agent notification emitted"
+      use_for: "Escalation, async status updates"
+
+    - event: SubagentStart
+      when: "Subagent spawned via Agent tool"
+      use_for: "Resource tracking, context injection to subagent"
+
+    - event: SubagentStop
+      when: "Subagent completes or is stopped"
+      use_for: "Result aggregation, cleanup, telemetry"
+
+    - event: Stop
+      when: "Agent reaches natural end of response"
+      use_for: "Quality gate, auto-commit, output persistence"
+
+    - event: TeammateIdle
+      when: "Teammate in team has no pending messages"
+      use_for: "Load balancing, work reassignment"
+
+    - event: TaskCompleted
+      when: "Task (TaskCreate'd) reaches terminal state"
+      use_for: "Automated QA gate, artifact validation"
+
+    - event: ConfigChange
+      when: "Settings or config modified"
+      use_for: "Config validation, security audit, rollback triggers"
+
+    - event: WorktreeCreate
+      when: "New git worktree created"
+      use_for: "Environment setup, branch validation"
+
+    - event: WorktreeRemove
+      when: "Git worktree removed"
+      use_for: "Cleanup, artifact collection before deletion"
+
+    - event: PreCompact
+      when: "Before context compaction"
+      use_for: "State serialization, handoff artifact generation"
+
+    - event: SessionEnd
+      when: "Session terminates"
+      use_for: "Final state save, cleanup, summary generation"
+
+  aiox_specific:  # 10 events — TK-CC-012, AIOX instrumentation layer
+    - event: PreSquadActivation
+      when: "Before squad persona activates"
+      use_for: "Dependency check, permission validation"
+
+    - event: PostSquadActivation
+      when: "After squad persona activates"
+      use_for: "Telemetry, state init"
+
+    - event: PreTaskExecution
+      when: "Before SINKRA task begins execution"
+      use_for: "Pre-condition validation, context injection"
+
+    - event: PostTaskExecution
+      when: "After SINKRA task completes"
+      use_for: "Artifact persistence, output validation"
+
+    - event: PreHandoff
+      when: "Before agent-to-agent handoff"
+      use_for: "Handoff artifact validation, signoff check (inter-BU)"
+
+    - event: PostHandoff
+      when: "After handoff artifact delivered"
+      use_for: "Confirmation logging, notification"
+
+    - event: PreCommit
+      when: "Before git commit"
+      use_for: "Lint, typecheck, validate:yaml, CODEOWNERS check"
+
+    - event: PostCommit
+      when: "After git commit"
+      use_for: "Story checkbox update, ClickUp sync"
+
+    - event: PipelineStart
+      when: "Headless pipeline (claude -p) begins"
+      use_for: "Environment validation, input schema check"
+
+    - event: PipelineEnd
+      when: "Headless pipeline completes"
+      use_for: "Output validation, metrics collection, notification"
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# VETO CONDITIONS (create-agent-checklist Phase 5)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+veto_conditions:
+  - id: V1
+    name: "No custom swarm: block"
+    rule: "Agent MUST NOT have a custom 'swarm:' YAML block with role/allowed_tools/memory_scope"
+    reason: "violates No Invention principle — use CC-native frontmatter fields instead"
+    migration: "swarm.allowed_tools → tools array in frontmatter"
+
+  - id: V2
+    name: "Flat roster (BR-AGENT-041)"
+    rule: "Worker agents MUST NOT have Agent tool in their tools array"
+    reason: "Teammates cannot spawn other teammates. Flat topology enforced by CC runtime."
+
+  - id: V3
+    name: "Backward compat"
+    rule: "Old format agents without CC frontmatter fields are allowed but should be migrated"
+    reason: "Legacy agents without tools/permissionMode still function — migration is recommended, not blocking"
+
+  - id: V4
+    name: "No members[] in TeamCreate"
+    rule: "TeamCreate calls MUST NOT pass members[] parameter"
+    reason: "BR-SWARM-001: CC runtime rejects TeamCreate with members[]. Workers spawn via Agent(team_name=...)"
+
+  - id: V5
+    name: "No parallel writes to same file"
+    rule: "Multiple workers in same team MUST NOT write to the same file path simultaneously"
+    reason: "Race condition — last write wins, previous writes lost"
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# MIGRATION GUIDE: custom swarm: block → CC-native frontmatter
+# ═══════════════════════════════════════════════════════════════════════════════
+
+migration_guide:
+  description: |
+    The inject-swarm-fields.js script (squads/claude-code-mastery/scripts/) injected a
+    non-CC-native 'swarm:' block into agent files. This violates the No Invention principle.
+    Migrate to CC-native frontmatter fields when creating or updating agents.
+
+  before_custom_swarm_block: |
+    ---
+    name: my-agent
+    description: "Does something"
+    ---
+
+    swarm:
+      role: worker
+      allowed_tools:
+        - Read
+        - Edit
+        - Write
+      memory_scope: task
+      background: false
+
+  after_cc_native_frontmatter: |
+    ---
+    name: my-agent
+    description: "Does something"
+    tools: [Read, Edit, Write, Glob, Grep]
+    permissionMode: default
+    maxTurns: 50
+    disallowedTools: [AskUserQuestion, TaskOutput]
+    background: false
+    ---
+
+  field_mapping:
+    "swarm.role: worker":
+      - "tools: [Read, Edit, Write, Glob, Grep, Bash]  # restrict to file tools"
+      - "disallowedTools: [Agent, AskUserQuestion, TaskOutput]"
+    "swarm.role: leader":
+      - "tools: [Agent, TaskStop, SendMessage, SyntheticOutput, Read, Grep]"
+    "swarm.allowed_tools": "→ tools array in frontmatter"
+    "swarm.memory_scope: task": "→ memory: [] (task-scoped memory files)"
+    "swarm.memory_scope: session": "→ memory: ['.claude/memory/session.md']"
+    "swarm.background: false": "→ background: false in frontmatter"
+    "swarm.background: true": "→ background: true in frontmatter"

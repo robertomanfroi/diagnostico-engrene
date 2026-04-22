@@ -1,0 +1,109 @@
+version: "1.0"
+generated_at: "2026-02-17"
+generated_by: "squad-chief/discover-tools"
+
+squad:
+  name: spy
+  domain: competitive_intelligence
+  budget_tier: low_cost
+
+use_cases:
+  - quick-analysis
+  - deep-research
+  - bench-framework
+  - bench-quick-compare
+  - bench-gap-analysis
+
+capability_tools:
+  youtube_transcripts:
+    priority: high
+    primary:
+      - etl-ops:youtube_video
+      - etl-cli:youtube-transcript.js
+    fallback:
+      - yt-dlp
+      - youtube-transcript-api
+
+  youtube_metadata_enrichment:
+    priority: high
+    primary:
+      - etl-ops:youtube_metadata
+      - etl-cli:youtube-metadata.js
+    fallback:
+      - youtube-data-api-v3
+      - yt-dlp
+
+  instagram_profile_media_capture:
+    priority: high
+    primary:
+      - meta-graph-api
+    fallback:
+      - instaloader
+      - apify-api
+
+  deep_web_extraction:
+    priority: high
+    primary:
+      - etl-ops:web_page
+      - etl-cli:fetch-page.js
+    fallback:
+      - web_fetch
+      - firecrawl-mcp
+      - playwright-mcp
+
+  dynamic_page_capture:
+    priority: medium
+    primary:
+      - etl-cli:fetch-page.js
+    fallback:
+      - playwright-mcp
+      - firecrawl-mcp
+
+  benchmark_timing:
+    priority: medium
+    primary:
+      - hyperfine
+    fallback:
+      - shell-time
+
+  benchmark_automation:
+    priority: medium
+    primary:
+      - apify-mcp
+    fallback:
+      - bash
+
+recommendations:
+  quick_wins:
+    - etl-ops:youtube_video
+    - etl-ops:web_page
+    - etl-ops:youtube_metadata
+    - yt-dlp
+    - hyperfine
+  strategic:
+    - youtube-data-api-v3
+    - playwright-mcp
+    - apify-api
+  optional:
+    - meta-graph-api
+    - instaloader
+    - youtube-transcript-api
+
+integration_order:
+  - wave: 1
+    tools:
+      - etl-ops:youtube_video
+      - etl-ops:web_page
+      - etl-ops:youtube_metadata
+      - yt-dlp
+      - hyperfine
+  - wave: 2
+    tools:
+      - youtube-data-api-v3
+      - playwright-mcp
+      - apify-api
+  - wave: 3
+    tools:
+      - meta-graph-api
+      - instaloader
+      - youtube-transcript-api

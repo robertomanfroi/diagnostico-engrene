@@ -1,0 +1,13 @@
+services:
+  docs-bench-store:
+    kind: filesystem
+    service_ref: "docs/bench/"
+    owner: spy
+  spy-output-store:
+    kind: filesystem
+    service_ref: "outputs/sinkra-squad/spy/"
+    owner: spy
+  research-api-gateway:
+    kind: api
+    service_ref: "YOUTUBE_API_KEY,META_ACCESS_TOKEN"
+    owner: spy

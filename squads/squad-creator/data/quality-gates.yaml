@@ -1,0 +1,135 @@
+meta:
+  id: squad-creator-quality-gates
+  version: 1.0.0
+  purpose: "Thresholds numéricos canônicos para criação, QA e publicação de squads."
+
+quality_thresholds:
+  discovery:
+    viability_score:
+      threshold: 6
+    overlap_confidence:
+      threshold: 0.7
+    use_case_coverage:
+      threshold: 0.8
+    evidence_paths:
+      threshold: 3
+  architecture:
+    roster_completeness:
+      threshold: 0.9
+    template_alignment:
+      threshold: 0.85
+    composition_coverage:
+      threshold: 0.8
+    command_surface_readiness:
+      threshold: 0.75
+  generation:
+    scaffold_completeness:
+      threshold: 0.95
+    schema_pass_rate:
+      threshold: 1.0
+    artifact_binding:
+      threshold: 0.9
+    task_contract_coverage:
+      threshold: 0.95
+  validation:
+    structure_score:
+      threshold: 8.5
+    compatibility_score:
+      threshold: 8.0
+    references_score:
+      threshold: 8.0
+    completeness_score:
+      threshold: 8.5
+  installation:
+    sync_success_rate:
+      threshold: 1.0
+    runtime_boot_success:
+      threshold: 1.0
+    command_registry_match:
+      threshold: 0.95
+    ide_projection_health:
+      threshold: 0.9
+  cross_provider:
+    baseline_quality:
+      threshold: 7.0
+    candidate_reliability:
+      threshold: 0.8
+    pt_br_fidelity:
+      threshold: 0.85
+    cost_saving_ratio:
+      threshold: 0.15
+  publication:
+    publish_readiness:
+      threshold: 0.9
+    handoff_completeness:
+      threshold: 0.95
+    registry_update_health:
+      threshold: 1.0
+    post_publish_validation:
+      threshold: 0.9
+  governance:
+    executor_coverage:
+      threshold: 1.0
+    domain_registry_coverage:
+      threshold: 1.0
+    token_family_coverage:
+      threshold: 1.0
+    artifact_lifecycle_coverage:
+      threshold: 0.95
+  runtime:
+    state_persistence_health:
+      threshold: 1.0
+    retry_policy_coverage:
+      threshold: 0.9
+    log_retention_health:
+      threshold: 0.9
+    recovery_handoff_quality:
+      threshold: 0.85
+  observability:
+    quality_dashboard_freshness:
+      threshold: 0.9
+    analytics_signal_coverage:
+      threshold: 0.85
+    deviation_register_completeness:
+      threshold: 0.8
+    evidence_traceability:
+      threshold: 0.95
+
+veto_conditions:
+  - id: SC_QG_001
+    condition: "schema_pass_rate < 1.0"
+    action: "Bloquear publicação"
+  - id: SC_QG_002
+    condition: "viability_score < 6"
+    action: "Bloquear criação direta"
+  - id: SC_QG_003
+    condition: "publish_readiness < 0.9"
+    action: "Emitir handoff de correção"
+
+# migrated_from: squads/kaizen/data/quality-gates.yaml | migration_story: STORY-108.3 | date: 2026-04-04
+kaizen:
+  version: "1.0.0"
+  gates:
+    QG-KZ-001:
+      checkpoint: data_collection
+      threshold: 1
+      rule: "squad_inventory_present == true"
+      veto: true
+    QG-KZ-002:
+      checkpoint: evidence_quality
+      threshold: 3
+      rule: "critical_recommendation_evidence_count >= 3"
+      veto: true
+    QG-KZ-003:
+      checkpoint: report_completeness
+      threshold: 6
+      rule: "dimensions_covered >= 6"
+    QG-KZ-004:
+      checkpoint: weekly_digest_quality
+      threshold: 5
+      rule: "top_recommendations <= 5"
+      veto: true
+    QG-KZ-005:
+      checkpoint: output_quality_audit
+      threshold: 0.8
+      rule: "quality_audit_score >= 0.8"

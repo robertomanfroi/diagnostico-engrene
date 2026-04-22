@@ -1,0 +1,143 @@
+workflow:
+  id: wf-extract-sop
+  name: Extract SOP from Transcript
+  version: "1.0.0"
+  description: >
+    Extract Standard Operating Procedure from meeting transcripts using SC-PE-001
+    pattern. Four-phase pipeline: prepare, 3-pass extraction, automation analysis,
+    and document assembly with gap analysis.
+  type: orchestration
+  command: "*extract-sop {transcript}"
+  state_machine:
+    states: [init, prepare, extract, analyze, assemble, complete, failed]
+    transitions:
+      - trigger: start
+        source: init
+        dest: prepare
+      - trigger: prepare_complete
+        source: prepare
+        dest: extract
+      - trigger: prepare_failed
+        source: prepare
+        dest: failed
+      - trigger: extract_complete
+        source: extract
+        dest: analyze
+      - trigger: extract_failed
+        source: extract
+        dest: failed
+      - trigger: analyze_complete
+        source: analyze
+        dest: assemble
+      - trigger: analyze_failed
+        source: analyze
+        dest: failed
+      - trigger: assemble_complete
+        source: assemble
+        dest: complete
+      - trigger: assemble_failed
+        source: assemble
+        dest: failed
+      - trigger: fail
+        source: "*"
+        dest: failed
+  sequence:
+    - step: prepare
+      id: prepare
+      phase: 1
+      phase_name: FETCH & PREPARATION
+      agent: squad-chief
+      task_ref: extract-sop-prepare
+      action: execute_fetch_transcript_and_prepare
+      description: Fetch transcript and prepare for extraction
+      inputs:
+        - transcript
+        - domain_context
+      outputs:
+        - prepared_transcript
+        - context_metadata
+      next: extract
+    - step: extract
+      id: extract
+      phase: 2
+      phase_name: 3-PASS EXTRACTION
+      agent: squad-chief
+      task_ref: extract-sop-extract
+      action: execute_3_pass_extraction
+      description: Extract Structure, Anatomy, and Decisions in 3 passes
+      inputs:
+        - prepared_transcript
+        - existing_docs
+      outputs:
+        - structure_extract
+        - anatomy_extract
+        - decision_extract
+      next: analyze
+    - step: analyze
+      id: analyze
+      phase: 3
+      phase_name: AUTOMATION ANALYSIS
+      agent: squad-chief
+      task_ref: extract-sop-analyze
+      action: execute_automation_analysis
+      description: Analyze automation potential and assess quality
+      inputs:
+        - structure_extract
+        - anatomy_extract
+        - decision_extract
+      outputs:
+        - automation_analysis
+        - quality_assessment
+      next: assemble
+    - step: assemble
+      id: assemble
+      phase: 4
+      phase_name: DOCUMENT ASSEMBLY
+      agent: squad-chief
+      task_ref: extract-sop-assemble
+      action: execute_blueprint_gap_analysis_assembly
+      description: Generate blueprint, gap analysis, and assemble final SOP document
+      inputs:
+        - structure_extract
+        - automation_analysis
+      outputs:
+        - sop_document
+        - squad_blueprint
+        - gap_report
+    - workflow_end:
+        id: complete
+        action: workflow_complete
+  inputs:
+    required:
+      - name: transcript
+        type: string
+        description: Meeting transcript (text, audio transcription, or video transcript)
+    optional:
+      - name: domain_context
+        type: string
+        description: Business domain/area for terminology context
+      - name: existing_docs
+        type: string
+        description: Current SOPs, manuals, or process docs
+      - name: process_owner
+        type: string
+        description: Who to validate extracted SOP with
+  outputs:
+    primary:
+      - sop_document
+      - squad_blueprint
+      - gap_report
+      - automation_analysis
+
+  quality_gates:
+    - id: SCP_SOP_001
+      phase: assemble
+      type: automated
+      placement: exit
+      severity: blocking
+      description: "SOP extraction must produce structured procedure with steps"
+      criteria:
+        - field: sop_assembled
+          operator: "=="
+          value: true
+      on_fail: block

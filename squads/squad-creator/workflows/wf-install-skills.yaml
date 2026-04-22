@@ -1,0 +1,52 @@
+workflow:
+  id: wf-install-skills
+  name: Install Squad Skills Compatibility Wrapper
+  version: 2.0.1
+  description: Wrapper de compatibilidade que executa o Atom canônico `install-skills` e preserva o surface de workflow.
+  type: orchestration
+  agent_mapping:
+    agents:
+      squad-chief: orchestrator
+  state_machine:
+    states:
+      - init
+      - install
+      - complete
+      - failed
+    transitions:
+      - trigger: start
+        source: init
+        dest: install
+      - trigger: install_complete
+        source: install
+        dest: complete
+      - trigger: fail
+        source: "*"
+        dest: failed
+  sequence:
+    - phase: install
+      id: install
+      agent: squad-chief
+      task_ref: install-skills
+      action: execute_install_atom
+      description: Executa descoberta, resolução, instalação, verificação e relatório como um único Atom canônico.
+      inputs: [squad_name, force, dry_run, ide, verbose, output]
+      outputs: [installation_report]
+      on_complete:
+        trigger: install_complete
+  veto_conditions:
+    - id: VETO-INSTALL-001
+      condition: Squad structure validation failed
+      trigger: install
+      block_behavior: BLOCK pipeline, suggest *validate-squad first
+  error_handling:
+    on_error:
+      - save_state
+      - log_error
+    recovery:
+      enabled: true
+      strategy: restart_from_init
+  resume:
+    state_file: .aiox/squad-runtime/install-skills/{squad_name}/state.json
+    supported: true
+    preserve_outputs: true

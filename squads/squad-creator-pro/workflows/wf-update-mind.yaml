@@ -1,0 +1,148 @@
+workflow:
+  id: wf-update-mind
+  name: Update Existing Agent DNA
+  version: "1.0.0"
+  description: >
+    Update existing agent DNA (brownfield) by processing new sources and merging
+    with existing DNA. Evolucao > Revolucao. Preserve o que funciona, adicione o que falta.
+  type: orchestration
+  command: "*update-mind {squad_name} {agent_slug}"
+  state_machine:
+    states: [init, load-existing, extract-new, merge-strategy, apply-updates, complete, failed]
+    transitions:
+      - trigger: start
+        source: init
+        dest: load-existing
+      - trigger: load_existing_complete
+        source: load-existing
+        dest: extract-new
+      - trigger: load_existing_failed
+        source: load-existing
+        dest: failed
+      - trigger: extract_new_complete
+        source: extract-new
+        dest: merge-strategy
+      - trigger: extract_new_failed
+        source: extract-new
+        dest: failed
+      - trigger: merge_strategy_complete
+        source: merge-strategy
+        dest: apply-updates
+      - trigger: merge_strategy_failed
+        source: merge-strategy
+        dest: failed
+      - trigger: apply_updates_complete
+        source: apply-updates
+        dest: complete
+      - trigger: apply_updates_failed
+        source: apply-updates
+        dest: failed
+      - trigger: fail
+        source: "*"
+        dest: failed
+  sequence:
+    - step: load-existing
+      id: load-existing
+      phase: 1
+      phase_name: LOAD EXISTING DNA
+      agent: squad-chief
+      task_ref: update-mind-load
+      action: execute_load_existing_dna_and_snapshot
+      description: Load existing agent DNA and create pre-update snapshot
+      inputs:
+        - squad_name
+        - agent_slug
+      outputs:
+        - existing_dna
+        - snapshot_before
+      next: extract-new
+    - step: extract-new
+      id: extract-new
+      phase: 2
+      phase_name: EXTRACT FROM NEW SOURCES
+      agent: squad-chief
+      task_ref: update-mind-extract
+      action: execute_process_and_extract_new_sources
+      description: Process and extract voice/thinking deltas from new sources
+      inputs:
+        - new_sources_path
+        - focus
+      outputs:
+        - voice_delta
+        - thinking_delta
+      next: merge-strategy
+    - step: merge-strategy
+      id: merge-strategy
+      phase: 3
+      phase_name: MERGE STRATEGY
+      agent: squad-chief
+      task_ref: update-mind-merge
+      action: execute_merge_strategy_and_conflict_resolution
+      description: Determine merge strategy and resolve conflicts between old/new DNA
+      inputs:
+        - existing_dna
+        - voice_delta
+        - thinking_delta
+        - mode
+      outputs:
+        - merge_plan
+        - resolved_conflicts
+      next: apply-updates
+    - step: apply-updates
+      id: apply-updates
+      phase: 4
+      phase_name: APPLY UPDATES
+      agent: squad-chief
+      task_ref: update-mind-apply
+      action: execute_apply_updates_and_diff_report
+      description: Apply merged updates to agent file and generate diff report
+      inputs:
+        - merge_plan
+        - resolved_conflicts
+        - snapshot_before
+      outputs:
+        - updated_agent
+        - diff_report
+    - workflow_end:
+        id: complete
+        action: workflow_complete
+  inputs:
+    required:
+      - name: squad_name
+        type: string
+        description: Nome do squad
+      - name: agent_slug
+        type: string
+        description: Slug do agent existente
+    optional:
+      - name: new_sources_path
+        type: string
+        description: Caminho para novas fontes
+      - name: focus
+        type: enum
+        values: [voice, thinking, both]
+        default: both
+      - name: mode
+        type: enum
+        values: [merge, replace, selective]
+        default: merge
+  outputs:
+    primary:
+      - updated_agent
+      - diff_report
+
+  quality_gates:
+    - id: SCP_UMD_001
+      phase: apply
+      type: hybrid
+      placement: exit
+      severity: blocking
+      description: "Mind update must preserve existing DNA while integrating new data"
+      criteria:
+        - field: update_applied
+          operator: "=="
+          value: true
+        - field: existing_dna_preserved
+          operator: "=="
+          value: true
+      on_fail: block

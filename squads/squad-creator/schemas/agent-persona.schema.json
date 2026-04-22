@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agent-persona.schema.json",
+  "title": "AIOX Agent Persona Schema",
+  "description": "Validates agent persona files (.md with YAML block) — governance framework compliance",
+  "type": "object",
+  "required": ["agent", "persona", "commands"],
+  "properties": {
+    "agent": {
+      "type": "object",
+      "required": ["name", "id", "title"],
+      "properties": {
+        "name": { "type": "string", "minLength": 2 },
+        "id": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+        "title": { "type": "string" },
+        "aliases": { "type": "array", "items": { "type": "string" } },
+        "whenToUse": { "type": "string" }
+      }
+    },
+    "persona": {
+      "type": "object",
+      "required": ["role", "style", "focus"],
+      "properties": {
+        "role": { "type": "string" },
+        "style": { "type": "string" },
+        "identity": { "type": "string" },
+        "focus": { "type": "string" }
+      }
+    },
+    "commands": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["name", "description"],
+        "properties": {
+          "name": { "type": "string" },
+          "description": { "type": "string" }
+        }
+      }
+    },
+    "squad": { "type": "string" },
+    "tier": { "type": "integer", "minimum": 0, "maximum": 3 },
+    "version": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
+    "voice_dna": {
+      "type": "object",
+      "properties": {
+        "sentence_starters": { "type": "array", "items": { "type": "string" } },
+        "power_words": { "type": "array", "items": { "type": "string" }, "minItems": 10 },
+        "never_use": { "type": "array", "items": { "type": "string" } },
+        "metaphors": { "type": "array", "items": { "type": "string" } },
+        "signature_phrases": { "type": "array", "items": { "type": "string" }, "minItems": 5 }
+      }
+    },
+    "thinking_dna": {
+      "type": "object",
+      "properties": {
+        "frameworks": { "type": "array", "items": { "type": "string" } },
+        "heuristics": { "type": "array", "items": { "type": "string" } },
+        "red_flags": { "type": "array", "items": { "type": "string" } }
+      }
+    }
+  }
+}

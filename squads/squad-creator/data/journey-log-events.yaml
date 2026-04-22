@@ -1,0 +1,72 @@
+# migrated_from: squads/kaizen/data/journey-log-events.yaml | migration_story: STORY-108.3 | date: 2026-04-04
+version: "1.0.0"
+squad: kaizen
+description: "Eventos canônicos de journey log para os organisms SINKRA-native do Kaizen."
+
+events:
+  JLOG-KZ-001:
+    event: analysis_requested
+    emitted_by: kaizen-chief
+    organism: org-ecosystem-analysis
+    transition: "INPUT -> INVENTORY"
+    description: "Uma execução de análise completa foi solicitada e o inventário do ecossistema vai começar."
+  JLOG-KZ-002:
+    event: governance_audit_completed
+    emitted_by: kaizen-chief
+    organism: org-ecosystem-analysis
+    transition: "INVENTORY -> GOVERNANCE_AUDIT"
+    description: "Autonomy audit, output quality audit e auto-healing gate concluídos."
+  JLOG-KZ-003:
+    event: diagnosis_completed
+    emitted_by: topology-analyst
+    organism: org-ecosystem-analysis
+    transition: "GOVERNANCE_AUDIT -> TIER_0_DIAGNOSIS"
+    description: "Diagnóstico estrutural e de performance consolidado."
+  JLOG-KZ-004:
+    event: capability_analysis_completed
+    emitted_by: capability-mapper
+    organism: org-ecosystem-analysis
+    transition: "TIER_0_DIAGNOSIS -> TIER_1_ANALYSIS"
+    description: "Gaps, gargalos e radar tecnológico consolidados."
+  JLOG-KZ-005:
+    event: cost_analysis_completed
+    emitted_by: cost-analyst
+    organism: org-ecosystem-analysis
+    transition: "TIER_1_ANALYSIS -> TIER_2_COST_ANALYSIS"
+    description: "Lens financeira aplicada sobre recomendações e desperdícios."
+  JLOG-KZ-006:
+    event: weekly_report_requested
+    emitted_by: kaizen-chief
+    organism: org-weekly-report
+    transition: "INPUT -> CACHE_CHECK"
+    description: "Ciclo semanal de reporting iniciado."
+  JLOG-KZ-007:
+    event: cached_analysis_reused_or_regenerated
+    emitted_by: kaizen-chief
+    organism: org-weekly-report
+    transition: "CACHE_CHECK -> ANALYSIS_BINDING"
+    description: "O report foi vinculado a uma análise recente ou forçou nova análise."
+  JLOG-KZ-008:
+    event: weekly_digest_published
+    emitted_by: kaizen-chief
+    organism: org-weekly-report
+    transition: "ANALYSIS_BINDING -> DELIVERY"
+    description: "Weekly digest formatado e pronto para entrega."
+  JLOG-KZ-009:
+    event: self_improvement_started
+    emitted_by: kaizen-chief
+    organism: org-self-improve
+    transition: "INPUT -> META_DATA_COLLECTION"
+    description: "Meta-análise do próprio squad iniciada."
+  JLOG-KZ-010:
+    event: effectiveness_diagnosed
+    emitted_by: kaizen-chief
+    organism: org-self-improve
+    transition: "META_DATA_COLLECTION -> EFFECTIVENESS_DIAGNOSIS"
+    description: "As quatro dimensões de eficácia foram avaliadas."
+  JLOG-KZ-011:
+    event: improvement_plan_generated
+    emitted_by: kaizen-chief
+    organism: org-self-improve
+    transition: "EFFECTIVENESS_DIAGNOSIS -> IMPROVEMENT_PLAN"
+    description: "Plano incremental de melhoria gerado e classificado."

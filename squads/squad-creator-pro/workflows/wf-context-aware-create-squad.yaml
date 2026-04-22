@@ -1,0 +1,177 @@
+workflow:
+  id: wf-context-aware-create-squad
+  name: Context-Aware Squad Creation
+  version: 1.4.0
+  purpose: Create squads using context detection, parallel discovery, and hard final gates
+  description: Context-aware greenfield/resume orchestration with native PRD -> epic -> state -> resume routing for large squads.
+  orchestrator: "@squad-chief"
+  type: greenfield_or_resume
+  state_machine:
+    states: [init, discovery, persist-creation-plan, scope-gate, architecture, creation, creation-tasks, creation-workflows, optimization, integration, quality-gates, complete, failed]
+    transitions:
+      - trigger: start
+        source: init
+        dest: discovery
+      - trigger: discovery_complete
+        source: discovery
+        dest: persist-creation-plan
+      - trigger: discovery_failed
+        source: discovery
+        dest: failed
+      - trigger: persist_creation_plan_complete
+        source: persist-creation-plan
+        dest: scope-gate
+      - trigger: persist_creation_plan_failed
+        source: persist-creation-plan
+        dest: failed
+      - trigger: scope_gate_complete
+        source: scope-gate
+        dest: architecture
+      - trigger: scope_gate_failed
+        source: scope-gate
+        dest: failed
+      - trigger: architecture_complete
+        source: architecture
+        dest: creation
+      - trigger: architecture_failed
+        source: architecture
+        dest: failed
+      - trigger: creation_complete
+        source: creation
+        dest: creation-tasks
+      - trigger: creation_failed
+        source: creation
+        dest: failed
+      - trigger: creation_tasks_complete
+        source: creation-tasks
+        dest: creation-workflows
+      - trigger: creation_tasks_failed
+        source: creation-tasks
+        dest: failed
+      - trigger: creation_workflows_complete
+        source: creation-workflows
+        dest: optimization
+      - trigger: creation_workflows_failed
+        source: creation-workflows
+        dest: failed
+      - trigger: optimization_complete
+        source: optimization
+        dest: integration
+      - trigger: optimization_failed
+        source: optimization
+        dest: failed
+      - trigger: integration_complete
+        source: integration
+        dest: quality-gates
+      - trigger: integration_failed
+        source: integration
+        dest: failed
+      - trigger: quality_gates_complete
+        source: quality-gates
+        dest: complete
+      - trigger: quality_gates_failed
+        source: quality-gates
+        dest: failed
+      - trigger: fail
+        source: "*"
+        dest: failed
+  sequence:
+    - import: modules/module-discovery.yaml
+      agent: "@squad-chief"
+      action: import_module
+    - phase: persist-creation-plan
+      id: persist-creation-plan
+      agent: "@squad-chief"
+      task: create-squad
+      task_ref: create-squad
+      action: persist_creation_plan
+      blocking: true
+      notes: |
+        NON-NEGOTIABLE: Persistir plano de criação com checklist completo
+        ANTES de criar qualquer arquivo do squad. Aplica-se a TODOS os squads,
+        independente do tamanho. Jamais confiar apenas na janela de contexto.
+        Formato mínimo: creation-plan.yaml. Formato completo: prd.md.
+        O plano DEVE listar TODOS os artefatos (agentes, tasks, workflows,
+        checklists, templates, data, scripts) com [ ] checklist por item.
+      outputs:
+        - .aiox/squad-runtime/create-squad/{squad_name}/creation-plan.yaml
+        - docs/projects/{squad_name}/prd.md
+    - phase: scope-gate
+      id: scope-gate
+      agent: "@squad-chief"
+      task: create-squad
+      task_ref: create-squad
+      action: enforce_native_scope_gate
+      notes: If total_artifacts >= 15 OR workflows_mapped >= 10 OR agents_needed >= 8, require docs/projects/{domain}/prd.md and epic-scoped execution with --epic=N before creation can proceed. The PRD must include alternatives compared, dependency stress test, and why-this-order rationale.
+      outputs:
+        - .aiox/squad-runtime/create-squad/{squad_name}/state.json
+        - docs/projects/{squad_name}/epics/
+    - phase: architecture
+      id: architecture
+      agent: "@squad-chief"
+      task: create-squad
+      task_ref: create-squad
+      action: create_architecture
+      notes: Use detected context, PRD, and merged discovery as mandatory inputs; compare at least 2 sequencing options, stress-test dependencies, persist why-this-order, then classify workspace integration level and contract
+      outputs:
+        - .aiox/squad-runtime/create-squad/{squad_name}/workspace-integration-level.yaml
+        - .aiox/squad-runtime/create-squad/{squad_name}/architecture-decision-record.yaml
+    - phase: creation
+      id: creation
+      agent: "@squad-chief"
+      task: create-agent
+      task_ref: create-agent
+      action: create_agents
+    - phase: creation-tasks
+      id: creation-tasks
+      agent: "@squad-chief"
+      task: create-task
+      task_ref: create-task
+      action: create_tasks
+    - phase: creation-workflows
+      id: creation-workflows
+      agent: "@squad-chief"
+      task: create-workflow
+      task_ref: create-workflow
+      action: create_workflows
+    - phase: optimization
+      id: optimization
+      agent: "@squad-chief"
+      task: optimize-workflow
+      task_ref: optimize-workflow
+      action: optimize_workflow
+      notes: "Mandatory in greenfield: run optimization after workflow creation to eliminate ghost gaps and enforce executor/checkpoint quality before final gates"
+    - import: modules/module-integration.yaml
+      agent: "@squad-chief"
+      action: import_module
+    - import: modules/module-quality-gates.yaml
+      agent: "@squad-chief"
+      action: import_module
+  checkpoints:
+    - id: CP_CTX
+      phase: discovery-context
+      decision: CONTINUE_OR_CLARIFY
+    - id: CP_SCOPE
+      phase: scope-gate
+      decision: PRD_OR_EPIC_GATE_SATISFIED
+    - id: CP_ARCH
+      phase: architecture
+      decision: APPROVE_ARCHITECTURE
+    - id: CP_WORKSPACE
+      phase: architecture
+      decision: WORKSPACE_CONTRACT_VALID
+    - id: CP_OPT
+      phase: optimization
+      decision: OPTIMIZATION_APPLIED
+    - id: CP_FINAL
+      phase: quality-final-artifacts
+      decision: PASS_OR_REVISE
+  outputs:
+    - squads/{squad_name}/
+    - .claude/skills/{slash_prefix}/{entry_agent}/SKILL.md
+    - .codex/skills/{entry_agent}/SKILL.md
+    - .aiox/squad-runtime/create-squad/{squad_name}/state.json
+    - .aiox/squad-runtime/create-squad/{squad_name}/workspace-integration-level.yaml
+    - docs/projects/{squad_name}/epics/
+    - .aiox/squad-runtime/optimize/{squad_name}/analysis-summary.yaml
+    - .aiox/squad-runtime/create-squad/{squad_name}/creation-report.yaml

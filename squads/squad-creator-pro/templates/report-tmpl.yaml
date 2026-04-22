@@ -1,0 +1,14 @@
+# Squad Creator Pro — Generic Report Template
+# Date: 2026-03-27
+
+report:
+  artifact_id: "{artifact-id}"
+  artifact_type: "{validation | modernization | workspace-hardening | analysis}"
+  subject: "{squad-name}"
+  generated_at: "{ISO-8601}"
+  generated_by: "@squad-chief"
+  status: "draft"
+  summary: "{one-line summary}"
+  findings: []
+  recommendations: []
+  evidence: []

@@ -1,0 +1,75 @@
+# Squad Creator Pro — Journey Log Template
+# Records lifecycle events for squad-creator-pro artifacts and runtime instances.
+# Date: 2026-03-27
+
+journal:
+  entity_type: "{squad | agent | workflow | task | report}"
+  entity_id: "{entity-name}"
+  entity_path: "{squads/{squad-name}/}"
+  created_by: "squad-creator-pro"
+  created_at: "{YYYY-MM-DD}"
+  status: ACTIVE  # ACTIVE | CONSOLIDATING | CONSOLIDATED | ANALYZED
+
+triggers:
+  on_birth:
+    executor: Worker
+    task: create-squad
+    event: birth
+    auto: true
+    description: "Triggered when the pro pack creates or first hardens an artifact."
+  on_transition:
+    executor: Worker
+    task: validate-squad
+    event: transition
+    auto: true
+    description: "Appended on every lifecycle state change."
+  on_consolidation:
+    executor: Agent
+    task: modernize-squad
+    event: consolidation
+    auto: false
+    requires_human_signoff: true
+    description: "Consolidates the journey log when the artifact reaches a stable governed state."
+  on_archive:
+    executor: Hybrid
+    task: workspace-integration-hardening
+    event: archived
+    auto: false
+    requires_human_signoff: true
+    description: "Used when an artifact is superseded, merged, or archived."
+
+analytics:
+  designated_for_self_learning: true
+  volume_target: "all active-surface lifecycle events"
+  analysis_agent: squad-chief
+
+entries: []
+  # Append-only log of lifecycle events.
+  #
+  # - event: birth
+  #   date: "{YYYY-MM-DD}"
+  #   actor: "@squad-chief"
+  #   phase: "{phase}"
+  #   details: "{what was created}"
+  #   artifact_status: draft
+  #
+  # - event: transition
+  #   date: "{YYYY-MM-DD}"
+  #   actor: "@squad-chief"
+  #   from_state: "{previous state}"
+  #   to_state: "{new state}"
+  #   reason: "{why}"
+  #
+  # - event: validated
+  #   date: "{YYYY-MM-DD}"
+  #   actor: "Human:{reviewer}"
+  #   validation_score: "{0-10}"
+  #   verdict: "{PASS|FAIL|CONDITIONAL}"
+  #   artifact_status: "{validated|rejected}"
+  #
+  # - event: archived
+  #   date: "{YYYY-MM-DD}"
+  #   actor: "Human:{owner}"
+  #   reason: "{superseded|deprecated|merged}"
+  #   successor: "{entity-id|null}"
+  #   artifact_status: archived

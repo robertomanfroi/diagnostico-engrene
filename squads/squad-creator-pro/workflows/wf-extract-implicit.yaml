@@ -1,0 +1,101 @@
+workflow:
+  id: wf-extract-implicit
+  name: Extract Implicit Pipeline
+  version: "1.0.0"
+  description: Canonical atomic pipeline for tacit knowledge extraction across scan, analysis, prioritization, synthesis and validation.
+  type: orchestration
+  state_machine:
+    states: [init, scan, analyze, prioritize, synthesize, validate, complete, failed]
+    transitions:
+      - trigger: start
+        source: init
+        dest: scan
+      - trigger: scan_complete
+        source: scan
+        dest: analyze
+      - trigger: scan_failed
+        source: scan
+        dest: failed
+      - trigger: analyze_complete
+        source: analyze
+        dest: prioritize
+      - trigger: analyze_failed
+        source: analyze
+        dest: failed
+      - trigger: prioritize_complete
+        source: prioritize
+        dest: synthesize
+      - trigger: prioritize_failed
+        source: prioritize
+        dest: failed
+      - trigger: synthesize_complete
+        source: synthesize
+        dest: validate
+      - trigger: synthesize_failed
+        source: synthesize
+        dest: failed
+      - trigger: validate_complete
+        source: validate
+        dest: complete
+      - trigger: validate_failed
+        source: validate
+        dest: failed
+      - trigger: fail
+        source: "*"
+        dest: failed
+  sequence:
+    - step: scan
+      id: scan
+      phase: 1
+      phase_name: Initial Scan
+      agent: "@squad-chief"
+      action: execute_extract_implicit_scan
+      task_ref: extract-implicit-scan
+      next: analyze
+    - step: analyze
+      id: analyze
+      phase: 2
+      phase_name: Deep Analysis
+      agent: "@squad-chief"
+      action: execute_extract_implicit_analyze
+      task_ref: extract-implicit-analyze
+      next: prioritize
+    - step: prioritize
+      id: prioritize
+      phase: 3
+      phase_name: Prioritize Findings
+      agent: "@squad-chief"
+      action: execute_extract_implicit_prioritize
+      task_ref: extract-implicit-prioritize
+      next: synthesize
+    - step: synthesize
+      id: synthesize
+      phase: 4
+      phase_name: Synthesize Report
+      agent: "@squad-chief"
+      action: execute_extract_implicit_synthesize
+      task_ref: extract-implicit-synthesize
+      next: validate
+    - step: validate
+      id: validate
+      phase: 5
+      phase_name: Feynman Validation
+      agent: "@squad-chief"
+      action: execute_extract_implicit_validate
+      task_ref: extract-implicit-validate
+    - workflow_end:
+        id: complete
+        action: workflow_complete
+
+  quality_gates:
+    - id: SCP_EIM_001
+      phase: validate
+      type: automated
+      placement: exit
+      severity: warning
+      description: "Implicit knowledge extraction must identify at least 1 implicit pattern"
+      criteria:
+        - field: implicit_patterns_found
+          operator: ">="
+          value: 1
+      on_fail: warn

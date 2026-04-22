@@ -1,0 +1,162 @@
+workflow:
+  id: wf-extract-knowledge
+  name: Extract Knowledge
+  version: "1.0.0"
+  description: >
+    Extract complete knowledge triplet (Framework + SOP + Checklist) from author/expert
+    source materials. Guarantees ZERO invented content -- every statement must have a
+    literal citation from the source material.
+  type: orchestration
+  command: "*extract-knowledge {author_name} {topic} {sources_path}"
+  state_machine:
+    states: [init, source-validation, framework-extraction, sop-extraction, checklist-generation, final-validation, complete, failed]
+    transitions:
+      - trigger: start
+        source: init
+        dest: source-validation
+      - trigger: source_validation_complete
+        source: source-validation
+        dest: framework-extraction
+      - trigger: source_validation_failed
+        source: source-validation
+        dest: failed
+      - trigger: framework_extraction_complete
+        source: framework-extraction
+        dest: sop-extraction
+      - trigger: framework_extraction_failed
+        source: framework-extraction
+        dest: failed
+      - trigger: sop_extraction_complete
+        source: sop-extraction
+        dest: checklist-generation
+      - trigger: sop_extraction_failed
+        source: sop-extraction
+        dest: failed
+      - trigger: checklist_generation_complete
+        source: checklist-generation
+        dest: final-validation
+      - trigger: checklist_generation_failed
+        source: checklist-generation
+        dest: failed
+      - trigger: final_validation_complete
+        source: final-validation
+        dest: complete
+      - trigger: final_validation_failed
+        source: final-validation
+        dest: failed
+      - trigger: fail
+        source: "*"
+        dest: failed
+  sequence:
+    - step: source-validation
+      id: source-validation
+      phase: 1
+      phase_name: SOURCE VALIDATION
+      agent: squad-chief
+      task_ref: extract-knowledge-source-validation
+      action: execute_source_coverage_gate
+      description: Verify sources exist and pass SOURCE_COVERAGE gate
+      inputs:
+        - author_name
+        - sources_path
+      outputs:
+        - source_coverage_score
+        - validated_sources
+      next: framework-extraction
+    - step: framework-extraction
+      id: framework-extraction
+      phase: 2
+      phase_name: FRAMEWORK EXTRACTION
+      agent: squad-chief
+      task_ref: extract-knowledge-framework
+      action: execute_extract_conceptual_model
+      description: Extract conceptual model (formulas, principles) from sources
+      inputs:
+        - validated_sources
+        - topic
+      outputs:
+        - framework_md
+      next: sop-extraction
+    - step: sop-extraction
+      id: sop-extraction
+      phase: 3
+      phase_name: SOP EXTRACTION
+      agent: squad-chief
+      task_ref: extract-knowledge-sop
+      action: execute_extract_operational_process
+      description: Extract operational process (steps, executors) from sources
+      inputs:
+        - validated_sources
+        - topic
+        - framework_md
+      outputs:
+        - sop_md
+        - squad_blueprint_yaml
+      next: checklist-generation
+    - step: checklist-generation
+      id: checklist-generation
+      phase: 4
+      phase_name: CHECKLIST GENERATION
+      agent: squad-chief
+      task_ref: extract-knowledge-checklist
+      action: execute_generate_validation_checklist
+      description: Generate validation checklist from extracted SOP
+      inputs:
+        - sop_md
+        - framework_md
+      outputs:
+        - checklist_md
+      next: final-validation
+    - step: final-validation
+      id: final-validation
+      phase: 5
+      phase_name: FINAL VALIDATION
+      agent: squad-chief
+      task_ref: extract-knowledge-validation
+      action: execute_validate_all_gates
+      description: Validate all extraction gates (50+ citations, zero invention)
+      inputs:
+        - framework_md
+        - sop_md
+        - checklist_md
+      outputs:
+        - validation_report
+    - workflow_end:
+        id: complete
+        action: workflow_complete
+  inputs:
+    required:
+      - name: author_name
+        type: string
+        description: Author/expert name
+      - name: topic
+        type: string
+        description: Specific topic to extract
+      - name: sources_path
+        type: path
+        description: Path to source materials
+    optional:
+      - name: format
+        type: enum
+        values: [triplet, framework, sop, checklist]
+        default: triplet
+  outputs:
+    primary:
+      - framework_md
+      - sop_md
+      - squad_blueprint_yaml
+      - checklist_md
+      - validation_report
+
+  quality_gates:
+    - id: SCP_EKN_001
+      phase: validation
+      type: automated
+      placement: exit
+      severity: blocking
+      description: "Knowledge extraction must pass source validation and framework integrity"
+      criteria:
+        - field: knowledge_validated
+          operator: "=="
+          value: true
+      on_fail: block

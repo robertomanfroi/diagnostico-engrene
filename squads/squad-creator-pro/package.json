@@ -1,0 +1,30 @@
+{
+  "name": "@aiox-pro/squad-creator-pro",
+  "version": "1.0.0",
+  "description": "Squad Creator Pro - Meta-squad for creating AI agent squads based on real elite minds",
+  "main": "index.js",
+  "scripts": {
+    "install:expansion": "echo 'Use the tasks in this pack to install other expansion packs'"
+  },
+  "keywords": [
+    "aiox",
+    "aiox-pro",
+    "squad",
+    "squad-creator-pro",
+    "tools"
+  ],
+  "author": "AIOX Team",
+  "license": "PROPRIETARY",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/AIOX/aiox-pro",
+    "directory": "squads/squad-creator-pro"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "python": ">=3.10"
+  },
+  "dependencies": {
+    "js-yaml": "^4.1.0"
+  }
+}

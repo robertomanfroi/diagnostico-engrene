@@ -1,0 +1,100 @@
+workflow:
+  id: wf-squad-overview
+  name: Squad Overview Pipeline
+  version: 1.0.0
+  description: Orquestra 6 subtasks atômicas para analisar um squad e gerar o arquivo SQUAD-OVERVIEW.md com scoring de qualidade.
+  type: orchestration
+  agent_mapping:
+    agents:
+      squad-chief: orchestrator
+  state_machine:
+    states:
+      - init
+      - metadata
+      - agents
+      - minds
+      - structure
+      - generate
+      - write
+      - complete
+      - failed
+    transitions:
+      - trigger: start
+        source: init
+        dest: metadata
+      - trigger: metadata_complete
+        source: metadata
+        dest: agents
+      - trigger: agents_complete
+        source: agents
+        dest: minds
+      - trigger: minds_complete
+        source: minds
+        dest: structure
+      - trigger: structure_complete
+        source: structure
+        dest: generate
+      - trigger: generate_complete
+        source: generate
+        dest: write
+      - trigger: write_complete
+        source: write
+        dest: complete
+      - trigger: fail
+        source: "*"
+        dest: failed
+  sequence:
+    - phase: metadata
+      id: metadata
+      agent: squad-chief
+      task_ref: squad-overview-metadata
+      action: collect_squad_metadata
+      inputs: [squad_name, squad_path, format]
+      outputs: [metadata_packet]
+      on_complete:
+        trigger: metadata_complete
+    - phase: agents
+      id: agents
+      agent: squad-chief
+      task_ref: squad-overview-agents
+      action: analyze_agent_topology
+      inputs: [squad_path, metadata_packet]
+      outputs: [agents_packet]
+      on_complete:
+        trigger: agents_complete
+    - phase: minds
+      id: minds
+      agent: squad-chief
+      task_ref: squad-overview-minds
+      action: collect_mind_dna_if_applicable
+      inputs: [squad_name, squad_path, include_minds, agents_packet]
+      outputs: [minds_packet]
+      on_complete:
+        trigger: minds_complete
+    - phase: structure
+      id: structure
+      agent: squad-chief
+      task_ref: squad-overview-structure
+      action: analyze_structure_frameworks_and_commands
+      inputs: [squad_path, metadata_packet, agents_packet, minds_packet]
+      outputs: [structure_packet]
+      on_complete:
+        trigger: structure_complete
+    - phase: generate
+      id: generate
+      agent: squad-chief
+      task_ref: squad-overview-generate
+      action: assemble_overview_document
+      inputs: [metadata_packet, agents_packet, minds_packet, structure_packet, format]
+      outputs: [overview_document]
+      on_complete:
+        trigger: generate_complete
+    - phase: write
+      id: write
+      agent: squad-chief
+      task_ref: squad-overview-write
+      action: write_and_validate_overview
+      inputs: [squad_path, overview_document, format]
+      outputs: [overview_report]
+      on_complete:
+        trigger: write_complete

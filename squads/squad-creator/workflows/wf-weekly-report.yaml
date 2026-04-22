@@ -1,0 +1,139 @@
+# migrated_from: squads/kaizen/workflows/wf-weekly-report.yaml | migration_story: STORY-108.3 | date: 2026-04-04
+workflow_name: weekly_recommendations_report
+description: Simplified version of wf-ecosystem-analysis focused on generating the weekly report. If a full analysis was run recently (< 3 days), uses cached results. Otherwise, triggers full analysis first. Applies RULE-RD-001 and QG-KZ-004 before delivery.
+agent_sequence:
+  - kaizen-chief
+  - kaizen-chief
+  - kaizen-chief
+success_indicators:
+  - Executive summary present (max 3 sentences)
+  - Recommendations classified by RULE-RD-001 (N>=3)
+  - Max 5 recommendations prioritized by impact
+  - Each recommendation has evidence + action + cost
+  - QG-KZ-004 passed
+quality_policy:
+  cache_freshness_days:
+    threshold: 3
+  max_recommendations:
+    threshold: 5
+  executive_summary_sentences:
+    threshold: 3
+workflow:
+  type: sinkra-native-reporting-organism
+  id: wf-weekly-report
+  name: Weekly Recommendations Report
+  version: 1.0.0
+  orchestrator: kaizen-chief
+  mode: autonomous
+  sinkra:
+    organism_id: org-weekly-report
+    organism_pattern: linear
+    molecule_sequence: [mol-diagnosis, mol-optimization]
+    quality_gate_source: squads/kaizen/data/quality-gates.yaml
+    journey_log_source: squads/kaizen/data/journey-log-events.yaml
+  description: |
+    Organism SINKRA-native de reporting semanal. Se uma análise completa
+    recente existir (< 3 dias), reutiliza a Instance validada; caso
+    contrário, dispara o organism de análise do ecossistema.
+  sequence:
+    - step: phase-0
+      id: phase-0
+      phase: 1
+      phase_name: Check Recent Analysis
+      agent: kaizen-chief
+      action: execute_check-recent-analysis
+      next: phase-1
+    - step: phase-1
+      id: phase-1
+      phase: 2
+      phase_name: Full Analysis (if needed)
+      agent: kaizen-chief
+      action: execute-wf-ecosystem-analysis-yaml
+      next: phase-2
+    - step: phase-2
+      id: phase-2
+      phase: 3
+      phase_name: Format Report
+      agent: kaizen-chief
+      action: execute_format-report
+      next: agent-1
+    - step: agent-1
+      id: agent-1
+      phase: 4
+      phase_name: kaizen-chief
+      agent: kaizen-chief
+      action: execute_kaizen-chief
+      next: agent-2
+    - step: agent-2
+      id: agent-2
+      phase: 5
+      phase_name: kaizen-chief
+      agent: kaizen-chief
+      action: execute_kaizen-chief
+      next: agent-3
+    - step: agent-3
+      id: agent-3
+      phase: 6
+      phase_name: kaizen-chief
+      agent: kaizen-chief
+      action: execute_kaizen-chief
+    - workflow_end:
+        id: complete
+        action: workflow_complete
+  phases:
+    phase_0:
+      name: Check Recent Analysis
+      journey_log: JLOG-KZ-006
+      steps:
+        - id: "0.1"
+          name: Check for recent full analysis
+          action: Look for data/reports/week-*-*.md from last 3 days
+          decision:
+            if_found: Use cached results → skip to phase_2
+            if_not_found: Trigger wf-ecosystem-analysis → then phase_2
+    phase_1:
+      name: Full Analysis (if needed)
+      condition: No recent analysis found
+      action: Execute wf-ecosystem-analysis.yaml
+      journey_log: JLOG-KZ-007
+    phase_2:
+      name: Format Report
+      journey_log: JLOG-KZ-008
+      steps:
+        - id: "2.1"
+          name: Load latest analysis
+          action: Read most recent report from data/reports/
+        - id: "2.2"
+          name: Extract top recommendations
+          action: Select top 3-5 by impact score
+        - id: "2.3"
+          name: Generate executive summary
+          action: 3-sentence summary of ecosystem state
+        - id: "2.4"
+          name: Format for delivery
+          action: Apply templates/weekly-report-tmpl.md
+  quality_gate:
+    id: QG-KZ-004
+    name: Weekly Report Quality
+    transition: Format → Delivery
+    type: blocking
+    criteria:
+      - Executive summary presente (max 3 frases)
+      - Recomendações classificadas por nível (RULE-RD-001)
+      - Max 5 recomendações priorizadas por impacto
+      - Cada recomendação tem evidência + ação + custo
+      - Template weekly-report-tmpl.md aplicado corretamente
+    veto_conditions:
+      - Recomendação sem evidência → REMOVER do relatório
+      - Mais de 5 recomendações → CORTAR por menor impacto
+      - Dados fabricados (sem git log/glob) → BLOQUEAR publicação
+  output:
+    format: Weekly Recommendations Report (Markdown)
+    sections:
+      - executive_summary
+      - competency_gaps
+      - tool_gaps
+      - agent_performance_alerts
+      - squad_recommendations
+      - cost_highlights
+      - prioritized_actions

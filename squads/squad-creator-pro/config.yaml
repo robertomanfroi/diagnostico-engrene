@@ -1,0 +1,455 @@
+pack:
+  name: squad-creator-pro
+  version: "4.0.0"
+  short-title: Squad Creator Pro
+  description: >-
+    Pro upgrade pack for squad-creator. Adds mind cloning, DNA extraction,
+    specialist delegation, model routing, advanced optimization, and quality gates.
+    Auto-detected by squad-creator base orchestrator when present.
+    Remove this directory to degrade cleanly to base-only mode.
+  icon: "⚡"
+  author: AIOX Team
+
+score: 90.7
+type: upgrade-pack
+enhances: squad-creator
+tested: true
+sinkra_native: true
+sinkra_certified_at: "2026-04-03"
+updated_at: "2026-03-27"
+
+ide_sync:
+  enabled: false
+  rationale: "Upgrade-pack carregado pelo squad-creator base; não é superfície primária de ativação"
+
+# Feature manifest (per research document Section 4.3)
+features:
+  mind-cloning:
+    description: "Clone real expert minds into AI agents via DNA extraction"
+    agents: ["oalanicolas"]
+    tasks:
+      - collect-sources
+      - extract-voice-dna
+      - extract-thinking-dna
+      - extract-knowledge
+      - extract-implicit
+      - extract-sop
+      - validate-extraction
+      - update-mind
+      - an-extract-dna
+      - an-fidelity-score
+      - an-validate-clone
+      - an-clone-review
+      - an-design-clone
+      - an-diagnose-clone
+      - an-assess-sources
+      - an-extract-framework
+      - an-extract-heuristics
+      - an-extract-session-heuristics
+    workflows:
+      - wf-clone-mind
+      - wf-extraction-pipeline
+
+  research:
+    description: "Deep research and source acquisition for mind cloning"
+    tasks:
+      - an-compare-outputs
+      - deep-research-pre-agent
+      - auto-acquire-sources
+    workflows:
+      - wf-mind-research-loop
+      - wf-research-then-create-agent
+      - wf-auto-acquire-sources
+
+  advanced-creation:
+    description: "Advanced squad creation with full tool discovery and fusion"
+    tasks:
+      - plan-squad
+      - parallel-discovery
+      - squad-fusion
+      - deconstruct
+    workflows:
+      - wf-plan-squad
+      - wf-create-squad
+      - wf-context-aware-create-squad
+      - wf-discover-tools
+      - wf-squad-fusion
+      - wf-brownfield-upgrade-squad
+
+  optimization:
+    description: "Squad and workflow optimization via axioma assessment"
+    agents: ["pedro-valerio"]
+    tasks:
+      - optimize
+      - optimize-workflow
+      - find-0-8
+    workflows:
+      - wf-optimize-squad
+      - wf-optimize-yolo
+
+  modernization:
+    description: "End-to-end modernization for legacy squads without exposing internal methodology"
+    tasks:
+      - modernize-squad
+    workflows:
+      - wf-modernize-squad
+
+  model-routing:
+    description: "Intelligent model selection per task complexity"
+    tasks:
+      - qualify-task
+      - lookup-model
+      - smoke-test-model-routing
+    workflows:
+      - wf-model-tier-qualification
+      - wf-cross-provider-qualification
+
+  quality:
+    description: "Advanced quality gates, axioma assessment, audit"
+    agents: ["pedro-valerio"]
+    tasks:
+      - pv-axioma-assessment
+      - pv-audit
+      - pv-modernization-score
+      - workspace-integration-hardening
+    workflows:
+      - validate-squad
+      - wf-workspace-integration-hardening
+      - modules/module-discovery
+      - modules/module-integration
+      - modules/module-quality-gates
+
+  maintenance:
+    description: "Pro-specific maintenance and migration tasks"
+    tasks:
+      - sync-chief-codex-skill
+      - migrate-workflows-to-yaml
+
+  strategy:
+    description: "Business strategy and marketing intelligence"
+    agents: ["thiago_finch"]
+    tasks: []
+    workflows: []
+
+agents:
+  - id: squad-operator
+    label: Squad Operator
+    executor_profile:
+      story_role: "executor"
+      can_execute: true
+      sinkra_type: Human
+      human_in_the_loop: true
+      output_schema: "brief aprovado, escopo validado e decisão de publish registrada"
+  - id: squad-chief
+    path: agents/squad-chief.md
+    executor_profile:
+      story_role: "executor"
+      can_execute: true
+      sinkra_type: Agent
+      human_in_the_loop: true
+      output_schema: "plano de orquestração, handoff de fases e comando estruturado"
+  - id: oalanicolas
+    path: agents/oalanicolas.md
+    executor_profile:
+      story_role: "executor"
+      can_execute: true
+      sinkra_type: Clone
+      human_in_the_loop: true
+      output_schema: "DNA extraído, heurísticas, frameworks e validação de fidelidade"
+  - id: pedro-valerio
+    path: agents/pedro-valerio.md
+    executor_profile:
+      story_role: "executor"
+      can_execute: true
+      sinkra_type: Agent
+      human_in_the_loop: true
+      output_schema: "workflow auditado, quality gates e parecer de processo"
+  - id: thiago_finch
+    path: agents/thiago_finch.md
+    executor_profile:
+      story_role: "executor"
+      can_execute: true
+      sinkra_type: Clone
+      human_in_the_loop: true
+      output_schema: "strategy brief, tese de posicionamento e narrativa operacional"
+  - id: deterministic-runtime
+    label: Deterministic Runtime
+    executor_profile:
+      story_role: "executor"
+      can_execute: true
+      sinkra_type: Worker
+      human_in_the_loop: true
+      output_schema: "artefato validado deterministicamente, score YAML e relatório de auditoria"
+
+domain_model:
+  declared:
+    - label: Strategic
+      label_pt: Estratégico
+      focus: "planejamento, tese do squad, arquitetura e priorização"
+    - label: Tactical
+      label_pt: Tático
+      focus: "desenho de workflow, validação, handoff e orquestração"
+    - label: Operational
+      label_pt: Operacional
+      focus: "execução, extração, geração de artefatos e integração"
+
+logging:
+  required: true
+  error_behavior: fail_fast_with_handoff
+  error_handling:
+    retry_policy: bounded_retry
+    max_retries: 3
+    on_fail: escalate_to_human_review
+  runtime_audit:
+    enabled: true
+    path: ".aiox/squad-runtime/squad-creator-pro/runtime-log.yaml"
+
+# Skills (standalone invokable with accountability contracts)
+skills:
+  - id: squad
+    path: skills/squad.md
+    description: "Master orchestrator for squad creation"
+  - id: fidelity-score
+    path: skills/fidelity-score.md
+    description: "Deterministic fidelity scoring for mind clones (8 layers, worker script)"
+
+# Governance Framework Compliance (Hub upgrade)
+artifact_contracts:
+  - artifact_id: "squad-config"
+    template_path: "templates/config-tmpl.yaml"
+    lifecycle_states: [draft, pending_validation, validated, approved, rejected, superseded, archived]
+  - artifact_id: "agent-definition"
+    template_path: "templates/agent-tmpl.md"
+    lifecycle_states: [draft, pending_validation, validated, approved, rejected, superseded, archived]
+  - artifact_id: "squad-validation-report"
+    template_path: "templates/quality-gate-tmpl.yaml"
+    lifecycle_states: [draft, validated, approved, archived]
+  - artifact_id: "pro-squad-config"
+    template_path: "templates/config-tmpl.yaml"
+    lifecycle_states: [draft, pending_validation, validated, approved, rejected, consumed, superseded, archived]
+  - artifact_id: "pro-agent-persona"
+    template_path: "templates/agent-tmpl.md"
+    lifecycle_states: [draft, pending_validation, validated, approved, rejected, consumed, superseded, archived]
+  - artifact_id: "pro-validation-report"
+    template_path: "templates/quality-gate-tmpl.yaml"
+    lifecycle_states: [draft, validated, approved]
+  - artifact_id: "pro-modernization-report"
+    template_path: "templates/report-tmpl.yaml"
+    lifecycle_states: [draft, pending_validation, validated, approved, rejected, archived]
+  - artifact_id: "pro-workspace-hardening-report"
+    template_path: "templates/report-tmpl.yaml"
+    lifecycle_states: [draft, pending_validation, validated, approved, rejected, archived]
+  - artifact_id: "pro-squad-prd"
+    template_path: "templates/squad-prd-tmpl.md"
+    lifecycle_states: [draft, validated, approved]
+  - artifact_id: "pro-research-output"
+    template_path: "templates/research-output-tmpl.md"
+    lifecycle_states: [draft, validated, approved]
+  - artifact_id: "pro-workflow-definition"
+    template_path: "templates/workflow-tmpl.yaml"
+    lifecycle_states: [draft, validated, approved]
+  - artifact_id: "pro-task-definition"
+    template_path: "templates/task-tmpl.md"
+    lifecycle_states: [draft, validated, approved]
+  - artifact_id: "pro-journey-log"
+    template_path: "templates/journey-log-tmpl.yaml"
+    lifecycle_states: [draft, validated, approved, active, consolidating, consolidated, analyzed, archived]
+
+artifact_lifecycle:
+  tracking_enabled: true
+  state_persistence: ".aiox/squad-runtime/squad-creator-pro/artifact-state.yaml"
+  transitions: [draft -> pending_validation -> validated/rejected -> approved -> consumed/superseded -> archived]
+
+instance_lifecycle:
+  tracking_enabled: true
+  state_persistence: ".aiox/squad-runtime/squad-creator-pro/instance.yaml"
+  states: [CRIADA, EM_EXECUCAO, COMPLETA, PAUSADA, BLOQUEADA, CANCELADA, ARQUIVADA]
+
+journey_log:
+  enabled: true
+  template: "templates/journey-log-tmpl.yaml"
+  persistence: ".aiox/squad-runtime/squad-creator-pro/journey-log.yaml"
+
+agnosticism_exceptions:
+  - scope: "agents/*.md"
+    reason: >-
+      Mind clone agents contain real expert data (revenue results, client names,
+      pricing tiers) as part of their DNA extraction. These are calibration
+      evidence for cognitive fidelity, not business-specific data leakage.
+      Removing them degrades clone quality below acceptable thresholds.
+    approved_by: "oalanicolas"
+    approved_at: "2026-03-27"
+
+# SINKRA Composition Mapping (6-level hierarchy — Pro overlay)
+# Pro extends base composition via upgrade-pack pattern.
+# Base defines core Atoms/Molecules; Pro adds specialized ones.
+composition_mapping:
+  relationship: "overlay"
+  base_composition: "squads/squad-creator/config.yaml#composition_mapping"
+
+  tokens:
+    source: "data/token-registry.yaml"
+    count: 23
+    description: "Pro tokens (TKF-001 to TKF-023) — overlay routing, parity audit, leak scan, drift detection"
+
+  atoms:
+    description: "Pro-specific tasks — mind cloning, DNA extraction, validation, optimization"
+    mapping:
+      - pattern: "tasks/an-*.md"
+        role: analysis
+        count_hint: 35
+      - pattern: "tasks/etd-*.md"
+        role: thinking_dna_extraction
+      - pattern: "tasks/evd-*.md"
+        role: voice_dna_extraction
+      - pattern: "tasks/pv-*.md"
+        role: axioma_assessment
+      - pattern: "tasks/collect-sources-*.md"
+        role: source_collection
+      - pattern: "tasks/extract-*.md"
+        role: knowledge_extraction
+      - pattern: "tasks/optimize-*.md"
+        role: optimization
+      - pattern: "tasks/validate-*.md"
+        role: validation
+      - pattern: "tasks/squad-fusion-*.md"
+        role: fusion
+    count: 188
+
+  molecules:
+    description: "Grupos recorrentes de 2+ Atoms em padrão reutilizável (Pro-specific)"
+    declared:
+      - id: mol-voice-dna-extraction
+        atoms: [evd-collect-sources, evd-extract-dimensions, evd-assemble-voice-dna]
+        pattern: "collect → extract 7 dimensions → assemble"
+        reused_in: [wf-extract-voice-dna]
+      - id: mol-thinking-dna-extraction
+        atoms: [etd-recognition-patterns, etd-discover-frameworks, etd-extract-heuristics, etd-decision-architecture, etd-anti-patterns, etd-objection-handling, etd-handoff-triggers, etd-assemble-output]
+        pattern: "8-phase cognitive extraction pipeline"
+        reused_in: [wf-extract-thinking-dna]
+      - id: mol-source-collection
+        atoms: [collect-sources-discover, collect-sources-classify, collect-sources-validate, collect-sources-gap-analysis, collect-sources-quality-gate]
+        pattern: "discover → classify → validate → gap-analysis → quality-gate"
+        reused_in: [wf-collect-sources]
+      - id: mol-extraction-validation
+        atoms: [validate-extraction-checklist, validate-extraction-adversarial, validate-extraction-gate]
+        pattern: "11-point checklist → adversarial tests → gate decision"
+        reused_in: [wf-validate-extraction]
+      - id: mol-clone-validation
+        atoms: [an-fidelity-score, an-validate-clone-hackability, an-validate-clone]
+        pattern: "fidelity score → hackability + authenticity → verdict"
+        reused_in: [wf-validate-clone]
+      - id: mol-clone-review
+        atoms: [an-clone-review-source-trinity, an-clone-review-stages-fidelity, an-clone-review-report]
+        pattern: "source trinity → stages fidelity → report"
+        reused_in: [wf-clone-review]
+      - id: mol-diagnose-clone
+        atoms: [an-diagnose-clone-symptoms, an-diagnose-clone-verify-trinity, an-diagnose-clone-prescribe]
+        pattern: "symptoms → verify trinity → prescribe"
+        reused_in: [wf-diagnose-clone]
+      - id: mol-squad-fusion
+        atoms: [squad-fusion-initialize, squad-fusion-discovery, squad-fusion-deduplication, squad-fusion-scope, squad-fusion-structure, squad-fusion-validation, squad-fusion-integration, squad-fusion-command-sync, squad-fusion-cleanup]
+        pattern: "init → discover → dedup → scope → structure → validate → integrate → sync → cleanup"
+        reused_in: [wf-squad-fusion]
+      - id: mol-upgrade-cycle
+        atoms: [upgrade-squad-inventory, upgrade-squad-gap, upgrade-squad-plan, upgrade-squad-qualitative, upgrade-squad-apply, upgrade-squad-verify]
+        pattern: "inventory → gap → plan → qualitative → apply → verify"
+        reused_in: [wf-upgrade-squad]
+      - id: mol-deep-research
+        atoms: [deep-research-check-local-knowledge, deep-research-generate-prompt, deep-research-execute, deep-research-validate]
+        pattern: "check local → generate prompt → execute → validate"
+        reused_in: [wf-deep-research]
+      - id: mol-expert-gold
+        atoms: [extract-expert-gold-context-load, extract-expert-gold-multi-lense, extract-expert-gold-filter, extract-expert-gold-enrichment, extract-expert-gold-validation]
+        pattern: "context → multi-lense → filter → enrich → validate"
+        reused_in: [wf-extract-expert-gold]
+
+  organisms:
+    description: "Workflows completos com state machine e gestão de estado"
+    mapping:
+      - id: org-clone-mind
+        workflow: wf-clone-mind
+        molecules: [mol-source-collection, mol-voice-dna-extraction, mol-thinking-dna-extraction, mol-extraction-validation]
+        state_machine: true
+        phases: 11
+      - id: org-validate-clone
+        workflow: wf-validate-clone
+        molecules: [mol-clone-validation]
+        state_machine: true
+        phases: 3
+      - id: org-squad-fusion
+        workflow: wf-squad-fusion
+        molecules: [mol-squad-fusion]
+        state_machine: true
+        phases: 10
+      - id: org-validate-squad
+        workflow: validate-squad
+        state_machine: true
+        phases: 5
+      - id: org-optimize-squad
+        workflow: wf-optimize-squad
+        state_machine: true
+        phases: 14
+
+  templates:
+    description: "Pro templates — extends base template set"
+    source: "templates/"
+    items:
+      - id: tmpl-pro-config
+        path: "templates/config-tmpl.yaml"
+      - id: tmpl-pro-agent
+        path: "templates/agent-tmpl.md"
+      - id: tmpl-pro-report
+        path: "templates/report-tmpl.yaml"
+      - id: tmpl-pro-quality-gate
+        path: "templates/quality-gate-tmpl.yaml"
+      - id: tmpl-pro-journey-log
+        path: "templates/journey-log-tmpl.yaml"
+
+  instances:
+    description: "Generated squads and mind clones — runtime artifacts"
+    persistence: ".aiox/squad-runtime/{squad-name}/"
+    lifecycle: [CRIADA, EM_EXECUCAO, COMPLETA, PAUSADA, BLOQUEADA, CANCELADA, ARQUIVADA]
+
+bu_mapping: "hub-framework"
+supported_modes: [CRIAR, RESOLVER, VALIDAR, CONFIGURAR, GERENCIAR]
+
+workspace_integration:
+  level: none
+  rationale: >-
+    Pro orchestration reads workspace artifacts and hardens squad contracts, but
+    does not own workspace mutation. Any generated squad that requires
+    controlled runtime or workspace-first integration must hand off execution to
+    the COO/c-level contract.
+  read_paths:
+    - workspace/
+    - workspace/_templates/
+    - workspace/domains/
+  write_paths: []
+  documents_owned: []
+  template_namespace: squad-governance
+
+metadata:
+  version: "4.0.0"
+  type: "upgrade-pack"
+  enhances: "squad-creator"
+  base_requirement: ">=5.0.0"
+  # pro_stats convention (SCP-2):
+  #   scripts = operational scripts in scripts/ root only (excludes tests/ and cross-provider/)
+  #   test_scripts = test files in scripts/tests/ (excludes __init__.py, conftest.py, __pycache__)
+  #   cross_provider_scripts = cross-provider tooling in scripts/cross-provider/
+  #   Reconciled against disk on 2026-03-27 after wrapper conversion and duplicate cleanup.
+  #   Counts reflect the current overlay inventory on disk.
+  pro_stats:
+    agents: 4
+    tasks: 191
+    workflows: 47
+    configs: 8
+    checklists: 12
+    scripts: 32
+    test_scripts: 11
+    cross_provider_scripts: 2
+    data_files: 33
+    minds: 17
+    test_cases: 59
+  # Reconciled against disk on 2026-03-27.

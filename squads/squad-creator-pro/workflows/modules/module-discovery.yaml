@@ -1,0 +1,16 @@
+module:
+  id: module-discovery
+  name: Discovery Module
+  purpose: Shared discovery phase for squad creation and upgrades
+
+  phases:
+    - id: discovery-context
+      task: detect-squad-context
+      outputs:
+        - .aiox/squad-runtime/create-squad/{squad_name}/context-detection.yaml
+
+    - id: discovery-parallel
+      task: parallel-discovery
+      outputs:
+        - .aiox/squad-runtime/discovery/{domain}/discovery-merged.yaml
+        - .aiox/squad-runtime/discovery/{domain}/discovery-summary.md

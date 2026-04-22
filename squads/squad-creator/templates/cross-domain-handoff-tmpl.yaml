@@ -1,0 +1,18 @@
+# migrated_from: squads/kaizen/templates/cross-domain-handoff-tmpl.yaml | migration_story: STORY-108.3 | date: 2026-04-04
+version: "1.0.0"
+template_id: "kaizen-cross-domain-handoff"
+artifact_type: "handoff"
+lifecycle: draft
+source_domain: Operational
+target_domain: Tactical
+handoff_contract:
+  objective: ""
+  source_artifacts: []
+  target_tasks: []
+  required_decisions: []
+  blockers: []
+  success_threshold:
+    threshold: 0.8
+  escalation:
+    owner: Human:Ecosystem_Operator
+    fallback: kaizen-chief

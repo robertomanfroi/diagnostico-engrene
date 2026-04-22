@@ -1,0 +1,112 @@
+workflow:
+  id: wf-detect-operational-mode
+  name: Detect Operational Mode Pipeline
+  version: 1.0.0
+  description: Orquestra 5 subtasks atômicas para classificar o squad em modo operacional ou textual e emitir o plano de infraestrutura correspondente.
+  type: orchestration
+  agent_mapping:
+    agents:
+      squad-chief: orchestrator
+    phase_ownership:
+      verbs: squad-chief
+      systems: squad-chief
+      outputs: squad-chief
+      classify: squad-chief
+      infrastructure: squad-chief
+  state_machine:
+    states:
+      - init
+      - verbs
+      - systems
+      - outputs
+      - classify
+      - infrastructure
+      - complete
+      - failed
+    transitions:
+      - trigger: start
+        source: init
+        dest: verbs
+      - trigger: verbs_complete
+        source: verbs
+        dest: systems
+      - trigger: systems_complete
+        source: systems
+        dest: outputs
+      - trigger: outputs_complete
+        source: outputs
+        dest: classify
+      - trigger: classify_complete
+        source: classify
+        dest: infrastructure
+      - trigger: infrastructure_complete
+        source: infrastructure
+        dest: complete
+      - trigger: fail
+        source: "*"
+        dest: failed
+  sequence:
+    - phase: verbs
+      id: verbs
+      agent: squad-chief
+      task_ref: detect-operational-mode-verbs
+      action: extract_verb_signal
+      description: Extrair sinais lexicais operacionais e textuais do briefing.
+      inputs:
+        - briefing
+      outputs:
+        - verb_signal
+      on_complete:
+        trigger: verbs_complete
+    - phase: systems
+      id: systems
+      agent: squad-chief
+      task_ref: detect-operational-mode-systems
+      action: extract_system_signal
+      description: Detectar plataformas e serviços externos que exigem runtime operacional.
+      inputs:
+        - briefing
+        - skills_detected
+      outputs:
+        - system_signal
+      on_complete:
+        trigger: systems_complete
+    - phase: outputs
+      id: outputs
+      agent: squad-chief
+      task_ref: detect-operational-mode-outputs
+      action: classify_output_signal
+      description: Classificar outputs esperados como operacionais, textuais ou mistos.
+      inputs:
+        - outputs_defined
+      outputs:
+        - output_signal
+      on_complete:
+        trigger: outputs_complete
+    - phase: classify
+      id: classify
+      agent: squad-chief
+      task_ref: detect-operational-mode-classify
+      action: determine_mode
+      description: Consolidar sinais, calcular score e emitir o relatório final de modo.
+      inputs:
+        - verb_signal
+        - system_signal
+        - output_signal
+      outputs:
+        - mode_report
+      on_complete:
+        trigger: classify_complete
+    - phase: infrastructure
+      id: infrastructure
+      agent: squad-chief
+      task_ref: detect-operational-mode-infrastructure
+      action: emit_infrastructure_plan
+      description: Traduzir o modo detectado em contrato de infraestrutura operacional ou textual.
+      inputs:
+        - mode_report
+        - squad_name
+      outputs:
+        - infrastructure_plan
+      on_complete:
+        trigger: infrastructure_complete

@@ -1,0 +1,172 @@
+workflow:
+  id: wf-create-task
+  name: Create Squad Task Pipeline
+  version: 1.0.0
+  description: Orchestrates 6 atomic sub-tasks to create a validated squad task following Task Anatomy standard (8 fields). Covers classification, anatomy definition, executor design, generation, validation, and registration.
+  type: orchestration
+  agent_mapping:
+    agents:
+      squad-chief: orchestrator
+    phase_ownership:
+      classify: squad-chief
+      anatomy: squad-chief
+      executor: squad-chief
+      generate: squad-chief
+      validate: squad-chief
+      register: squad-chief
+  state_machine:
+    states:
+      - init
+      - classify
+      - anatomy
+      - executor
+      - generate
+      - validate
+      - register
+      - complete
+      - failed
+    transitions:
+      - trigger: start
+        source: init
+        dest: classify
+      - trigger: classify_complete
+        source: classify
+        dest: anatomy
+      - trigger: classify_redirect
+        source: classify
+        dest: failed
+        reason: should_be_workflow
+      - trigger: anatomy_complete
+        source: anatomy
+        dest: executor
+      - trigger: anatomy_failed
+        source: anatomy
+        dest: failed
+      - trigger: executor_complete
+        source: executor
+        dest: generate
+      - trigger: generate_complete
+        source: generate
+        dest: validate
+      - trigger: validate_passed
+        source: validate
+        dest: register
+      - trigger: validate_failed
+        source: validate
+        dest: generate
+        max_retries: 2
+      - trigger: register_complete
+        source: register
+        dest: complete
+      - trigger: fail
+        source: "*"
+        dest: failed
+  sequence:
+    - phase: classify
+      id: classify
+      agent: squad-chief
+      task_ref: create-task-classify
+      action: classify_task
+      description: Determine Task vs Workflow, identify target squad, assign executor type
+      inputs:
+        - task_purpose
+        - task_name
+        - squad_name
+      outputs:
+        - classification_result
+        - target_squad
+        - executor_type
+    - phase: anatomy
+      id: anatomy
+      agent: squad-chief
+      task_ref: create-task-anatomy
+      action: define_anatomy
+      description: Define all 8 required Task Anatomy fields via elicitation
+      blocking: true
+      inputs:
+        - classification_result
+        - task_purpose
+      outputs:
+        - task_anatomy
+      heuristic: SC_ANA_001
+    - phase: executor
+      id: executor
+      agent: squad-chief
+      task_ref: create-task-executor
+      action: design_executor
+      description: Define guardrails, checkpoints, and review triggers for the task
+      inputs:
+        - task_anatomy
+        - executor_type
+      outputs:
+        - executor_config
+        - checkpoints
+        - guardrails
+    - phase: generate
+      id: generate
+      agent: squad-chief
+      task_ref: create-task-generate
+      action: generate_task_file
+      description: Produce task file from template, anatomy, and executor configuration
+      inputs:
+        - task_anatomy
+        - executor_config
+        - target_squad
+      outputs:
+        - task_file_path
+        - task_file_content
+    - phase: validate
+      id: validate
+      agent: squad-chief
+      task_ref: create-task-validate
+      action: validate_task
+      description: Run SC_TSK_001 quality gate, fix issues, save validated file
+      blocking: true
+      inputs:
+        - task_file_path
+        - task_file_content
+      outputs:
+        - validation_result
+        - validation_score
+      heuristic: SC_TSK_001
+      on_pass:
+        trigger: validate_passed
+      on_fail:
+        trigger: validate_failed
+        action: fix_and_retry
+        max_iterations: 2
+    - phase: register
+      id: register
+      agent: squad-chief
+      task_ref: create-task-register
+      action: register_task
+      description: Update config.yaml, agent dependencies, and README with new task
+      inputs:
+        - task_file_path
+        - target_squad
+      outputs:
+        - updated_config
+        - updated_readme
+      on_complete:
+        trigger: register_complete
+  error_handling:
+    on_error:
+      - save_state
+      - log_error
+    recovery:
+      enabled: true
+      strategy: resume_from_last_complete
+    redirects:
+      should_be_workflow: "Redirect to *create-workflow"
+      missing_anatomy_field: "Re-elicit from user"
+  resume:
+    state_file: .aiox/squad-runtime/create-task/{squad_name}/state.json
+    supported: true
+    preserve_outputs: true
+    allowed_phases:
+      - classify
+      - anatomy
+      - executor
+      - generate
+      - validate
+      - register

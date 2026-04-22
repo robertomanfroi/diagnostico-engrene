@@ -1,0 +1,92 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "squad-config.schema.json",
+  "title": "AIOX Squad Config Schema",
+  "description": "Validates squad config.yaml files — governance framework compliance",
+  "type": "object",
+  "required": ["name", "version", "description", "entry_agent"],
+  "properties": {
+    "name": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]*$",
+      "description": "Squad name in kebab-case"
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$",
+      "description": "Semantic version"
+    },
+    "tested": {
+      "type": "boolean",
+      "description": "Whether squad has passed validation"
+    },
+    "description": {
+      "type": "string",
+      "minLength": 10,
+      "description": "Squad purpose description"
+    },
+    "entry_agent": {
+      "type": "string",
+      "description": "Primary agent ID (must match agents/{id}.md)"
+    },
+    "quality_threshold": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 10,
+      "description": "Minimum quality score for validation pass"
+    },
+    "settings": {
+      "type": "object",
+      "properties": {
+        "activation": {
+          "type": "object",
+          "properties": {
+            "show_greeting": { "type": "boolean" },
+            "show_ecosystem_report": { "type": "boolean" },
+            "show_quick_commands": { "type": "boolean" }
+          }
+        }
+      }
+    },
+    "workspace_integration": {
+      "type": "object",
+      "required": ["level"],
+      "properties": {
+        "level": {
+          "type": "string",
+          "enum": ["none", "read_only", "controlled_runtime_consumer", "workspace_first"]
+        },
+        "rationale": { "type": "string" },
+        "read_paths": { "type": "array", "items": { "type": "string" } },
+        "write_paths": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "artifact_contracts": {
+      "type": "array",
+      "description": "Governance framework — artifacts produced by this squad",
+      "items": {
+        "type": "object",
+        "required": ["artifact_id", "template_path", "lifecycle_states"],
+        "properties": {
+          "artifact_id": { "type": "string" },
+          "template_path": { "type": "string" },
+          "lifecycle_states": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": ["draft", "pending_validation", "validated", "approved", "rejected", "consumed", "superseded", "archived"]
+            }
+          }
+        }
+      }
+    },
+    "bu_mapping": { "type": "string" },
+    "supported_modes": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": ["CRIAR", "PLANEJAR", "RESOLVER", "ENTENDER", "VALIDAR", "CONFIGURAR", "GERENCIAR", "EXPLORAR"]
+      }
+    }
+  }
+}

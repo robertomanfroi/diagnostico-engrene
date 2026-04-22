@@ -1,0 +1,48 @@
+quality_gates:
+  benchmark_pipeline:
+    type_detection_confidence:
+      threshold: 0.8
+    source_verification_rate:
+      threshold: 1.0
+    matrix_completeness:
+      threshold: 0.9
+    scorecard_integrity:
+      threshold: 1.0
+  deep_research:
+    corpus_selection_quality:
+      threshold: 0.85
+    transcript_coverage:
+      threshold: 0.8
+    pattern_recurrence_min:
+      threshold: 3
+    comment_signal_density:
+      threshold: 0.7
+  reporting:
+    executive_summary_quality:
+      threshold: 0.85
+    recommendation_specificity:
+      threshold: 0.8
+    artifact_publish_success:
+      threshold: 1.0
+    battle_card_readiness:
+      threshold: 0.9
+  governance:
+    evidence_traceability:
+      threshold: 1.0
+    domain_coverage:
+      threshold: 1.0
+    token_family_coverage:
+      threshold: 1.0
+    handoff_completeness:
+      threshold: 0.9
+
+veto_conditions:
+  - id: SPY_QG_001
+    condition: "source_verification_rate < 1.0"
+    action: "Bloquear benchmark"
+  - id: SPY_QG_002
+    condition: "artifact_publish_success < 1.0"
+    action: "Bloquear publish"
+  - id: SPY_QG_003
+    condition: "evidence_traceability < 1.0"
+    action: "Emitir revisão obrigatória"

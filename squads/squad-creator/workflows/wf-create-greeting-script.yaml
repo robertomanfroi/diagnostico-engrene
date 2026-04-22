@@ -1,0 +1,60 @@
+workflow:
+  id: wf-create-greeting-script
+  name: Create Greeting Script Pipeline
+  version: 1.0.0
+  description: Orquestra 5 subtasks atômicas para gerar, integrar e validar greeting scripts determinísticos com Next Action.
+  type: orchestration
+  agent_mapping:
+    agents:
+      squad-chief: orchestrator
+  state_machine:
+    states: [init, discovery, gap-map, generate, integrate, validate, complete, failed]
+    transitions:
+      - { trigger: start, source: init, dest: discovery }
+      - { trigger: discovery_complete, source: discovery, dest: gap-map }
+      - { trigger: gap_map_complete, source: gap-map, dest: generate }
+      - { trigger: generate_complete, source: generate, dest: integrate }
+      - { trigger: integrate_complete, source: integrate, dest: validate }
+      - { trigger: validate_complete, source: validate, dest: complete }
+      - { trigger: fail, source: "*", dest: failed }
+  sequence:
+    - phase: discovery
+      id: discovery
+      agent: squad-chief
+      task_ref: create-greeting-script-discovery
+      action: discover_greeting_context
+      inputs: [squad_name, entry_agent]
+      outputs: [greeting_context_contract]
+      on_complete: { trigger: discovery_complete }
+    - phase: gap-map
+      id: gap-map
+      agent: squad-chief
+      task_ref: create-greeting-script-gap-map
+      action: build_greeting_gap_map
+      inputs: [greeting_context_contract]
+      outputs: [greeting_gap_map]
+      on_complete: { trigger: gap_map_complete }
+    - phase: generate
+      id: generate
+      agent: squad-chief
+      task_ref: create-greeting-script-generate
+      action: render_greeting_script
+      inputs: [greeting_context_contract, greeting_gap_map]
+      outputs: [greeting_script_draft]
+      on_complete: { trigger: generate_complete }
+    - phase: integrate
+      id: integrate
+      agent: squad-chief
+      task_ref: create-greeting-script-integrate
+      action: persist_and_register_greeting
+      inputs: [squad_name, entry_agent, greeting_script_draft]
+      outputs: [greeting_integration_report]
+      on_complete: { trigger: integrate_complete }
+    - phase: validate
+      id: validate
+      agent: squad-chief
+      task_ref: create-greeting-script-validate
+      action: execute_greeting_validation
+      inputs: [squad_name, entry_agent, greeting_integration_report]
+      outputs: [greeting_validation_report]
+      on_complete: { trigger: validate_complete }

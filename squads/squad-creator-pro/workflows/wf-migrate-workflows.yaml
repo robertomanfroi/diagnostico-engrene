@@ -1,0 +1,103 @@
+workflow:
+  id: wf-migrate-workflows
+  name: Migrate Workflows to YAML
+  version: "1.0.0"
+  description: >
+    Migrate legacy .md workflow files to standardized .yaml format. Ensures
+    consistency, enables automated parsing, and supports schema validation.
+    Three-phase: analyze, convert+validate, archive+cleanup.
+  type: orchestration
+  command: "*migrate-workflows {squad_name}"
+  state_machine:
+    states: [init, analyze, convert-validate, archive-cleanup, complete, failed]
+    transitions:
+      - trigger: start
+        source: init
+        dest: analyze
+      - trigger: analyze_complete
+        source: analyze
+        dest: convert-validate
+      - trigger: analyze_failed
+        source: analyze
+        dest: failed
+      - trigger: convert_validate_complete
+        source: convert-validate
+        dest: archive-cleanup
+      - trigger: convert_validate_failed
+        source: convert-validate
+        dest: failed
+      - trigger: archive_cleanup_complete
+        source: archive-cleanup
+        dest: complete
+      - trigger: archive_cleanup_failed
+        source: archive-cleanup
+        dest: failed
+      - trigger: fail
+        source: "*"
+        dest: failed
+  sequence:
+    - step: analyze
+      id: analyze
+      phase: 1
+      phase_name: ANALYZE
+      agent: squad-chief
+      task_ref: migrate-workflows-analyze
+      action: execute_read_md_and_extract_structure
+      description: Read .md workflows, extract structure, identify gaps vs YAML template
+      inputs:
+        - squad_name
+      outputs:
+        - workflow_inventory
+        - structure_analysis
+        - gap_report
+      next: convert-validate
+    - step: convert-validate
+      id: convert-validate
+      phase: 2
+      phase_name: CONVERT & VALIDATE
+      agent: squad-chief
+      task_ref: migrate-workflows-convert
+      action: execute_convert_to_yaml_and_validate
+      description: Convert to YAML format, validate syntax and required fields
+      inputs:
+        - workflow_inventory
+        - structure_analysis
+      outputs:
+        - converted_yamls
+        - validation_results
+      next: archive-cleanup
+    - step: archive-cleanup
+      id: archive-cleanup
+      phase: 3
+      phase_name: ARCHIVE & CLEANUP
+      agent: squad-chief
+      task_ref: migrate-workflows-archive
+      action: execute_archive_originals_and_update_refs
+      description: Archive original .md files, update cross-references, verify no broken links
+      inputs:
+        - converted_yamls
+      outputs:
+        - archived_files
+        - updated_references
+    - workflow_end:
+        id: complete
+        action: workflow_complete
+  veto_conditions:
+    - id: VETO-MWY-001
+      trigger: Dry-run output not reviewed before conversion
+      action: BLOCK
+    - id: VETO-MWY-002
+      trigger: Original .md files not archived before deletion
+      action: BLOCK
+    - id: VETO-MWY-003
+      trigger: Cross-references not identified before archiving
+      action: BLOCK
+  inputs:
+    required:
+      - name: squad_name
+        type: string
+        description: Target squad with .md workflows to migrate
+  outputs:
+    primary:
+      - converted_yamls
+      - archived_files

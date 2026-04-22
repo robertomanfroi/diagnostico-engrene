@@ -1,0 +1,60 @@
+# Squad KPIs — squad-creator-pro
+# M6 Baseline KPIs for operational measurement
+# Created: 2026-04-03 (SINKRA-native upgrade Phase 5)
+
+meta:
+  squad: squad-creator-pro
+  version: "1.0.0"
+  created_at: "2026-04-03"
+  review_cadence: monthly
+
+baseline_kpis:
+  clone_fidelity:
+    name: "Clone Fidelity Pass Rate"
+    description: "Percentage of clone validations that achieve fidelity score >= 6.0/10"
+    target: 0.80
+    unit: ratio
+    measurement: "fidelity_score >= 6.0 in an-fidelity-score-calculate output"
+    source_gate: QG-SC-001
+
+  task_completion_rate:
+    name: "Task Completion Rate"
+    description: "Percentage of tasks that reach COMPLETE state within SLA"
+    target: 0.90
+    unit: ratio
+    measurement: "tasks with state == COMPLETE / total tasks executed"
+
+  quality_gate_pass_rate:
+    name: "Quality Gate First-Pass Rate"
+    description: "Percentage of quality gates passed on first attempt (no retry)"
+    target: 0.75
+    unit: ratio
+    measurement: "gates passed first attempt / total gate evaluations"
+
+  source_coverage:
+    name: "Source Collection Coverage"
+    description: "Average source coverage ratio in collect-sources pipeline"
+    target: 0.80
+    unit: ratio
+    measurement: "sources_found / sources_required per clone-mind execution"
+    source_gate: QG-SC-002
+
+  axioma_score:
+    name: "Axioma Assessment Average"
+    description: "Average axioma score across squad validations"
+    target: 7.0
+    unit: score_10
+    measurement: "overall_axioma_score from pv-axioma-assessment outputs"
+    source_gate: QG-SC-006
+
+  extraction_completeness:
+    name: "DNA Extraction Completeness"
+    description: "Percentage of extraction pipelines completing all 5 DNA dimensions"
+    target: 0.85
+    unit: ratio
+    measurement: "dimensions_extracted / 5 per extraction pipeline run"
+
+thresholds:
+  green: ">= target"
+  yellow: ">= target * 0.8"
+  red: "< target * 0.8"

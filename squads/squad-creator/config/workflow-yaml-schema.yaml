@@ -1,0 +1,323 @@
+# Workflow YAML Schema Standard
+# Version: 1.1.0
+# Purpose: Defines the canonical schema for workflow YAML files to ensure
+#          visual rendering compatibility in the AIOX Dashboard.
+# Enforcement: Dashboard diagram renderer (yaml-to-mermaid.ts)
+# Referenced by: checklists/create-workflow-checklist.md, templates/workflow-tmpl.yaml
+
+schema:
+  id: workflow-yaml-schema
+  version: "1.1.0"
+  severity: MUST  # for new workflows
+  created: "2026-03-09"
+
+# =============================================================================
+# CANONICAL SCHEMA (Pattern A) — USE THIS FOR ALL NEW WORKFLOWS
+# =============================================================================
+
+canonical:
+  description: |
+    The official format for all new workflow YAML files.
+    Executable contract is workflow.sequence[].
+    workflow.phases is optional supplemental metadata only.
+    Ensures visual diagram rendering in the AIOX Dashboard.
+
+  required_top_level:
+    - field: workflow
+      type: object
+      description: "Root workflow payload"
+
+  required_workflow_fields:
+    - field: id
+      type: string
+      format: "{workflow-name}"
+      example: "story-development-cycle"
+    - field: name
+      type: string
+      example: "Story Development Cycle"
+      description: "Human-readable workflow name."
+    - field: version
+      type: string
+      format: semver
+      example: "1.0.0"
+    - field: sequence
+      type: array
+      min_items: 1
+      description: "Executable workflow sequence."
+
+  required_per_step:
+    - field: id
+      type: string
+      example: "create"
+      description: "Unique step identifier used by requires/next/on_failure."
+    - field: agent
+      type: string
+      example: "sm"
+      description: "Agent responsible for the step. MUST NOT use @ prefix. Use the agent ID as it appears in the filename (e.g., 'scanner' not '@scanner', 'sm' not '@sm')."
+
+  optional_per_step:
+    - field: step
+      type: string
+      description: "Human-readable or machine identifier for the action."
+    - field: phase
+      type: integer
+      description: "Display ordering hint (compatibility/readability)."
+    - field: phase_name
+      type: string
+      description: "Display label for step grouping."
+    - field: task
+      type: string
+      description: "Task file or task ID executed by this step."
+    - field: action
+      type: string
+      description: "Action summary."
+    - field: requires
+      type: string
+      description: "Single dependency by step id."
+    - field: depends_on
+      type: array[string]
+      description: "Multiple dependencies by step id."
+    - field: next
+      type: string
+      description: "Next step id on success."
+    - field: on_failure
+      type: string
+      description: "Fallback step id on failure."
+    - field: on_complete
+      type: object
+      description: "Completion routing metadata."
+    - field: outputs
+      type: array
+      description: "Output artifacts emitted by the step."
+    - field: checkpoint
+      type: object
+      description: "Validation gate metadata."
+    - field: parallel_group
+      type: string
+      description: "Parallelization group marker."
+    - field: executor
+      type: string
+      description: "Execution engine hint."
+    - field: notes
+      type: string
+      description: "Step details and constraints."
+    - field: workflow_end
+      type: object
+      description: "Terminal marker entry."
+    - field: repeat_development_cycle
+      type: object
+      description: "Loop marker entry."
+
+  optional_workflow_fields:
+    - field: phases
+      type: array|object
+      description: "Supplemental phase metadata (non-executable)."
+    - field: checkpoint
+      type: object
+      description: "Workflow-level validation settings."
+    - field: handoff_prompts
+      type: object
+      description: "Context handoff templates."
+    - field: flow_diagram
+      type: string
+      description: "Mermaid flow diagram."
+    - field: description
+      type: string
+    - field: type
+      type: string
+    - field: orchestrator
+      type: string
+      description: "Default workflow orchestrator."
+    - field: transitions
+      type: array
+      description: "Explicit labeled edges between steps/phases."
+    - field: metadata
+      type: object
+
+  example: |
+    workflow:
+      id: story-development-cycle
+      name: "Story Development Cycle"
+      version: "1.0.0"
+      orchestrator: po
+      description: "Create -> validate -> implement -> review loop."
+
+      sequence:
+        - step: create_story
+          id: create
+          phase: 1
+          phase_name: "Story Creation"
+          agent: sm
+          task: create-next-story
+          outputs:
+            - story_file
+          next: validate
+
+        - step: validate_story
+          id: validate
+          phase: 2
+          phase_name: "Story Validation"
+          agent: po
+          task: validate-story
+          requires: create
+          checkpoint:
+            criteria:
+              - "10 validation checks passed"
+            human_review: true
+          next: implement
+          on_failure: create
+
+        - step: implement_story
+          id: implement
+          phase: 3
+          phase_name: "Implementation"
+          agent: dev
+          task: develop
+          requires: validate
+          next: review
+
+        - workflow_end:
+          id: complete
+          action: story_complete
+
+# =============================================================================
+# DIAGRAM RENDERING RULES
+# =============================================================================
+
+rendering:
+  node_shapes:
+    - condition: "default"
+      shape: rectangle
+      syntax: 'id["label"]'
+    - condition: "checkpoint.human_review == true"
+      shape: diamond
+      syntax: 'id{"label"}'
+    - condition: "type == 'elicit' OR elicit field present"
+      shape: hexagon
+      syntax: 'id{{"label"}}'
+
+  edge_types:
+    - condition: "depends_on reference"
+      type: solid_arrow
+      syntax: "A --> B"
+    - condition: "transitions[].condition"
+      type: labeled_solid_arrow
+      syntax: "A -->|condition| B"
+    - condition: "condition contains VETO or NO-GO"
+      type: dotted_arrow
+      syntax: "A -.->|condition| B"
+    - condition: "no dependencies defined"
+      type: sequential_fallback
+      syntax: "A --> B (by array order)"
+
+  agent_coloring:
+    description: |
+      Each unique agent gets a distinct color from a 7-color palette.
+      Nodes with the same agent share color. Legend shown below diagram.
+    palette:
+      - "#4CAF50"
+      - "#2196F3"
+      - "#FF9800"
+      - "#9C27B0"
+      - "#F44336"
+      - "#00BCD4"
+      - "#795548"
+
+# =============================================================================
+# BACKWARD-COMPATIBLE PATTERNS (DO NOT USE FOR NEW WORKFLOWS)
+# =============================================================================
+
+legacy_patterns:
+  - id: top_level_phases
+    description: "phases as top-level executable array"
+    used_by: "older squad workflows"
+    structure: "phases[]"
+    migration: "Move executable flow to workflow.sequence[]"
+
+  - id: workflow_phases
+    description: "workflow.phases without workflow.sequence"
+    used_by: "legacy AIOX/third-party imports"
+    structure: "workflow.phases[]"
+    migration: "Keep workflow.phases as metadata and add workflow.sequence[] as executable contract"
+
+  - id: executor_field
+    description: "executor instead of agent"
+    used_by: "brand squad"
+    structure: "workflow.sequence[].executor"
+    migration: "Rename executor to agent"
+
+  - id: steps_numeric
+    description: "steps with step: N numeric ID"
+    used_by: "franchise squad"
+    structure: "steps[].step: N"
+    migration: "Convert to workflow.sequence[] with id: step_N"
+
+  - id: workflow_steps
+    description: "steps nested under workflow key"
+    used_by: "db-sage, design, movimento squads"
+    structure: "workflow.steps[]"
+    migration: "Convert to workflow.sequence[]"
+
+  - id: workflow_sequence
+    description: "sequence array under workflow key (current canonical)"
+    used_by: "squad-creator"
+    structure: "workflow.sequence[]"
+    migration: "No migration needed"
+
+  - id: stage_keys
+    description: "stage_N as top-level keys"
+    used_by: "copy wf-9/10/11"
+    structure: "stage_1: {}, stage_2: {}"
+    migration: "Convert to workflow.sequence[] array"
+
+  - id: phases_dict
+    description: "phases as dict keyed by name"
+    used_by: "rules-extractor"
+    structure: "phases: { phase_0_name: {} }"
+    migration: "Convert to workflow.sequence[] array, use key as id"
+
+  - id: agents_array
+    description: "agents as array instead of single agent"
+    used_by: "rules-extractor"
+    structure: "workflow.sequence[].agents: [a, b]"
+    migration: "Use first agent as primary: agents[0]"
+
+# =============================================================================
+# NON-RENDERABLE PATTERNS (Show raw YAML)
+# =============================================================================
+
+non_renderable:
+  - id: trigger_action
+    description: "Event-driven trigger/action patterns"
+    used_by: "c-level workspace-governance, design self-healing"
+    reason: "No linear flow — governance/CI pipelines, not agent orchestrations"
+
+  - id: module
+    description: "Workflow sub-modules for composition"
+    used_by: "squad-creator/modules/"
+    reason: "Building blocks, not standalone workflows"
+
+# =============================================================================
+# VALIDATION CHECKLIST
+# =============================================================================
+
+validation:
+  blocking:
+    - "YAML syntax is valid"
+    - "Has workflow.id, workflow.name, workflow.version fields"
+    - "Uses workflow.sequence[] as executable contract (or approved legacy pattern)"
+    - "Every executable step has id, agent fields (except workflow_end/repeat markers)"
+    - "Step IDs are unique across the file"
+    - "requires/depends_on references only valid step IDs"
+    - "transitions[].from and transitions[].to reference valid step or phase IDs"
+    - "Agent names do NOT use @ prefix (use 'scanner' not '@scanner') — filenames are {agent-id}.md without @"
+    - "handoff_prompts section exists when workflow has 2+ distinct agents"
+
+  recommended:
+    - "Uses canonical Pattern A (workflow.sequence[])"
+    - "File is in squads/{squad-name}/workflows/ directory"
+    - "Filename follows wf-{name}.yaml convention"
+    - "Agent names match actual agent definitions in the squad"
+    - "At least one checkpoint with human_review: true"
+    - "3+ executable steps for complex workflows"
+    - "workflow.type field is present"

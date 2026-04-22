@@ -1,0 +1,120 @@
+workflow:
+  id: wf-validate-clone
+  name: Validate Clone
+  version: "1.0.0"
+  description: >
+    Validate clone quality using fidelity score (8 layers x 5 checkpoints),
+    hackability test (4 binary tests), and authenticity markers (10 markers).
+    Worker script handles 90%, LLM only for hackability.
+  type: orchestration
+  command: "*validate-clone {clone_path}"
+  state_machine:
+    states: [init, fidelity-score, hackability-authenticity, verdict-report, complete, failed]
+    transitions:
+      - trigger: start
+        source: init
+        dest: fidelity-score
+      - trigger: fidelity_score_complete
+        source: fidelity-score
+        dest: hackability-authenticity
+      - trigger: fidelity_score_failed
+        source: fidelity-score
+        dest: failed
+      - trigger: hackability_complete
+        source: hackability-authenticity
+        dest: verdict-report
+      - trigger: hackability_failed
+        source: hackability-authenticity
+        dest: failed
+      - trigger: verdict_complete
+        source: verdict-report
+        dest: complete
+      - trigger: verdict_failed
+        source: verdict-report
+        dest: failed
+      - trigger: fail
+        source: "*"
+        dest: failed
+  sequence:
+    - step: fidelity-score
+      id: fidelity-score
+      phase: 1
+      phase_name: FIDELITY SCORE
+      agent: oalanicolas
+      task_ref: an-fidelity-score
+      action: execute_8_layers_x_5_checkpoints
+      description: "Delegates to an-fidelity-score orchestrator (8 layers x 5 checkpoints = 40 total)"
+      inputs:
+        - clone_path
+      outputs:
+        - fidelity_scores
+        - layer_breakdown
+      next: hackability-authenticity
+    - step: hackability-authenticity
+      id: hackability-authenticity
+      phase: 2
+      phase_name: HACKABILITY & AUTHENTICITY
+      agent: oalanicolas
+      task_ref: an-validate-clone-hackability
+      action: execute_4_hack_tests_and_10_markers
+      description: 4 binary hack tests + 10 authenticity markers
+      inputs:
+        - clone_path
+      outputs:
+        - hackability_results
+        - authenticity_markers
+      next: verdict-report
+    - step: verdict-report
+      id: verdict-report
+      phase: 3
+      phase_name: VERDICT & REPORT
+      agent: oalanicolas
+      task_ref: an-validate-clone
+      action: execute_deterministic_verdict_and_report
+      description: "Delegates to an-validate-clone orchestrator — deterministic decision tree + final report"
+      inputs:
+        - fidelity_scores
+        - hackability_results
+        - authenticity_markers
+      outputs:
+        - validation_verdict
+        - validation_report
+    - workflow_end:
+        id: complete
+        action: workflow_complete
+  inputs:
+    required:
+      - name: clone_path
+        type: string
+        description: Path to the clone agent file
+  outputs:
+    primary:
+      - validation_verdict
+      - validation_report
+
+  quality_gates:
+    - id: SCP_VCL_001
+      phase: fidelity-score
+      type: automated
+      placement: exit
+      severity: blocking
+      description: "Fidelity score must complete with all 8 layers scored"
+      criteria:
+        - field: layers_scored
+          operator: "=="
+          value: 8
+        - field: fidelity_scores
+          operator: "!="
+          value: null
+      on_fail: block
+    - id: SCP_VCL_002
+      phase: verdict-report
+      type: automated
+      placement: exit
+      severity: blocking
+      description: "Verdict must be deterministic — PASS, PASS (PREMIUM), REVIEW, or FAIL"
+      criteria:
+        - field: validation_verdict
+          operator: "in"
+          value: ["PASS", "PASS (PREMIUM)", "REVIEW", "FAIL"]
+      on_fail: block

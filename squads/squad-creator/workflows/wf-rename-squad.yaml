@@ -1,0 +1,51 @@
+workflow:
+  id: wf-rename-squad
+  name: Rename Squad Pipeline
+  version: 1.0.0
+  description: Orquestra 4 subtasks atômicas que formalizam o fluxo map -> structural -> propagate -> validate do script rename-squad.sh.
+  type: orchestration
+  agent_mapping:
+    agents:
+      squad-chief: orchestrator
+  state_machine:
+    states: [init, map, structural, propagate, validate, complete, failed]
+    transitions:
+      - { trigger: start, source: init, dest: map }
+      - { trigger: map_complete, source: map, dest: structural }
+      - { trigger: structural_complete, source: structural, dest: propagate }
+      - { trigger: propagate_complete, source: propagate, dest: validate }
+      - { trigger: validate_complete, source: validate, dest: complete }
+      - { trigger: fail, source: "*", dest: failed }
+  sequence:
+    - phase: map
+      id: map
+      agent: squad-chief
+      task_ref: rename-squad-map
+      action: map_blast_radius
+      inputs: [old_name, new_name, dry_run, no_branch]
+      outputs: [rename_blast_radius]
+      on_complete: { trigger: map_complete }
+    - phase: structural
+      id: structural
+      agent: squad-chief
+      task_ref: rename-squad-structural
+      action: execute_structural_rename
+      inputs: [old_name, new_name, rename_blast_radius, dry_run, no_branch]
+      outputs: [rename_structural_result]
+      on_complete: { trigger: structural_complete }
+    - phase: propagate
+      id: propagate
+      agent: squad-chief
+      task_ref: rename-squad-propagate
+      action: propagate_repo_references
+      inputs: [old_name, new_name, rename_structural_result, dry_run]
+      outputs: [rename_propagation_result]
+      on_complete: { trigger: propagate_complete }
+    - phase: validate
+      id: validate
+      agent: squad-chief
+      task_ref: rename-squad-validate
+      action: validate_rename_outcome
+      inputs: [old_name, new_name, rename_propagation_result, dry_run]
+      outputs: [rename_validation_report]
+      on_complete: { trigger: validate_complete }

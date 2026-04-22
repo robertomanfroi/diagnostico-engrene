@@ -1,0 +1,255 @@
+workflow:
+  id: wf-plan-squad
+  name: Deep Squad Planning
+  version: "1.3.0"
+  purpose: >
+    Create a deep, execution-ready PRD for a squad before running create-squad.
+    This workflow exists for large or high-risk squads that need full planning
+    visibility before implementation starts.
+  state_machine:
+    states: [init, preflight, depth-calibration, domain-mapping, architecture, challenge-reorder, roadmap, prd-assembly, handoff, complete, failed]
+    transitions:
+      - trigger: start
+        source: init
+        dest: preflight
+      - trigger: preflight_complete
+        source: preflight
+        dest: depth-calibration
+      - trigger: preflight_failed
+        source: preflight
+        dest: failed
+      - trigger: depth_calibration_complete
+        source: depth-calibration
+        dest: domain-mapping
+      - trigger: depth_calibration_failed
+        source: depth-calibration
+        dest: failed
+      - trigger: domain_mapping_complete
+        source: domain-mapping
+        dest: architecture
+      - trigger: domain_mapping_failed
+        source: domain-mapping
+        dest: failed
+      - trigger: architecture_complete
+        source: architecture
+        dest: challenge-reorder
+      - trigger: architecture_failed
+        source: architecture
+        dest: failed
+      - trigger: challenge_reorder_complete
+        source: challenge-reorder
+        dest: roadmap
+      - trigger: challenge_reorder_failed
+        source: challenge-reorder
+        dest: failed
+      - trigger: roadmap_complete
+        source: roadmap
+        dest: prd-assembly
+      - trigger: roadmap_failed
+        source: roadmap
+        dest: failed
+      - trigger: prd_assembly_complete
+        source: prd-assembly
+        dest: handoff
+      - trigger: prd_assembly_failed
+        source: prd-assembly
+        dest: failed
+      - trigger: handoff_complete
+        source: handoff
+        dest: complete
+      - trigger: handoff_failed
+        source: handoff
+        dest: failed
+      - trigger: fail
+        source: "*"
+        dest: failed
+  description: |
+    Pro-only planning workflow for squads that require a full product-level PRD
+    before creation. Produces a deep planning document in
+    docs/projects/{domain}/prd.md and a runtime planning summary.
+  type: planning
+  orchestrator: "@squad-chief"
+  specialists:
+    - "@pedro-valerio"
+    - "@thiago_finch"
+  mode: guided
+  command: "*plan-squad {domain} [--purpose \"...\"] [--target-user \"...\"] [--reference {path}] [--output {path}] [--business {slug}] [--product {slug}] [--app {id}]"
+  governance_protocol: squads/squad-creator/protocols/ai-first-governance.md
+  distribution_constraint: pro_only
+  inputs:
+    required:
+      - name: domain
+        type: string
+        description: Domain or squad problem space to plan
+        example: editais
+    optional:
+      - name: purpose
+        type: string
+        description: High-level purpose of the squad
+      - name: target_user
+        type: string
+        description: Primary user or operator of the squad
+      - name: reference
+        type: path
+        description: Optional benchmark document used to calibrate depth
+      - name: output
+        type: path
+        default: docs/projects/{domain}/prd.md
+        description: Explicit PRD output path
+      - name: business
+        type: string
+        description: Optional business slug for environment contract resolution
+      - name: product
+        type: string
+        description: Optional product slug for environment contract resolution
+      - name: app
+        type: string
+        description: Optional app id for environment contract resolution
+  veto_conditions:
+    - id: PS_VC_001
+      trigger: Problem framing absent and no defensible evidence to infer it
+      action: BLOCK - ask for problem framing before generating a deep PRD.
+    - id: PS_VC_002
+      trigger: Workflow/capability inventory skipped
+      action: BLOCK - a deep PRD cannot be assembled without scope mapping.
+    - id: PS_VC_003
+      trigger: Reference document copied literally instead of adapted by pattern
+      action: BLOCK - preserve depth, not domain-specific cargo culting.
+    - id: PS_VC_004
+      trigger: PRD assembled without roadmap, governance, or open questions
+      action: BLOCK - document is not execution-ready.
+    - id: PS_VC_005
+      trigger: Architecture or roadmap approved without comparing defensible alternatives
+      action: BLOCK - compare at least 2 options, record the rejected path, and justify the chosen order.
+    - id: PS_VC_006
+      trigger: Feedback changes assumptions, dependencies, or sequencing but the workflow patches the plan literally
+      action: BLOCK - reopen architecture and challenge/reorder before continuing.
+  outputs:
+    - docs/projects/{domain}/prd.md
+    - .aiox/squad-runtime/plan-squad/{domain}/planning-summary.yaml
+  sequence:
+    - step: phase-0
+      id: phase-0
+      phase: 1
+      phase_name: PREFLIGHT
+      agent: squad-chief
+      task_ref: plan-squad-contract
+      action: resolve_planning_contract
+      outputs:
+        - planning_contract
+        - environment_contract
+      next: phase-1
+    - step: phase-1
+      id: phase-1
+      phase: 2
+      phase_name: DEPTH CALIBRATION
+      agent: squad-chief
+      task_ref: plan-squad-depth-calibration
+      action: calibrate_reference_depth
+      outputs:
+        - depth_rules
+        - reference_delta
+      next: phase-2
+    - step: phase-2
+      id: phase-2
+      phase: 3
+      phase_name: DOMAIN MAPPING
+      agent: squad-chief
+      task_ref: plan-squad-domain-mapping
+      action: map_capabilities_and_workflows
+      outputs:
+        - capability_map
+        - workflow_inventory
+        - risk_inputs
+      next: phase-3
+    - step: phase-3
+      id: phase-3
+      phase: 4
+      phase_name: ARCHITECTURE
+      agent: squad-chief
+      task_ref: plan-squad-architecture
+      action: design_agent_architecture_and_governance
+      outputs:
+        - agent_architecture
+        - knowledge_model
+        - governance_contract
+      next: phase-4
+    - step: phase-4
+      id: phase-4
+      phase: 5
+      phase_name: CHALLENGE & REORDER
+      agent: pedro-valerio
+      task_ref: plan-squad-challenge-reorder
+      action: stress_test_dependencies_and_reorder
+      notes: Compare at least 2 sequencing options, identify premature items, blocked items, and not-before conditions. If user feedback reveals a hidden dependency or a flawed order, reopen the architecture instead of patching the roadmap literally.
+      outputs:
+        - challenge_report
+        - alternatives_matrix
+        - sequencing_rationale
+      next: phase-5
+    - step: phase-5
+      id: phase-5
+      phase: 6
+      phase_name: ROADMAP
+      agent: pedro-valerio
+      task_ref: plan-squad-roadmap
+      action: define_epics_stories_and_quality_gates
+      outputs:
+        - roadmap
+        - quality_gate_matrix
+      next: phase-6
+    - step: phase-6
+      id: phase-6
+      phase: 7
+      phase_name: PRD ASSEMBLY
+      agent: squad-chief
+      task_ref: plan-squad-prd-assembly
+      action: assemble_prd_from_template
+      outputs:
+        - docs/projects/{domain}/prd.md
+        - .aiox/squad-runtime/plan-squad/{domain}/planning-summary.yaml
+      next: phase-7
+    - step: phase-7
+      id: phase-7
+      phase: 8
+      phase_name: HANDOFF
+      agent: squad-chief
+      task_ref: create-squad
+      action: prepare_execution_handoff
+      outputs:
+        - execution_handoff
+      next: complete
+    - workflow_end:
+        id: complete
+        action: workflow_complete
+  checkpoints:
+    - id: CP_SCOPE
+      phase: preflight
+      decision: PROBLEM_AND_SCOPE_CLEAR
+      blocking: true
+    - id: CP_DEPTH
+      phase: depth-calibration
+      decision: DEPTH_CALIBRATED_WITHOUT_DOMAIN_LEAK
+      blocking: true
+    - id: CP_ARCH
+      phase: architecture
+      decision: ARCHITECTURE_AND_GOVERNANCE_COVERED
+      blocking: true
+    - id: CP_CHALLENGE
+      phase: challenge-reorder
+      decision: ORDER_AND_ALTERNATIVES_VALIDATED
+      blocking: true
+    - id: CP_PRD
+      phase: prd-assembly
+      decision: PRD_DEEP_ENOUGH_FOR_EXECUTION
+      blocking: true
+    - id: CP_HANDOFF
+      phase: handoff
+      decision: READY_FOR_PRE_EXISTING_BRIEF_FLOW
+      blocking: true
+  handoff:
+    downstream_mode: pre_existing_brief
+    next_command: "*create-squad {domain}"
+    required_context:
+      - docs/projects/{domain}/prd.md
+      - .aiox/squad-runtime/plan-squad/{domain}/planning-summary.yaml

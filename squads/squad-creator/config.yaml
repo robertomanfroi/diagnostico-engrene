@@ -1,0 +1,429 @@
+pack:
+  name: squad-creator
+  version: "6.0.0"
+  short-title: Squad Creator
+  description: >-
+    Meta-squad canônico do hub. Cria squads, agents, workflows e tasks via templates e validação estrutural.
+    Orchestrator: @squad-chief (triage, routing, criação template-driven de squads).
+    Base mode: 24 tasks, 3 workflows, 1 agent.
+    Pro mode: auto-detected via squad-creator-pro/ (adds mind cloning, DNA extraction,
+    multi-agent orchestration, model routing, advanced optimization).
+    Ecosystem mode: ecosystem-analyst agent (topology, performance, bottleneck, gaps, radar, cost).
+    v6.0.0: Fusão kaizen — observabilidade contínua do ecossistema integrada ao squad canônico.
+  icon: "🏭"
+  author: AIOX Team
+  slashPrefix: squadCreator
+
+sinkra_native: true
+sinkra_native_certified_at: "2026-04-04"
+sinkra_native_score: 9.5
+
+tested: true
+updated_at: "2026-04-04"
+entry_agent: squad-chief
+quality_threshold: 8.5
+
+settings:
+  activation:
+    show_ecosystem_report: true   # Display stats on activation
+    show_greeting: true           # Display agent greeting
+    show_quick_commands: true     # Display command shortcuts
+
+  ecosystem_report:
+    show_totals: true             # Total squads, agents, tasks
+    show_top_squads: true         # Table of largest squads
+    show_quality_refs: true       # Gold standard references
+    show_gaps: false              # Identified domain gaps
+    top_squads_limit: 5           # How many squads to display
+
+workspace_integration:
+  level: none
+  rationale: >-
+    O squad-creator consome contexto do workspace para scaffolding e validacao,
+    mas nao executa integracoes de workspace. Integracao
+    controlled_runtime_consumer/workspace_first e ownership do squad c-level
+    via COO, com handoff explicito quando necessario.
+  read_paths:
+    - workspace/
+    - workspace/_templates/
+    - workspace/domains/
+  write_paths: []
+  template_namespace: squad-governance
+
+metadata:
+  version: "6.0.0"
+  type: "base"
+  pro_detection: true
+  pro_path: "squads/squad-creator-pro/config.yaml"
+  score: 9.5
+  base_stats:
+    agents: 1  # squad-chief only — outros agents vivem em squad-creator-pro
+    tasks: 139
+    workflows: 24
+    configs: 2
+    checklists: 14
+    data_files: 5
+
+agents:
+  - id: squad-chief
+    name: Squad Chief
+    executor_profile:
+      story_role: "executor"
+      can_execute: true
+      sinkra_type: Agent
+      human_in_the_loop: true
+      output_schema: squad-creation-decision
+
+domain_model:
+  Strategic:
+    label: "Estratégico"
+    scope: "Governança do ecossistema, catálogo e decisões de arquitetura"
+  Tactical:
+    label: "Tático"
+    scope: "Orquestração de criação, validação e upgrade de squads"
+  Operational:
+    label: "Operacional"
+    scope: "Scaffolding, geração de arquivos, instalação e sincronização"
+  Observability:
+    label: "Observabilidade"
+    scope: "Análise contínua do ecossistema: topologia, performance, gaps, radar, custo"
+
+logging:
+  runtime_audit: true
+  error_behavior: fail_loud
+  error_handling:
+    on_validation_fail: block_publish
+    on_generation_fail: emit_handoff
+    on_runtime_error: persist_evidence
+
+# Governance framework compliance
+artifact_contracts:
+  - artifact_id: "squad-config-base"
+    template_path: "templates/config-tmpl.yaml"
+    schema_path: "schemas/squad-config.schema.json"
+    lifecycle_states: [draft, pending_validation, validated, approved, rejected, consumed, superseded, archived]
+  - artifact_id: "agent-persona"
+    template_path: "templates/agent-tmpl.md"
+    schema_path: "schemas/agent-persona.schema.json"
+    lifecycle_states: [draft, validated, approved]
+  - artifact_id: "validation-report"
+    template_path: "templates/quality-gate-tmpl.yaml"
+    lifecycle_states: [draft, validated, approved]
+  - artifact_id: "journey-log"
+    template_path: "templates/journey-log-tmpl.yaml"
+    lifecycle_states: [draft, validated, approved]
+  - artifact_id: "ecosystem-health-report"
+    template_path: "templates/ecosystem-health-tmpl.md"
+    lifecycle_states: [draft, validated, approved]
+    producer: "ecosystem-analyst"
+    command: "*analyze"
+  - artifact_id: "gap-analysis-report"
+    template_path: "templates/gap-analysis-tmpl.md"
+    lifecycle_states: [draft, validated, approved]
+    producer: "ecosystem-analyst"
+    command: "*gaps"
+  - artifact_id: "performance-dashboard"
+    template_path: "templates/performance-dashboard-tmpl.md"
+    lifecycle_states: [draft, validated, approved]
+    producer: "ecosystem-analyst"
+    command: "*performance"
+  - artifact_id: "tech-radar-report"
+    template_path: "templates/tech-radar-tmpl.md"
+    lifecycle_states: [draft, validated, approved]
+    producer: "ecosystem-analyst"
+    command: "*radar"
+  - artifact_id: "weekly-digest"
+    template_path: "templates/weekly-digest-tmpl.md"
+    lifecycle_states: [draft, validated, approved]
+    producer: "ecosystem-analyst"
+    command: "*report"
+  - artifact_id: "weekly-report"
+    template_path: "templates/weekly-report-tmpl.md"
+    lifecycle_states: [draft, validated, approved]
+    producer: "ecosystem-analyst"
+    command: "*report"
+
+artifact_lifecycle:
+  tracking_enabled: true
+  state_persistence: ".aiox/squad-runtime/{squad-name}/artifact-state.yaml"
+  transitions: [draft -> pending_validation -> validated/rejected -> approved -> consumed/superseded -> archived]
+
+instance_lifecycle:
+  tracking_enabled: true
+  state_persistence: ".aiox/squad-runtime/{squad-name}/instance.yaml"
+  states: [CRIADA, EM_EXECUCAO, COMPLETA, PAUSADA, BLOQUEADA, CANCELADA, ARQUIVADA]
+
+journey_log:
+  enabled: true
+  template: "templates/journey-log-tmpl.yaml"
+  persistence: ".aiox/squad-runtime/{squad-name}/journey-log.yaml"
+
+bu_mapping: "hub-framework"
+supported_modes: [CRIAR, CONFIGURAR, VALIDAR, GERENCIAR, ENTENDER, EXPLORAR]
+sinkra_tier: "Enterprise"
+
+# Exceções de agnosticismo — diretórios/padrões com URLs legítimas
+agnosticism_exceptions:
+  - scope: "templates/"
+    reason: "Templates contêm URLs de exemplo fictícias (API endpoints) para parametrização"
+  - scope: "tasks/discover-tools-classify.md"
+    reason: "Task de discovery referencia catálogos externos — URLs agora em data/tool-discovery-sources.yaml"
+
+capabilities:
+  - "squad-creation"
+  - "agent-persona-generation"
+  - "task-anatomy-generation"
+  - "workflow-design"
+  - "template-driven-scaffolding"
+  - "squad-validation"
+  - "squad-upgrade"
+  - "cross-provider-qualification"
+  - "qa-after-creation"
+  - "ecosystem-registry-management"
+  - "ecosystem-observability"
+  - "performance-monitoring"
+  - "technology-radar"
+  - "capability-gap-analysis"
+  - "cost-roi-analysis"
+  - "bottleneck-detection"
+  - "self-improvement-loop"
+  - "weekly-cadence-reporting"
+
+entity_bindings:
+  tier: "Enterprise"
+  propagation_mode: on_create
+  entities_owned:
+    - entity_ref: "SC-ENT-001"
+      name: "Squad"
+      role: "creator"
+      entity_type: root
+    - entity_ref: "SC-ENT-002"
+      name: "AgentPersona"
+      role: "creator"
+      entity_type: derived
+    - entity_ref: "SC-ENT-003"
+      name: "TaskDefinition"
+      role: "creator"
+      entity_type: derived
+    - entity_ref: "SC-ENT-004"
+      name: "WorkflowDefinition"
+      role: "creator"
+      entity_type: derived
+    - entity_ref: "SC-ENT-005"
+      name: "ValidationReport"
+      role: "creator"
+      entity_type: derived
+    - entity_ref: "SC-ENT-006"
+      name: "EcosystemHealthReport"
+      role: "creator"
+      entity_type: derived
+    - entity_ref: "SC-ENT-007"
+      name: "CapabilityGapAnalysis"
+      role: "creator"
+      entity_type: derived
+    - entity_ref: "SC-ENT-008"
+      name: "TechRadarReport"
+      role: "creator"
+      entity_type: derived
+  entities_consumed:
+    - entity_ref: "SINKRA-ENT-001"
+      name: "ProcessMapping"
+      role: "reader"
+    - entity_ref: "SINKRA-ENT-002"
+      name: "TokenRegistry"
+      role: "reader"
+  domain_model_ref: "squads/sinkra-squad/data/domain-model.yaml"
+
+activation:
+  shortcuts:
+    - "/squadCreator:squad-chief"
+    - "/squadCreator:ecosystem-analyst"
+process_token_contract:
+  path: "data/process-token-map.yaml"
+  scope: "base-core"
+  tokens_declared: 29
+  reconciliation_source: "data/base-core-contract.yaml"
+  validation_script: "scripts/validate-tokens.sh"
+  validation_trigger: "on_qa_after_creation"
+
+# SINKRA Composition Mapping (6-level hierarchy)
+# Maps squad components to SINKRA primitives explicitly
+composition_mapping:
+  tokens:
+    source: "data/process-token-map.yaml"
+    count: 29
+    description: "Unidades paramétricas indivisíveis que governam fluxo entre tasks"
+
+  atoms:
+    description: "Tasks atômicas — exatamente 1 executor, inputs/outputs definidos, critérios de conclusão claros"
+    mapping:
+      - pattern: "tasks/*-discover.md"
+        role: discovery
+      - pattern: "tasks/*-generate.md"
+        role: generation
+      - pattern: "tasks/*-validate.md"
+        role: validation
+      - pattern: "tasks/*-design.md"
+        role: architecture
+      - pattern: "tasks/*-publish.md"
+        role: publication
+      - pattern: "tasks/qa-check-*.md"
+        role: quality_check
+      - pattern: "tasks/detect-gaps.md"
+        role: gap_analysis
+      - pattern: "tasks/performance-dashboard.md"
+        role: performance_monitoring
+      - pattern: "tasks/update-radar.md"
+        role: radar_update
+      - pattern: "tasks/cost-analysis.md"
+        role: cost_analysis
+      - pattern: "tasks/generate-recommendations.md"
+        role: recommendation_synthesis
+      - pattern: "tasks/self-improve.md"
+        role: meta_improvement
+      - pattern: "tasks/audit-output-quality.md"
+        role: quality_audit
+      - pattern: "tasks/auto-healing-gate.md"
+        role: quality_gate_precheck
+    count: 139
+
+  molecules:
+    description: "Grupos recorrentes de 2+ Atoms em padrão reutilizável"
+    declared:
+      - id: mol-agent-factory
+        atoms: [create-agent-research, create-agent-persona, create-agent-commands, create-agent-generate, create-agent-validate, create-agent-publish]
+        pattern: "research → elicit → define → generate → validate → publish"
+        reused_in: [wf-create-agent]
+      - id: mol-squad-factory
+        atoms: [create-squad-discover, create-squad-design, create-squad-build, create-squad-publish, create-squad-validate]
+        pattern: "discover → design → build → publish → validate"
+        reused_in: [wf-create-squad, wf-context-aware-create-squad]
+      - id: mol-qa-pipeline
+        atoms: [qa-check-structure, qa-check-schema, qa-check-references, qa-check-completeness, qa-check-compatibility, qa-generate-report]
+        pattern: "structure → schema → references → completeness → compatibility → report"
+        reused_in: [wf-qa-after-creation]
+      - id: mol-upgrade-cycle
+        atoms: [upgrade-squad-inventory, upgrade-squad-gap, upgrade-squad-plan, upgrade-squad-apply, upgrade-squad-verify]
+        pattern: "inventory → gap → plan → apply → verify"
+        reused_in: [wf-upgrade-squad]
+      - id: mol-task-factory
+        atoms: [create-task-classify, create-task-anatomy, create-task-executor, create-task-generate, create-task-register, create-task-validate]
+        pattern: "classify → anatomy → executor → generate → register → validate"
+        reused_in: [wf-create-task]
+      - id: mol-workflow-factory
+        atoms: [create-workflow-classify, create-workflow-design, create-workflow-generate, create-workflow-from-sop]
+        pattern: "classify → design → generate"
+        reused_in: [wf-create-workflow]
+      - id: mol-provider-qualification
+        atoms: [qualify-provider-preflight, qualify-provider-baseline, qualify-provider-reliability, qualify-provider-compare, qualify-provider-ptbr, qualify-provider-report]
+        pattern: "preflight → baseline → reliability → compare → ptbr → report"
+        reused_in: [wf-cross-provider-qualification]
+      - id: mol-ecosystem-analysis
+        atoms:
+          - wf-ecosystem-analysis.yaml (topology phase)
+          - wf-ecosystem-analysis.yaml (performance phase)
+          - wf-ecosystem-analysis.yaml (bottleneck phase)
+          - detect-gaps.md
+          - update-radar.md
+          - cost-analysis.md
+        pattern: "topology → performance → bottleneck → gaps → radar → cost"
+        reused_in: [wf-ecosystem-analysis]
+      - id: mol-weekly-cadence
+        atoms:
+          - wf-ecosystem-analysis.yaml
+          - generate-recommendations.md
+          - wf-weekly-report.yaml
+        pattern: "analyze → recommend → report"
+        reused_in: [wf-weekly-report]
+
+  organisms:
+    description: "Workflows completos com dimensão temporal, state machine e gestão de estado"
+    mapping:
+      - id: org-create-squad
+        workflow: wf-create-squad
+        molecules: [mol-squad-factory]
+        state_machine: true
+        phases: 10
+      - id: org-create-agent
+        workflow: wf-create-agent
+        molecules: [mol-agent-factory]
+        state_machine: true
+        phases: 6
+      - id: org-qa-pipeline
+        workflow: wf-qa-after-creation
+        molecules: [mol-qa-pipeline]
+        state_machine: true
+        phases: 6
+      - id: org-upgrade
+        workflow: wf-upgrade-squad
+        molecules: [mol-upgrade-cycle]
+        state_machine: true
+        phases: 5
+      - id: org-cross-provider
+        workflow: wf-cross-provider-qualification
+        molecules: [mol-provider-qualification]
+        state_machine: true
+        phases: 6
+      - id: org-ecosystem-analysis
+        workflow: wf-ecosystem-analysis
+        molecules: [mol-ecosystem-analysis]
+        state_machine: true
+        phases: 6
+      - id: org-weekly-report
+        workflow: wf-weekly-report
+        molecules: [mol-weekly-cadence]
+        state_machine: true
+        phases: 3
+      - id: org-self-improve
+        workflow: wf-self-improve
+        molecules: []
+        state_machine: true
+        phases: 4
+
+  templates:
+    description: "Configuráveis (parâmetros), NUNCA customizáveis (estrutura)"
+    source: "templates/"
+    parameter_categories: [Identity, Executor, Threshold, Context]
+    items:
+      - id: tmpl-config
+        path: "templates/config-tmpl.yaml"
+        produces: "squad config.yaml"
+      - id: tmpl-agent
+        path: "templates/agent-tmpl.md"
+        produces: "agent persona .md"
+      - id: tmpl-workflow
+        path: "templates/workflow-tmpl.yaml"
+        produces: "workflow .yaml"
+      - id: tmpl-task
+        path: "templates/task-tmpl.md"
+        produces: "task .md"
+      - id: tmpl-quality-gate
+        path: "templates/quality-gate-tmpl.yaml"
+        produces: "quality gate report"
+
+  instances:
+    description: "Squads gerados — identidade única, parâmetros resolvidos, lifecycle rastreado"
+    persistence: ".aiox/squad-runtime/{squad-name}/"
+    lifecycle: [CRIADA, EM_EXECUCAO, COMPLETA, PAUSADA, BLOQUEADA, CANCELADA, ARQUIVADA]
+    immutable_after_creation: true
+
+fusion_provenance:
+  source_squad: "kaizen"
+  source_version: "kaizen@pre-fusion-2026-04-04"
+  fusion_date: "2026-04-04"
+  fusion_story: "EPIC-108 (STORY-108.1 → 108.5)"
+  audit_artifacts:
+    - "outputs/kaizen/parity-audit/kaizen-parity-matrix.md"
+    - "outputs/kaizen/parity-audit/kaizen-squad-creator-fusion-matrix.md"
+    - "outputs/kaizen/parity-audit/kaizen-squad-creator-boundary-target.md"
+    - "outputs/kaizen/parity-audit/kaizen-squad-creator-fusion-plan.md"
+    - "outputs/kaizen/parity-audit/squad-creator-v6-architecture.md"
+  decisions:
+    - "ADR-108.1-001: kaizen agents NÃO absorvidos individualmente"
+    - "ADR-108.1-002: kaizen minds arquivados — inteligência destilada em ecosystem-analyst"
+    - "ADR-108.2-001: ecosystem-analyst com 6 lentes internas (não 6 agentes)"
+    - "ADR-108.2-002: 8 tasks kaizen absorvidas integralmente"
+    - "ADR-108.2-003: Tiers isolados garantem independência criação vs observabilidade"
+  backup:
+    path: "backups/squads/pre-fusion-{timestamp}/kaizen.tar.gz"
+    retention: "30 dias"

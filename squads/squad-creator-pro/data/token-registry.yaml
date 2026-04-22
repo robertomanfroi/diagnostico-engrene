@@ -1,0 +1,386 @@
+# Token Registry — squad-creator-pro (Upgrade Pack)
+# Materializa a camada de tokens do contrato SINKRA
+# Fonte: squads/sinkra-squad/output/squad-creator-pro-upgrade-pack/phase-4-5-token-assignments.yaml
+# Gerado por: sinkra-chief / sinkra-qa
+# Data: 2026-03-27
+# Versão: 1.0.0
+
+meta:
+  contract_source: "squads/sinkra-squad/output/squad-creator-pro-upgrade-pack/phase-4-5-token-assignments.yaml"
+  total_tokens: 23
+  token_types: [Taxonomy, Behavior, Threshold, Priority, Mode]  # remapped: Identity→Taxonomy, Control→Behavior, Data→Taxonomy, Status→Mode [HUB-003]
+  handoff_persistence: ".aiox/squad-runtime/token-state.json"
+
+time:
+  source: constants.time
+  tokens: [TK-TIME-001, TK-TIME-002, TK-TIME-003]
+
+capacity:
+  source: constants.capacity
+  tokens: [TK-CAP-001, TK-CAP-002]
+
+threshold:
+  source: constants.threshold
+  tokens: [TK-THR-001, TK-THR-002, TK-THR-003]
+
+priority:
+  source: constants.priority
+  tokens: [TK-PRI-001, TK-PRI-002, TK-PRI-003]
+
+permission:
+  source: constants.permission
+  tokens: [TK-PER-001]
+
+taxonomy:
+  source: constants.taxonomy
+  tokens: [TK-TAX-001, TK-TAX-002]
+
+behavior:
+  source: constants.behavior
+  tokens: [TK-BEH-001, TK-BEH-002]
+
+accountability:
+  source: "tasks/*#sinkra_task_metadata.accountable_id"
+  tokens:
+    - Human:Squad_Operator
+    - Human:Quality_Reviewer
+    - Human:Mind_Clone_Reviewer
+
+mode:
+  source: "config.yaml#supported_modes"
+  tokens: [CRIAR, RESOLVER, VALIDAR, CONFIGURAR, GERENCIAR]
+
+# ─────────────────────────────────────────────────────────────────────────────
+# CONSTANTES DE REFERÊNCIA
+# ─────────────────────────────────────────────────────────────────────────────
+
+constants:
+  time:
+    TK-TIME-001: { name: batch_closeout_sla_hours,           value: 8,    unit: hours }
+    TK-TIME-002: { name: runtime_validation_timeout_minutes, value: 20,   unit: minutes }
+    TK-TIME-003: { name: leak_scan_sla_minutes,              value: 30,   unit: minutes }
+
+  capacity:
+    TK-CAP-001: { name: max_paths_per_batch,    value: 25, unit: paths }
+    TK-CAP-002: { name: max_parallel_refactors, value: 5,  unit: tasks }
+
+  threshold:
+    TK-THR-001: { name: allowed_identical_nonexempt, value: 0,    unit: count }
+    TK-THR-002: { name: allowed_leakage_refs,         value: 0,    unit: count }
+    TK-THR-003: { name: checkpoint_approve_score,     value: 0.70, unit: ratio }
+
+  priority:
+    TK-PRI-001: { name: runtime_integrity }
+    TK-PRI-002: { name: contract_integrity }
+    TK-PRI-003: { name: cleanup_batch }
+
+  permission:
+    TK-PER-001: { name: maintainer_owner_policy_approval }
+
+  taxonomy:
+    TK-TAX-001: { name: owner_category }
+    TK-TAX-002: { name: artifact_kind }
+
+  behavior:
+    TK-BEH-001: { name: sanitize_before_close }
+    TK-BEH-002: { name: fallback_to_human_review }
+
+# ─────────────────────────────────────────────────────────────────────────────
+# TOKENS DE FLUXO — produtor / consumidor / persistência
+# ─────────────────────────────────────────────────────────────────────────────
+
+tokens:
+
+  # BLOCO 1: Routing Bootstrap (scp-wf-001)
+  - token_id:    "TKF-001"
+    token_type:  Taxonomy
+    token_name:  overlay_mode
+    token_value: upgrade-pack
+    domain:      Operational
+    produced_by: scp-atm-001
+    consumed_by: [scp-atm-002]
+    handoff_key: "overlay_mode"
+    persistence: runtime
+    description: "Classifica o modo de operação do pack como upgrade-pack antes de qualquer carregamento de artefatos."
+
+  - token_id:    "TKF-002"
+    token_type:  Taxonomy  # remapped: Identity → Taxonomy [HUB-003]
+    token_name:  artifact_inventory_token
+    token_value: inventory_ready
+    domain:      Operational
+    produced_by: scp-atm-002
+    consumed_by: [scp-atm-003]
+    handoff_key: "artifact_inventory"
+    persistence: runtime
+    description: "Confirma que o inventário de artefatos do pack foi carregado e está acessível."
+
+  - token_id:    "TKF-003"
+    token_type:  Behavior  # remapped: Control → Behavior [HUB-003]
+    token_name:  override_route_token
+    token_value: route_resolved
+    domain:      Tactical
+    produced_by: scp-atm-003
+    consumed_by: [scp-atm-004]
+    handoff_key: "override_routes"
+    persistence: runtime
+    description: "Confirma que o command_override_map foi resolvido: quais comandos do pro sobrescrevem o base."
+
+  - token_id:    "TKF-004"
+    token_type:  Behavior  # remapped: Control → Behavior [HUB-003]
+    token_name:  fallback_resolution_token
+    token_value: fallback_checked
+    domain:      Tactical
+    produced_by: scp-atm-004
+    consumed_by: [scp-atm-005]
+    handoff_key: "fallback_resolution"
+    persistence: runtime
+    description: "Confirma que as rotas de fallback (base vs pro) foram verificadas e resolvidas."
+
+  # BLOCO 2: Parity Audit (scp-wf-002)
+  - token_id:    "TKF-005"
+    token_type:  Taxonomy  # remapped: Data → Taxonomy [HUB-003]
+    token_name:  parity_snapshot_token
+    token_value: parity_ready
+    domain:      Operational
+    produced_by: scp-atm-005
+    consumed_by: [scp-atm-006]
+    handoff_key: "parity_snapshot"
+    persistence: runtime
+    description: "Snapshot de paridade base x pro gerado: common_paths, divergent_paths, identical_paths."
+
+  - token_id:    "TKF-006"
+    token_type:  Taxonomy  # remapped: Data → Taxonomy [HUB-003]
+    token_name:  identical_paths_token
+    token_value: duplicates_identified
+    domain:      Operational
+    produced_by: scp-atm-006
+    consumed_by: [scp-atm-007, scp-atm-008]
+    handoff_key: "identical_paths_list"
+    persistence: runtime
+    description: "Lista de paths idênticos entre base e pro identificada. Alimenta classificação de legítimos e obsoletos."
+
+  - token_id:    "TKF-007"
+    token_type:  Taxonomy
+    token_name:  legitimate_override_token
+    token_value: legit_overrides_classified
+    domain:      Tactical
+    produced_by: scp-atm-007
+    consumed_by: [scp-atm-011, scp-atm-012, scp-atm-013, scp-atm-014]
+    handoff_key: "legitimate_overrides"
+    persistence: runtime
+    description: "Overrides legítimos classificados: paths do pro que devem sobrescrever o base intencionalmente."
+
+  - token_id:    "TKF-008"
+    token_type:  Taxonomy
+    token_name:  stale_shadow_token
+    token_value: stale_shadows_classified
+    domain:      Tactical
+    produced_by: scp-atm-008
+    consumed_by: [scp-atm-009, scp-atm-010]
+    handoff_key: "stale_shadows"
+    persistence: runtime
+    description: "Shadows obsoletos classificados: cópias do base sem diferenciação real, candidatos a remoção ou wrapperização."
+
+  # BLOCO 3: Refactor Batch (scp-wf-003)
+  - token_id:    "TKF-009"
+    token_type:  Behavior
+    token_name:  wrapper_conversion_token
+    token_value: wrappers_applied
+    domain:      Operational
+    produced_by: scp-atm-009
+    consumed_by: [scp-atm-021]
+    handoff_key: "wrapper_conversion_report"
+    persistence: artifact
+    description: "Shadows convertidos em wrappers que delegam ao base, eliminando duplicação sem perder funcionalidade."
+
+  - token_id:    "TKF-010"
+    token_type:  Threshold
+    token_name:  duplicate_elimination_token
+    token_value: nonexempt_identicals_zero
+    domain:      Operational
+    produced_by: scp-atm-010
+    consumed_by: [scp-atm-021]
+    handoff_key: "duplicate_elimination_count"
+    persistence: artifact
+    constraint:  TK-THR-001
+    description: "Confirma que allowed_identical_nonexempt == 0: nenhuma cópia não-exempta restante no pack."
+
+  - token_id:    "TKF-011"
+    token_type:  Priority
+    token_name:  runtime_integrity_token
+    token_value: runtime_preserved
+    domain:      Tactical
+    produced_by: scp-atm-011
+    consumed_by: [scp-atm-016a]
+    handoff_key: "runtime_integrity_check"
+    persistence: runtime
+    constraint:  TK-PRI-001
+    description: "Runtime do pack preservado: entry point no squad-chief base, wrappers sem regressão."
+
+  - token_id:    "TKF-012"
+    token_type:  Priority
+    token_name:  contract_integrity_token
+    token_value: registry_preserved
+    domain:      Tactical
+    produced_by: scp-atm-012
+    consumed_by: [scp-atm-021]
+    handoff_key: "contract_integrity_check"
+    persistence: runtime
+    constraint:  TK-PRI-002
+    description: "Integridade do contrato preservada: registry, config.yaml e command_override_map consistentes."
+
+  - token_id:    "TKF-013"
+    token_type:  Behavior  # remapped: Control → Behavior [HUB-003]
+    token_name:  create_agent_adapter_token
+    token_value: adapterized
+    domain:      Tactical
+    produced_by: scp-atm-013
+    consumed_by: [scp-atm-021]
+    handoff_key: "agent_adapter_report"
+    persistence: artifact
+    description: "Adapters de agent criados ou validados: overrides de agent no pro estão devidamente wrapperizados."
+
+  - token_id:    "TKF-014"
+    token_type:  Behavior  # remapped: Control → Behavior [HUB-003]
+    token_name:  create_squad_adapter_token
+    token_value: adapterized
+    domain:      Tactical
+    produced_by: scp-atm-014
+    consumed_by: [scp-atm-021]
+    handoff_key: "squad_adapter_report"
+    persistence: artifact
+    description: "Adapters de squad criados ou validados: overrides de squad-level estão corretamente delegados."
+
+  # BLOCO 4: Leak Scan (intermediário)
+  - token_id:    "TKF-015"
+    token_type:  Taxonomy  # remapped: Data → Taxonomy [HUB-003]
+    token_name:  leak_scan_token
+    token_value: scan_complete
+    domain:      Operational
+    produced_by: scp-atm-021
+    consumed_by: [scp-atm-022]
+    handoff_key: "leak_scan_result"
+    persistence: runtime
+    constraint:  TK-TIME-003
+    description: "Varredura por referências metodológicas explícitas concluída. Resultado: count de refs encontradas."
+
+  - token_id:    "TKF-016"
+    token_type:  Threshold
+    token_name:  leakage_zero_token
+    token_value: explicit_refs_remaining_zero
+    domain:      Operational
+    produced_by: scp-atm-022
+    consumed_by: [scp-atm-016a]
+    handoff_key: "leakage_count"
+    persistence: runtime
+    constraint:  TK-THR-002
+    description: "Confirma que allowed_leakage_refs == 0: nenhuma referência metodológica explícita no pack."
+
+  # BLOCO 5: Runtime / Compliance Validation (scp-wf-004)
+  - token_id:    "TKF-017"
+    token_type:  Taxonomy  # remapped: Data → Taxonomy [HUB-003]
+    token_name:  hydrated_context_token
+    token_value: context_ready
+    domain:      Operational
+    produced_by: scp-atm-016a
+    consumed_by: [scp-atm-016b]
+    handoff_key: "hydrated_context"
+    persistence: runtime
+    description: "Contexto de execução hidratado com inventário, overrides e estado de runtime antes da validação."
+
+  - token_id:    "TKF-018"
+    token_type:  Taxonomy  # remapped: Data → Taxonomy [HUB-003]
+    token_name:  workflow_state_token
+    token_value: state_ready
+    domain:      Operational
+    produced_by: scp-atm-016b
+    consumed_by: [scp-atm-015]
+    handoff_key: "workflow_state"
+    persistence: runtime
+    description: "Estado inicial dos workflows inicializado: state_machine em posição de partida para execução."
+
+  - token_id:    "TKF-019"
+    token_type:  Mode  # remapped: Status → Mode [HUB-003]
+    token_name:  workflow_execution_token
+    token_value: validation_run_complete
+    domain:      Operational
+    produced_by: scp-atm-015
+    consumed_by: [scp-atm-017]
+    handoff_key: "validation_run_result"
+    persistence: artifact
+    constraint:  TK-TIME-002
+    description: "Execução de validação de runtime concluída dentro do SLA. Resultado serializado para reconciliação."
+
+  - token_id:    "TKF-020"
+    token_type:  Taxonomy  # remapped: Data → Taxonomy [HUB-003]
+    token_name:  reconciled_stats_token
+    token_value: stats_reconciled
+    domain:      Operational
+    produced_by: scp-atm-017
+    consumed_by: [scp-atm-018]
+    handoff_key: "reconciled_stats"
+    persistence: artifact
+    description: "Estatísticas de inventário reconciliadas: common/divergent/identical paths confirmados pós-execução."
+
+  # BLOCO 6: Drift & Closeout (scp-wf-005)
+  - token_id:    "TKF-021"
+    token_type:  Mode  # remapped: Status → Mode [HUB-003]
+    token_name:  drift_record_token
+    token_value: drift_registered
+    domain:      Tactical
+    produced_by: scp-atm-018
+    consumed_by: [scp-atm-019, scp-atm-020]
+    handoff_key: "drift_record"
+    persistence: artifact
+    description: "Drift detectado entre contrato e overlay registrado formalmente. Alimenta rastreabilidade de story e docs."
+
+  - token_id:    "TKF-022"
+    token_type:  Taxonomy  # remapped: Identity → Taxonomy [HUB-003]
+    token_name:  story_traceability_token
+    token_value: story_updated
+    domain:      Tactical
+    produced_by: scp-atm-019
+    consumed_by: []
+    handoff_key: "story_update_ref"
+    persistence: artifact
+    description: "Story de rastreabilidade atualizada com resultado do batch. Terminal: sem consumidores downstream."
+
+  - token_id:    "TKF-023"
+    token_type:  Taxonomy  # remapped: Identity → Taxonomy [HUB-003]
+    token_name:  docs_traceability_token
+    token_value: docs_updated
+    domain:      Operational
+    produced_by: scp-atm-020
+    consumed_by: []
+    handoff_key: "docs_update_ref"
+    persistence: artifact
+    description: "Documentação atualizada com resultado do batch. Terminal: sem consumidores downstream."
+
+# ─────────────────────────────────────────────────────────────────────────────
+# ÍNDICE POR TASK (produtor)
+# ─────────────────────────────────────────────────────────────────────────────
+
+task_token_index:
+  scp-atm-001:  { produces: TKF-001, consumes: [] }
+  scp-atm-002:  { produces: TKF-002, consumes: [TKF-001] }
+  scp-atm-003:  { produces: TKF-003, consumes: [TKF-002] }
+  scp-atm-004:  { produces: TKF-004, consumes: [TKF-003] }
+  scp-atm-005:  { produces: TKF-005, consumes: [TKF-004] }
+  scp-atm-006:  { produces: TKF-006, consumes: [TKF-005] }
+  scp-atm-007:  { produces: TKF-007, consumes: [TKF-006] }
+  scp-atm-008:  { produces: TKF-008, consumes: [TKF-006] }
+  scp-atm-009:  { produces: TKF-009, consumes: [TKF-008] }
+  scp-atm-010:  { produces: TKF-010, consumes: [TKF-008] }
+  scp-atm-011:  { produces: TKF-011, consumes: [TKF-007] }
+  scp-atm-012:  { produces: TKF-012, consumes: [TKF-007] }
+  scp-atm-013:  { produces: TKF-013, consumes: [TKF-007] }
+  scp-atm-014:  { produces: TKF-014, consumes: [TKF-007] }
+  scp-atm-015:  { produces: TKF-019, consumes: [TKF-018] }
+  scp-atm-016a: { produces: TKF-017, consumes: [TKF-011, TKF-016] }
+  scp-atm-016b: { produces: TKF-018, consumes: [TKF-017] }
+  scp-atm-017:  { produces: TKF-020, consumes: [TKF-019] }
+  scp-atm-018:  { produces: TKF-021, consumes: [TKF-020] }
+  scp-atm-019:  { produces: TKF-022, consumes: [TKF-021] }
+  scp-atm-020:  { produces: TKF-023, consumes: [TKF-021] }
+  scp-atm-021:  { produces: TKF-015, consumes: [TKF-009, TKF-010, TKF-012, TKF-013, TKF-014] }
+  scp-atm-022:  { produces: TKF-016, consumes: [TKF-015] }

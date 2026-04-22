@@ -1,0 +1,236 @@
+workflow:
+  id: wf-upgrade-squad
+  name: Upgrade Squad Pipeline
+  version: 1.0.0
+  description: Orchestrates 5 atomic tasks to upgrade existing squads to current AIOX structural standards. Covers inventory, gap analysis, upgrade planning, application, and verification. Supports audit and plan-only modes.
+  type: orchestration
+  agent_mapping:
+    agents:
+      squad-chief: orchestrator
+    phase_ownership:
+      inventory: squad-chief
+      gap: squad-chief
+      plan: squad-chief
+      apply: squad-chief
+      verify: squad-chief
+  state_machine:
+    states:
+      - init
+      - inventory
+      - gap
+      - plan
+      - apply
+      - verify
+      - complete
+      - failed
+    transitions:
+      - trigger: start
+        source: init
+        dest: inventory
+      - trigger: inventory_complete
+        source: inventory
+        dest: gap
+      - trigger: inventory_failed
+        source: inventory
+        dest: failed
+      - trigger: gap_complete
+        source: gap
+        dest: plan
+      - trigger: gap_complete_audit
+        source: gap
+        dest: complete
+        condition: mode == audit
+      - trigger: gap_failed
+        source: gap
+        dest: failed
+      - trigger: plan_complete
+        source: plan
+        dest: apply
+      - trigger: plan_complete_plan_only
+        source: plan
+        dest: complete
+        condition: mode == plan
+      - trigger: plan_failed
+        source: plan
+        dest: failed
+      - trigger: apply_complete
+        source: apply
+        dest: verify
+      - trigger: apply_failed
+        source: apply
+        dest: failed
+      - trigger: verify_complete
+        source: verify
+        dest: complete
+      - trigger: verify_failed
+        source: verify
+        dest: failed
+      - trigger: fail
+        source: "*"
+        dest: failed
+  sequence:
+    - phase: inventory
+      id: inventory
+      agent: squad-chief
+      task_ref: upgrade-squad-inventory
+      action: inventory_squad
+      description: Scan squad structure, catalog all components, capture current state and scores
+      inputs:
+        - squad_name
+        - mode
+        - focus
+      outputs:
+        - component_inventory
+        - current_scores
+        - squad_metadata
+    - phase: gap
+      id: gap
+      agent: squad-chief
+      task_ref: upgrade-squad-gap
+      action: analyze_gaps
+      description: Compare current state against AIOX standards, identify structural gaps and deficiencies
+      inputs:
+        - component_inventory
+        - current_scores
+        - focus
+      outputs:
+        - gap_report
+        - critical_gaps
+        - improvement_opportunities
+      on_complete:
+        trigger: gap_complete
+    - phase: plan
+      id: plan
+      agent: squad-chief
+      task_ref: upgrade-squad-plan
+      action: create_upgrade_plan
+      description: Generate prioritized upgrade plan with estimated effort and risk assessment
+      inputs:
+        - gap_report
+        - critical_gaps
+        - mode
+        - dry_run
+      outputs:
+        - upgrade_plan
+        - estimated_effort
+        - risk_assessment
+        - dry_run_diff
+      on_complete:
+        trigger: plan_complete
+    - phase: apply
+      id: apply
+      agent: squad-chief
+      task_ref: upgrade-squad-apply
+      action: apply_upgrades
+      description: Execute upgrade plan with backup enforcement and structural mutations
+      blocking: true
+      inputs:
+        - upgrade_plan
+        - squad_name
+        - dry_run
+      outputs:
+        - applied_changes
+        - backup_paths
+        - mutation_log
+      veto: VETO-UPGRADE-001
+      on_pass:
+        trigger: apply_complete
+      on_fail:
+        trigger: apply_failed
+    - phase: verify
+      id: verify
+      agent: squad-chief
+      task_ref: upgrade-squad-verify
+      action: verify_upgrades
+      description: Run validation suite on upgraded squad, compare before/after scores
+      inputs:
+        - applied_changes
+        - current_scores
+        - squad_name
+      outputs:
+        - after_scores
+        - score_delta
+        - verification_verdict
+        - upgrade_report
+      on_complete:
+        trigger: verify_complete
+  quality_gates:
+    - id: SC_UPG_GAP
+      phase: gap
+      type: automated
+      placement: transition
+      severity: blocking
+      description: "Gap analysis gate — ensures critical gaps are identified before planning"
+      criteria:
+        - field: gap_report
+          operator: "!="
+          value: null
+        - field: critical_gaps
+          operator: "is_array"
+          value: true
+      on_fail: block
+    - id: SC_UPG_APPLY
+      phase: apply
+      type: hybrid
+      placement: entry
+      severity: blocking
+      description: "Apply gate — requires dry-run diff before structural mutations"
+      criteria:
+        - field: dry_run_diff
+          operator: "!="
+          value: null
+        - field: backup_paths
+          operator: "is_array"
+          value: true
+      on_fail: block
+    - id: SC_UPG_VERIFY
+      phase: verify
+      type: automated
+      placement: exit
+      severity: blocking
+      description: "Verification gate — after_score must improve by at least 1.0"
+      criteria:
+        - field: score_delta
+          operator: ">="
+          value: 1.0
+        - field: verification_verdict
+          operator: "=="
+          value: "PASS"
+      on_fail: warn
+  veto_conditions:
+    - id: VETO-UPGRADE-001
+      condition: No dry-run executed with generated diff against target squad
+      trigger: Before apply phase
+      block_behavior: BLOCK upgrade execution until dry-run produces diff
+    - id: VETO-UPGRADE-002
+      condition: Dry-run produced critical blockers not acknowledged
+      trigger: Before applying structural mutations
+      block_behavior: BLOCK apply step until blockers resolved or explicitly accepted
+  completion_criteria:
+    - All critical structural gaps resolved or documented as exceptions
+    - After score >= Before score + 1.0 (meaningful improvement)
+    - No blocking structural checks failing
+    - Upgrade report generated
+    - Backups verified
+  error_handling:
+    on_error:
+      - save_state
+      - log_error
+    recovery:
+      enabled: true
+      strategy: resume_from_last_complete
+    anti_patterns:
+      - Upgrade without backup
+      - Auto-apply qualitative content changes (structural only)
+      - Skip verification after upgrades
+      - Attempt voice DNA generation (delegate to squad-creator-pro)
+  resume:
+    state_file: .aiox/squad-runtime/upgrade-squad/{squad_name}/state.json
+    supported: true
+    preserve_outputs: true
+    allowed_phases:
+      - inventory
+      - gap
+      - plan
+      - apply
+      - verify

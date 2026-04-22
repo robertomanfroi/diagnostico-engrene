@@ -1,0 +1,587 @@
+# Spy - Competitive Intelligence Squad v3.0
+# Expansion pack focused on content intelligence + universal benchmarking.
+
+name: spy
+version: "3.0.0"
+description: "Competitive intelligence: universal benchmarking (codebase, LLM, product, company, technology) + content analysis (YouTube/Instagram)"
+author: "AIOX Team"
+upgraded_at: "2026-03-27"
+
+pack:
+  name: spy
+  title: "Spy - Competitive Intelligence Squad"
+  version: "3.0.0"
+  author: "AIOX Team"
+  description: "Competitive intelligence: universal benchmarking (codebase, LLM, product, company, technology) + content analysis (YouTube/Instagram)"
+  icon: "🕵️"
+  slash_prefix: "spy"
+
+metadata:
+  version: "3.0.0"
+  score: 6.8
+
+entry_agent: spy
+
+domain_model:
+  Strategic:
+    label: "Estratégico"
+    scope: "Posicionamento competitivo, inteligência de mercado e decisões de benchmark"
+  Tactical:
+    label: "Tático"
+    scope: "Orquestração de benchmarks, síntese de evidências e análise comparativa"
+  Operational:
+    label: "Operacional"
+    scope: "Coleta, transcrição, publicação e automação de artefatos"
+
+logging:
+  runtime_audit: true
+  error_behavior: fail_loud
+  error_handling:
+    on_research_fail: emit_recovery_handoff
+    on_benchmark_fail: preserve_partial_artifacts
+    on_publish_fail: block_completion
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# SQUAD TYPE & INTEGRATION
+# ═══════════════════════════════════════════════════════════════════════════════
+squad_type: pipeline
+# pipeline = Sequential flow: Research → Analysis → Output
+
+mmos_integration:
+  enabled: false
+  fallback_behavior: "graceful"
+
+workspace_integration:
+  level: none
+  rationale: >-
+    Spy não escreve artefatos canônicos em workspace. Benchmarks vivem em
+    docs/bench/ e análises operacionais vivem em outputs/spy/.
+  read_paths: []
+  write_paths: []
+  readiness_owner: workspace-chief
+  readiness_resolver: null
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# AGENTS
+# ═══════════════════════════════════════════════════════════════════════════════
+agents:
+  - id: spy-operator
+    name: "Spy Operator"
+    role: "Human approval and strategic input"
+    tier: human
+    specialty: "Approval, scoping, executive decision"
+    executor_profile:
+      sinkra_type: "Human"
+      human_in_the_loop: true
+      output_schema: competitive-brief
+
+  - id: spy
+    name: "Spy"
+    role: "Main competitive intelligence agent"
+    tier: orchestrator
+    specialty: "Player analysis, viral content, market trends"
+    executor_profile:
+      sinkra_type: "Agent"
+      human_in_the_loop: true
+      output_schema: benchmark-routing-decision
+      story_role: "reviewer"
+      can_execute: false
+      can_review:
+        - competitive-intelligence
+        - market-analysis
+      work_contexts:
+        - player-analysis
+        - viral-content
+        - market-trends
+        - youtube-research
+        - instagram-research
+      core_replaces: null
+
+  - id: research-head
+    name: "Research Head"
+    role: "Research lead and data analysis"
+    tier: 1
+    specialty: "Deep research, data validation, strategic insights"
+    executor_profile:
+      sinkra_type: "Agent"
+      human_in_the_loop: true
+      output_schema: deep-research-report
+      story_role: "executor"
+      can_execute: true
+      can_review:
+        - research-quality
+        - data-validation
+      work_contexts:
+        - deep-research
+        - data-analysis
+        - strategic-insights
+        - competitive-benchmarking
+        - content-analysis
+      core_replaces: "@analyst"
+
+  - id: bench-analyst
+    name: "Bench Analyst"
+    role: "Universal benchmark specialist"
+    tier: 1
+    specialty: "Universal comparative benchmarking across codebases, LLMs, products, companies, and technologies"
+    executor_profile:
+      sinkra_type: "Agent"
+      human_in_the_loop: true
+      output_schema: benchmark-analysis-report
+      story_role: "executor"
+      can_execute: true
+      can_review:
+        - benchmark-quality
+        - competitive-benchmark
+      work_contexts:
+        - codebase-benchmarking
+        - llm-benchmarking
+        - product-comparison
+        - company-analysis
+        - technology-evaluation
+      core_replaces: "@analyst"
+
+  - id: benchmark-runtime
+    name: "Benchmark Runtime"
+    role: "Worker for deterministic preparation, workspace setup and report publication"
+    tier: worker
+    specialty: "Filesystem preparation, normalization, artifact persistence"
+    executor_profile:
+      sinkra_type: "Worker"
+      human_in_the_loop: true
+      output_schema: runtime-execution-report
+
+  - id: reference-competitor-clone
+    name: "Reference Competitor Clone"
+    role: "Clone-based adaptation of benchmark patterns and competitor heuristics"
+    tier: clone
+    specialty: "Pattern transfer, competitor modeling, reusable benchmark framing"
+    executor_profile:
+      sinkra_type: "Clone"
+      human_in_the_loop: true
+      output_schema: competitor-pattern-brief
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# TASKS
+# ═══════════════════════════════════════════════════════════════════════════════
+tasks:
+  # ─── Content Analysis ──────────────────────────────────────────────────────
+  - id: quick-analysis
+    name: "Quick Analysis"
+    category: analysis
+    description: "8-minute player analysis"
+
+  - id: deep-research
+    name: "Deep Research"
+    category: research
+    description: "Composed deep-dive stub with 7 internal atoms"
+
+  # ─── Content Analysis: Internal Atoms ─────────────────────────────────────
+  - id: deep-research-collect
+    name: "Deep Research — Collect"
+    category: research-atom
+    description: "Collect raw data and metadata for the target player"
+
+  - id: deep-research-select
+    name: "Deep Research — Select"
+    category: research-atom
+    description: "Select the final analysis corpus"
+
+  - id: deep-research-transcribe
+    name: "Deep Research — Transcribe"
+    category: research-atom
+    description: "Extract and annotate transcripts"
+
+  - id: deep-research-patterns
+    name: "Deep Research — Patterns"
+    category: research-atom
+    description: "Identify replicable content patterns"
+
+  - id: deep-research-comments
+    name: "Deep Research — Comments"
+    category: research-atom
+    description: "Extract audience truth from comments"
+
+  - id: deep-research-synthesis
+    name: "Deep Research — Synthesis"
+    category: research-atom
+    description: "Consolidate content DNA and applications"
+
+  - id: deep-research-publish
+    name: "Deep Research — Publish"
+    category: research-atom
+    description: "Publish the deep dive and update KB/framework"
+
+  # ─── Benchmark: Legacy Codebase Tasks ──────────────────────────────────────
+  - id: bench-framework
+    name: "Full Framework Benchmark"
+    category: benchmark-legacy
+    description: "Composed public stub for the full benchmark pipeline"
+
+  - id: bench-quick-compare
+    name: "Quick Framework Comparison"
+    category: benchmark-legacy
+    description: "Fast structural comparison (agents/workflows) — deprecated, use bench-matrix"
+
+  - id: bench-inventory
+    name: "AIOX Self-Inventory"
+    category: benchmark
+    description: "Composed router for type-specific inventory atoms"
+
+  - id: bench-gap-analysis
+    name: "Gap Analysis & Feature Absorption"
+    category: benchmark-legacy
+    description: "Prioritized roadmap and executable gap backlog (legacy)"
+
+  - id: bench-deep-compare
+    name: "Deep Component Comparison"
+    category: benchmark-codebase
+    description: "Component-by-component deep comparison with config blocks and analysis tables"
+
+  - id: bench-absorb
+    name: "Feature Absorption"
+    category: benchmark-codebase
+    description: "Absorb competitor features into AIOX backlog with priority scoring"
+
+  - id: bench-hooks
+    name: "Benchmark Hooks"
+    category: benchmark-codebase
+    description: "Pre/post hooks for benchmark pipeline automation"
+
+  - id: bench-migrate
+    name: "Migration Playbook Generator"
+    category: benchmark-codebase
+    description: "Generate migration playbook from competitor framework to AIOX"
+
+  - id: bench-traceability
+    name: "Benchmark Traceability"
+    category: benchmark-codebase
+    description: "Trace benchmark findings to gap backlog and absorption actions"
+
+  # ─── Benchmark: Universal Core Tasks ───────────────────────────────────────
+  - id: bench-detect
+    name: "Benchmark Type Detection"
+    category: benchmark-core
+    description: "Auto-detect comparison type from subjects"
+
+  - id: bench-matrix
+    name: "Universal Comparison Matrix"
+    category: benchmark-core
+    description: "Composed router for type-specific matrix atoms"
+
+  - id: bench-matrix-codebase
+    name: "Bench Matrix — Codebase"
+    category: benchmark-matrix-atom
+    description: "Build matrix for codebase comparisons"
+
+  - id: bench-matrix-llm
+    name: "Bench Matrix — LLM"
+    category: benchmark-matrix-atom
+    description: "Build matrix for LLM comparisons"
+
+  - id: bench-matrix-product
+    name: "Bench Matrix — Product"
+    category: benchmark-matrix-atom
+    description: "Build matrix for product comparisons"
+
+  - id: bench-matrix-company
+    name: "Bench Matrix — Company"
+    category: benchmark-matrix-atom
+    description: "Build matrix for company comparisons"
+
+  - id: bench-matrix-technology
+    name: "Bench Matrix — Technology"
+    category: benchmark-matrix-atom
+    description: "Build matrix for technology comparisons"
+
+  - id: bench-score
+    name: "Universal Scoring"
+    category: benchmark-core
+    description: "Weighted multi-dimension quantitative scoring"
+
+  - id: bench-gap
+    name: "Universal Gap Analysis"
+    category: benchmark-core
+    description: "Composed router for type-specific gap analysis atoms"
+
+  - id: bench-gap-llm
+    name: "Bench Gap — LLM"
+    category: benchmark-gap-atom
+    description: "Derive bidirectional gaps for LLM comparisons"
+
+  - id: bench-gap-product
+    name: "Bench Gap — Product"
+    category: benchmark-gap-atom
+    description: "Derive bidirectional gaps for product comparisons"
+
+  - id: bench-gap-company
+    name: "Bench Gap — Company"
+    category: benchmark-gap-atom
+    description: "Derive bidirectional gaps for company comparisons"
+
+  - id: bench-gap-technology
+    name: "Bench Gap — Technology"
+    category: benchmark-gap-atom
+    description: "Derive bidirectional gaps for technology comparisons"
+
+  - id: bench-report
+    name: "Executive Report"
+    category: benchmark-core
+    description: "Composed executive report stub with 3 internal atoms"
+
+  - id: bench-report-load-evidence
+    name: "Bench Report — Load Evidence"
+    category: benchmark-report-atom
+    description: "Load and validate upstream benchmark evidence"
+
+  - id: bench-report-synthesize-findings
+    name: "Bench Report — Synthesize Findings"
+    category: benchmark-report-atom
+    description: "Turn evidence into executive narrative"
+
+  - id: bench-report-publish
+    name: "Bench Report — Publish"
+    category: benchmark-report-atom
+    description: "Persist the final executive report"
+
+  - id: bench-battle-card
+    name: "Battle Card"
+    category: benchmark-core
+    description: "1-page quick comparison for decision makers"
+
+  # ─── Benchmark: Type-Specific Tasks ────────────────────────────────────────
+  - id: bench-codebase-recon
+    name: "Codebase Reconnaissance"
+    category: benchmark-codebase
+    description: "Git clone + filesystem scan for codebase comparison"
+
+  - id: bench-llm-eval
+    name: "LLM Evaluation"
+    category: benchmark-llm
+    description: "LLM specs, benchmarks, pricing comparison"
+
+  - id: bench-product-research
+    name: "Product Research"
+    category: benchmark-product
+    description: "Product features, pricing, reviews comparison"
+
+  - id: bench-company-intel
+    name: "Company Intelligence"
+    category: benchmark-company
+    description: "Company competitive analysis"
+
+  - id: bench-tech-eval
+    name: "Technology Evaluation"
+    category: benchmark-technology
+    description: "Technology maturity, ecosystem, DX comparison"
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# WORKFLOWS
+# ═══════════════════════════════════════════════════════════════════════════════
+workflows:
+  - id: bench-comparison-pipeline
+    name: "Universal Benchmark Comparison Pipeline"
+    category: benchmark
+    description: "10-phase universal pipeline: detect → inventory → matrix → score → gap → deep dive → report → battle card → quality gate"
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# TEMPLATES
+# ═══════════════════════════════════════════════════════════════════════════════
+templates:
+  # ─── Content Analysis Templates ────────────────────────────────────────────
+  - id: player-analysis-tmpl
+    name: "Player Analysis Template"
+
+  # ─── Legacy Codebase Templates ─────────────────────────────────────────────
+  - id: bench-comparativo-tmpl
+    name: "Benchmark Comparative Template (deprecated — use bench-matrix-tmpl)"
+
+  - id: bench-scores-tmpl
+    name: "Benchmark Scores Template (deprecated — use bench-scorecard-tmpl)"
+
+  - id: bench-deep-compare-tmpl
+    name: "Benchmark Deep Comparison Template"
+
+  - id: bench-migration-tmpl
+    name: "Benchmark Migration Playbook Template"
+
+  # ─── Codebase-Specific Renamed Templates ───────────────────────────────────
+  - id: bench-codebase-comparativo-tmpl
+    name: "Codebase Comparative Template"
+
+  - id: bench-codebase-scores-tmpl
+    name: "Codebase Scores Template"
+
+  # ─── Universal Templates ───────────────────────────────────────────────────
+  - id: bench-matrix-tmpl
+    name: "Universal Comparison Matrix Template"
+
+  - id: bench-scorecard-tmpl
+    name: "Universal Scorecard Template"
+
+  - id: bench-battle-card-tmpl
+    name: "Battle Card Template"
+
+  - id: bench-report-tmpl
+    name: "Executive Report Template"
+
+  - id: bench-quadrant-tmpl
+    name: "Gartner-Style Quadrant Template"
+
+  - id: bench-gap-tmpl
+    name: "Gap Analysis Template"
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# CHECKLISTS
+# ═══════════════════════════════════════════════════════════════════════════════
+checklists:
+  - id: content-creation-checklist
+    name: "Content Creation Checklist"
+
+  - id: bench-quality-checklist
+    name: "Benchmark Quality Checklist"
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# DATA (Knowledge Bases)
+# ═══════════════════════════════════════════════════════════════════════════════
+data:
+  - id: viral-content-framework
+    name: "Viral Content Framework"
+    description: "5 title formulas, 4 video structures, proven hooks"
+
+  - id: knowledge-base
+    name: "General Knowledge Base"
+
+  - id: bench-skeleton
+    name: "Benchmark Skeleton"
+    description: "Reference scaffold for universal output structure"
+
+  - id: bench-dimension-packs
+    name: "Dimension Packs"
+    description: "Weighted scoring dimensions per comparison type"
+
+  - id: bench-data-sources
+    name: "Data Sources"
+    description: "Data acquisition strategy per comparison type"
+
+  - id: bench-output-formats
+    name: "Output Formats"
+    description: "Available output formats for benchmark reports"
+
+  - id: capability-tools
+    name: "Capability Tools Map"
+    description: "Internal-first tool routing and fallbacks for Spy use cases"
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# API CONFIGURATION
+# ═══════════════════════════════════════════════════════════════════════════════
+apis:
+  - name: "YouTube Data v3"
+    env_var: "YOUTUBE_API_KEY"
+    status: "configured"
+
+  - name: "Meta Graph (Instagram)"
+    env_var: "META_ACCESS_TOKEN"
+    status: "configured"
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# DEPENDENCIES & TAGS
+# ═══════════════════════════════════════════════════════════════════════════════
+dependencies:
+  runtime:
+    - aiox-core
+  squads:
+    - etl-ops
+  services:
+    - services/etl
+  credentials:
+    - name: YOUTUBE_API_KEY
+      type: env_var
+      required: false
+    - name: META_ACCESS_TOKEN
+      type: env_var
+      required: false
+
+tags:
+  - competitive-intelligence
+  - content-analysis
+  - framework-benchmark
+  - universal-benchmark
+  - llm-comparison
+  - product-comparison
+  - company-analysis
+  - technology-evaluation
+  - youtube
+  - instagram
+  - viral-content
+  - research
+  - market-analysis
+
+# SINKRA v3.1 (Story 54.11)
+bu_mapping: "hub-framework"
+
+process_token_contract:
+  path: "data/token-registry.yaml"
+  scope: "spy-core"
+  tokens_declared: 12
+
+composition_mapping:
+  tokens:
+    source: "data/token-registry.yaml"
+    count: 12
+    description: "Tokens que governam benchmark, pesquisa e publicação."
+  atoms:
+    description: "Tasks atômicas de coleta, análise, scoring e publicação"
+    mapping:
+      - pattern: "tasks/bench-*-recon.md"
+        role: inventory
+      - pattern: "tasks/bench-*-intel.md"
+        role: company-intelligence
+      - pattern: "tasks/bench-*-eval.md"
+        role: evaluation
+      - pattern: "tasks/deep-research-*.md"
+        role: content-analysis
+    count: 41
+  molecules:
+    description: "Agrupamentos recorrentes de 2+ atoms"
+    declared:
+      - id: mol-benchmark-core
+        atoms: [bench-detect, bench-inventory, bench-matrix, bench-score, bench-gap, bench-report, bench-battle-card]
+      - id: mol-deep-research
+        atoms: [deep-research-collect, deep-research-select, deep-research-transcribe, deep-research-patterns, deep-research-comments, deep-research-synthesis, deep-research-publish]
+  organisms:
+    description: "Workflow completo com state machine"
+    mapping:
+      - id: org-bench-comparison
+        workflow: bench-comparison-pipeline
+        molecules: [mol-benchmark-core]
+        state_machine: true
+        phases: 10
+  templates:
+    description: "Templates de benchmark e análise"
+    source: "templates/"
+  instances:
+    description: "Execuções persistidas em outputs/spy e docs/bench"
+    persistence: "outputs/sinkra-squad/spy/"
+    lifecycle: [draft, validated, approved, published, archived]
+
+artifact_contracts:
+  - artifact_id: "competitive-analysis"
+    template_path: "templates/bench-report-tmpl.md"
+    lifecycle_states: [draft, validated, approved]
+  - artifact_id: "player-analysis"
+    template_path: "templates/player-analysis-tmpl.md"
+    lifecycle_states: [draft, validated, approved]
+  - artifact_id: "benchmark-scorecard"
+    template_path: "templates/bench-scorecard-tmpl.md"
+    lifecycle_states: [draft, validated, approved]
+  - artifact_id: "battle-card"
+    template_path: "templates/bench-battle-card-tmpl.md"
+    lifecycle_states: [draft, validated, approved]
+  - artifact_id: "cross-domain-handoff"
+    template_path: "templates/cross-domain-handoff-tmpl.yaml"
+    lifecycle_states: [draft, validated, approved]
+
+supported_modes:
+  - ENTENDER
+  - EXPLORAR

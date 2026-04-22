@@ -1,0 +1,595 @@
+workflow:
+  id: wf-optimize-yolo
+  name: Optimize Squad YOLO
+  version: "1.3.0"
+  purpose: >
+    Run a full-squad optimization cycle with one preflight approval gate and
+    autonomous execution after approval. Covers scan, planning, implementation
+    waves, materials convergence, validation, post-economy analysis, and
+    optional commit/push.
+  state_machine:
+    states: [init, preflight, deep-scan, plan, approval-gate, foundation-convergence, material-triage, executor-optimization, runtime-smoke, validate-self-heal, economy-report, finalization, complete, failed]
+    transitions:
+      - trigger: start
+        source: init
+        dest: preflight
+      - trigger: preflight_complete
+        source: preflight
+        dest: deep-scan
+      - trigger: preflight_failed
+        source: preflight
+        dest: failed
+      - trigger: deep_scan_complete
+        source: deep-scan
+        dest: plan
+      - trigger: deep_scan_failed
+        source: deep-scan
+        dest: failed
+      - trigger: plan_complete
+        source: plan
+        dest: approval-gate
+      - trigger: plan_failed
+        source: plan
+        dest: failed
+      - trigger: approval_gate_approved
+        source: approval-gate
+        dest: foundation-convergence
+      - trigger: approval_gate_rejected
+        source: approval-gate
+        dest: failed
+      - trigger: foundation_convergence_complete
+        source: foundation-convergence
+        dest: material-triage
+      - trigger: foundation_convergence_failed
+        source: foundation-convergence
+        dest: failed
+      - trigger: material_triage_complete
+        source: material-triage
+        dest: executor-optimization
+      - trigger: material_triage_failed
+        source: material-triage
+        dest: failed
+      - trigger: executor_optimization_complete
+        source: executor-optimization
+        dest: runtime-smoke
+      - trigger: executor_optimization_failed
+        source: executor-optimization
+        dest: failed
+      - trigger: runtime_smoke_complete
+        source: runtime-smoke
+        dest: validate-self-heal
+      - trigger: runtime_smoke_failed
+        source: runtime-smoke
+        dest: failed
+      - trigger: validate_self_heal_complete
+        source: validate-self-heal
+        dest: economy-report
+      - trigger: validate_self_heal_failed
+        source: validate-self-heal
+        dest: failed
+      - trigger: economy_report_complete
+        source: economy-report
+        dest: finalization
+      - trigger: economy_report_failed
+        source: economy-report
+        dest: failed
+      - trigger: finalization_complete
+        source: finalization
+        dest: complete
+      - trigger: finalization_failed
+        source: finalization
+        dest: failed
+      - trigger: fail
+        source: "*"
+        dest: failed
+  description: |
+    Canonical YOLO optimization workflow for squads that already passed initial
+    governance review and now need autonomous hardening.
+
+    This workflow exists for the real execution pattern that emerged in practice:
+    1. preflight and baseline
+    2. deep optimization scan
+    3. one human approval gate
+    4. autonomous execution until done
+    5. validation, economy report, and optional git finalization
+  type: optimization
+  orchestrator: "@pedro-valerio"
+  specialists:
+    - "@pedro-valerio"
+    - "@oalanicolas"
+  mode: autonomous
+  command: "*optimize-yolo {squad_name} [--focus all|tasks|checklists|templates|agents|workflows|data|materials] [--business {slug}] [--product {slug}] [--app {id}] [--context-type {type}] [--commit] [--push]"
+  governance_protocol: squads/squad-creator/protocols/ai-first-governance.md
+  philosophy:
+    core: |
+      "One approval gate. Then no more friction."
+
+      "Do not optimize isolated files. Optimize the operating system:
+      runtime, tasks, workflows, checklists, materials, and validation."
+    principles:
+      - id: OY_001
+        name: Single Gate
+        rule: One human approval after scan and plan. No repeated 'continue?' prompts after that.
+      - id: OY_002
+        name: Source of Truth First
+        rule: Resolve source-of-truth drift before polishing outputs.
+      - id: OY_003
+        name: Convergence Over Cosmetics
+        rule: Prioritize runtime, tasks, workflows, checklists, and materials alignment before low-signal cleanup.
+      - id: OY_004
+        name: Worker Where Deterministic
+        rule: Move loading, extraction, scoring, and batch assembly to Worker/Hybrid whenever defensible.
+      - id: OY_005
+        name: Material Utility Triage
+        rule: Every support document must be classified as active, integrate_next, or archive.
+      - id: OY_006
+        name: Student Safe by Default
+        rule: Push is opt-in. Commit is opt-in. Validation is mandatory.
+      - id: OY_007
+        name: Mode Contract First
+        rule: Resolve and report the canonical environment contract before any workspace-aware optimization path.
+  inputs:
+    required:
+      - name: squad_name
+        type: string
+        description: Name of the squad to optimize
+        example: copy
+    optional:
+      - name: focus
+        type: enum
+        values:
+          - all
+          - tasks
+          - checklists
+          - templates
+          - agents
+          - workflows
+          - data
+          - materials
+        default: all
+        description: Optimization focus area
+      - name: commit
+        type: boolean
+        default: false
+        description: Create a commit after validation succeeds
+      - name: push
+        type: boolean
+        default: false
+        description: Push after commit succeeds. Requires explicit preflight opt-in.
+      - name: execution_mode
+        type: enum
+        values:
+          - safe
+          - full_yolo
+        default: full_yolo
+        description: full_yolo runs the full autonomous path after approval
+      - name: business
+        type: string
+        description: Explicit business slug used when attempting full_workspace_mode
+      - name: product
+        type: string
+        description: Explicit product slug used when attempting full_workspace_mode
+      - name: app
+        type: string
+        description: Explicit app id used when attempting full_workspace_mode
+      - name: context_type
+        type: string
+        description: Optional context type override forwarded to the shared environment detector
+  approval_model:
+    type: single_gate
+    gate_id: approval_after_plan
+    contract: |
+      After the preflight report and optimization plan are presented, the user
+      approves once. Once approved, the workflow continues autonomously until:
+      - validation finishes
+      - a critical veto fires
+      - or an explicit opt-in action (commit/push) is completed
+  veto_conditions:
+    - id: OY_VC_001
+      trigger: Squad does not exist or lacks config.yaml
+      action: BLOCK — run validate-squad or fix path first.
+    - id: OY_VC_002
+      trigger: Quick validation baseline fails before optimization
+      action: BLOCK — do not optimize a structurally failing squad.
+    - id: OY_VC_003
+      trigger: Attempted modification of voice_dna without explicit human approval
+      action: BLOCK — flag for manual review only.
+    - id: OY_VC_004
+      trigger: Validation score drops by more than 0.5 after implementation
+      action: BLOCK — rollback last wave or stop for review.
+    - id: OY_VC_005
+      trigger: Workflow contracts fail after implementation
+      action: BLOCK — do not finalize broken workflow topology.
+    - id: OY_VC_006
+      trigger: Push requested without explicit preflight opt-in
+      action: BLOCK — commit may proceed, push may not.
+    - id: OY_VC_007
+      trigger: Attempted use of enterprise-only surfaces without explicit enterprise proof in environment_contract
+      action: BLOCK — fail closed to portable_docs_mode or stop for review.
+  pre_flight:
+    blocking: true
+    purpose: Establish mode contract, risk, baseline, and one-shot approval contract
+    steps:
+      - id: pf_0_environment
+        action: Resolve canonical environment contract
+        command: "node squads/squad-creator/scripts/detect-environment-contract.cjs --squad={squad_name} [--business={business}] [--product={product}] [--app={app}] [--context-type={context_type}] --format=json"
+        output: environment_contract
+      - id: pf_1_repo_global_baseline
+        action: Capture repo-global quality gate baseline
+        command: "node infrastructure/scripts/squads/capture_repo_global_quality_baseline.cjs"
+        output: repo_global_quality_baseline
+      - id: pf_2_baseline
+        action: Run quick validation baseline
+        command: "bash squads/squad-creator/scripts/validate-squad.sh {squad_name} --quick --json"
+        output: baseline_validation
+      - id: pf_3_inventory
+        action: Build artifact inventory
+        command: "find squads/{squad_name} -type f"
+        output: artifact_inventory
+      - id: pf_4_git
+        action: Capture git context
+        command: "git status --short"
+        output: git_context
+      - id: pf_5_risk
+        action: Classify execution risk
+        output: risk_profile
+        logic: |
+          HIGH if:
+          - dirty worktree on target files
+          - many workflows/checklists touched
+          - voice_dna present in likely edit scope
+          MEDIUM otherwise
+      - id: pf_6_plan_contract
+        action: Present one-gate execution contract
+        output: approval_contract
+        message: |
+          Preflight complete. Next step is deep scan + plan.
+          After user approval, workflow runs autonomously until validation and
+          economy reporting complete.
+          Active mode contract, source of truth, and projection freshness must
+          remain explicit in the final report. Repo-global blocker provenance
+          must compare final gate failures against the captured preflight
+          baseline instead of using ad hoc inference.
+    approval_prompt:
+      id: approval_after_plan
+      question: |
+        Approve full YOLO optimization after plan review?
+        If yes, the workflow continues without additional confirmation prompts.
+  sequence:
+    - step: phase-0
+      id: phase-0
+      phase: 1
+      phase_name: PREFLIGHT, MODE CONTRACT & BASELINE
+      agent: pedro-valerio
+      task_ref: optimize-scope-clarification
+      action: execute_preflight_and_baseline
+      outputs:
+        - environment_contract
+        - repo_global_quality_baseline
+        - baseline_validation
+        - artifact_inventory
+        - risk_profile
+      next: phase-1
+    - step: phase-1
+      id: phase-1
+      phase: 2
+      phase_name: DEEP SCAN
+      agent: pedro-valerio
+      task_ref: optimize-determinism-analysis
+      action: execute_full_optimization_scan
+      outputs:
+        - optimization_findings
+        - material_inventory
+        - executor_map
+        - convergence_gaps
+      next: phase-2
+    - step: phase-2
+      id: phase-2
+      phase: 3
+      phase_name: PLAN
+      agent: pedro-valerio
+      task_ref: optimize-workflow-report
+      action: execute_wave_plan_generation
+      outputs:
+        - optimization_plan
+        - priority_matrix
+        - approval_summary
+      next: approval_after_plan
+    - step: approval_after_plan
+      id: approval_after_plan
+      phase: 4
+      phase_name: APPROVAL GATE
+      agent: pedro-valerio
+      action: request_single_human_approval
+      blocking: true
+      next: phase-3
+    - step: phase-3
+      id: phase-3
+      phase: 5
+      phase_name: FOUNDATION CONVERGENCE
+      agent: pedro-valerio
+      task_ref: optimize-gap-zero
+      action: execute_foundation_convergence
+      description: |
+        Fix runtime/tasks/workflows/checklists source-of-truth drift first.
+        This phase absorbs the most important systemic improvements before any
+        broad cleanup wave.
+      outputs:
+        - runtime_hardening
+        - workflow_checklist_alignment
+      next: phase-4
+    - step: phase-4
+      id: phase-4
+      phase: 6
+      phase_name: MATERIAL TRIAGE & ACTIVATION
+      agent: oalanicolas
+      task_ref: optimize-workflow-phase-necessity
+      action: execute_material_utility_pass
+      description: |
+        Inventory support materials, classify them as active/integrate/archive,
+        activate high-value materials, and relocate low-value docs when
+        necessary.
+      outputs:
+        - material_activation_report
+        - archive_relocation_log
+      next: phase-5
+    - step: phase-5
+      id: phase-5
+      phase: 7
+      phase_name: EXECUTOR OPTIMIZATION WAVES
+      agent: pedro-valerio
+      task_ref: optimize-hybrid-executor
+      action: execute_worker_hybrid_conversion_waves
+      description: |
+        Apply `*optimize --hybrid` logic to the highest-ROI targets, especially:
+        loading, extraction, scoring, rubric, and batch evaluation tasks.
+      outputs:
+        - worker_hybrid_changes
+        - token_savings_projection
+      next: phase-5b
+    - step: phase-5b
+      id: phase-5b
+      phase: 8
+      phase_name: RUNTIME SMOKE
+      agent: pedro-valerio
+      task_ref: optimize-empirical-validation
+      action: execute_runtime_smoke_gate
+      description: |
+        Re-run the exact runtime-critical commands and executor surfaces
+        introduced or modified by the optimization waves using representative
+        arguments derived from explicit runtime context and the changed
+        contract surfaces. Placeholder-only smoke inputs are invalid.
+      outputs:
+        - runtime_smoke_report
+      next: phase-6
+    - step: phase-6
+      id: phase-6
+      phase: 9
+      phase_name: VALIDATE & SELF-HEAL
+      agent: pedro-valerio
+      task_ref: optimize-workflow-apply
+      action: execute_validation_and_fix_loop
+      description: |
+        Run workflow contracts, quick/full validation, and fix non-critical
+        findings automatically where safe.
+      outputs:
+        - validation_report
+        - remaining_manual_flags
+      next: phase-7
+    - step: phase-7
+      id: phase-7
+      phase: 10
+      phase_name: ECONOMY REPORT
+      agent: pedro-valerio
+      task_ref: optimize-post-economy
+      action: execute_post_optimization_economy_analysis
+      outputs:
+        - economy_report
+        - before_after_metrics
+      next: phase-8
+    - step: phase-8
+      id: phase-8
+      phase: 11
+      phase_name: FINALIZATION
+      agent: pedro-valerio
+      task_ref: optimize-post-economy
+      action: execute_finalize_commit_push_if_allowed
+      outputs:
+        - final_report
+        - commit_sha
+        - push_status
+    - workflow_end:
+        id: complete
+        action: workflow_complete
+  execution_rules:
+    autonomous_after_gate: true
+    continue_on_non_critical:
+      - low_value_doc_relocation_warnings
+      - legacy_reference_notes
+      - optional_materials_missing
+    must_stop_on:
+      - any_veto_condition
+      - validation_score_regression
+      - workflow_contract_failures
+      - unapproved_voice_dna_changes
+  handoff_prompts:
+    - from: "@pedro-valerio"
+      to: "@oalanicolas"
+      when: "After foundation convergence and before material triage"
+      prompt: |
+        Material utility pass only.
+        Classify support artifacts as active, integrate_next, or archive.
+        Activate high-value materials, preserve canonical naming, and avoid
+        reopening already-closed governance decisions unless evidence forces it.
+    - from: "@oalanicolas"
+      to: "@pedro-valerio"
+      when: "After material triage and before executor optimization waves"
+      prompt: |
+        Resume full-system optimization with the updated material inventory.
+        Prioritize Worker/Hybrid conversions for deterministic loading,
+        extraction, scoring, and batch evaluation surfaces. Keep core creative
+        generation in Agent unless a deterministic sub-surface is explicit.
+  phase_details:
+    phase_1_deep_scan:
+      required_analyses:
+        - runtime_vs_task_vs_workflow consistency
+        - checklist binding explicitness
+        - material utility inventory
+        - worker_vs_hybrid_vs_agent classification
+        - source-of-truth matrix by stage
+        - doc-drift vs actual counts and declared bridges
+      required_outputs:
+        - optimization-findings.md
+        - optimization-plan.md
+    phase_5_worker_hybrid:
+      priority_order:
+        - load-workspace-context
+        - loading/runtime tasks
+        - scoring/audit/rubric tasks
+        - batch workflows
+        - extraction/agent-creation support tasks
+      never_auto_convert:
+        - big-idea generation
+        - mechanism design
+        - sales page writing
+        - email sequence writing
+        - other core creative judgment tasks
+    phase_8_runtime_smoke:
+      trigger_when_changes_include:
+        - workspace_integration
+        - required_preflight
+        - readiness_resolver
+        - context_task
+        - workflow.agent
+        - workflow.executor
+        - handoff_prompts
+      representative_args:
+        derive_from:
+          - explicit runtime inputs: business, product, app, context_type
+          - target squad canonical input names
+          - changed command or executor surfaces
+        forbid_placeholder_only: true
+      fail_closed_on:
+        - command_failure
+        - unsupported_squad
+        - missing_runtime_dependency
+        - enterprise_surface_without_proof
+    phase_8_finalize:
+      commit_policy:
+        default: disabled
+        if_commit_true: create single logical commit
+        if_push_true: push only when explicitly approved in preflight
+  outputs:
+    primary:
+      - file: "{squad_path}/docs/optimization-yolo-report-{date}.md"
+        description: Final autonomous optimization report
+      - file: "{squad_path}/docs/optimization-yolo-plan-{date}.md"
+        description: Approved execution plan
+    supporting:
+      - file: "{squad_path}/docs/optimization-material-inventory-{date}.yaml"
+      - file: "{squad_path}/docs/optimization-economy-{date}.md"
+      - file: "{squad_path}/docs/optimization-validation-{date}.json"
+      - file: "{squad_path}/docs/optimization-repo-baseline-{date}.json"
+        description: Preflight repo-global baseline used to classify final quality-gate provenance
+      - file: "{squad_path}/docs/optimization-runtime-smoke-{date}.json"
+        description: Exact runtime-smoke command evidence, arguments, and failure classification
+      - file: "{squad_path}/docs/optimization-doc-drift-{date}.json"
+        description: README/ARCHITECTURE/CHANGELOG drift report for counts and declared bridges
+      - file: "{squad_path}/docs/optimization-validation-fallback-{date}.json"
+        description: Timeout or inconclusive validation fallback evidence
+      - file: "{squad_path}/docs/optimization-split-verdict-{date}.json"
+        description: Machine-readable local/global verdict matrix and blocker provenance
+      - file: "{squad_path}/docs/optimization-environment-{date}.json"
+        description: Machine-readable environment contract and projection freshness evidence
+  runtime_smoke_contract:
+    required: true
+    trigger_when_changes_include:
+      - workspace_integration
+      - required_preflight
+      - readiness_resolver
+      - context_task
+      - workflow.agent
+      - workflow.executor
+      - handoff_prompts
+    representative_args:
+      derive_from:
+        - explicit runtime inputs: business, product, app, context_type
+        - target squad canonical input names
+        - changed command or executor surfaces
+      forbid_placeholder_only: true
+    block_on:
+      - command_failure
+      - unsupported_squad
+      - missing_runtime_dependency
+      - enterprise_surface_without_proof
+    mode_rules:
+      portable_docs_mode:
+        evidence_source: docs_projection
+        forbid_enterprise_only_surfaces: true
+      full_workspace_mode:
+        requires:
+          - environment_contract.runtime_mode == full_workspace_mode
+          - explicit business/product/app context
+          - readiness_status == ready
+  validation_contract:
+    validate_squad:
+      primary_command: "bash squads/squad-creator/scripts/validate-squad.sh {squad_name} --quick --json"
+      timeout_seconds: 120
+      on_timeout: inconclusive
+      on_partial_output: inconclusive
+      fallback_steps:
+        - "node infrastructure/scripts/squads/validate_workflow_contracts.cjs --squads {squad_name} --json"
+        - "node infrastructure/scripts/squads/validate_squad_runtime_ssot.cjs"
+      evidence_artifact: "{squad_path}/docs/optimization-validation-fallback-{date}.json"
+    doc_drift_check:
+      command: "node infrastructure/scripts/squads/check_doc_drift.cjs --squad {squad_name} --json"
+      evidence_artifact: "{squad_path}/docs/optimization-doc-drift-{date}.json"
+    quality_gates:
+      baseline_required: true
+      baseline_output: repo_global_quality_baseline
+      baseline_evidence_artifact: "{squad_path}/docs/optimization-repo-baseline-{date}.json"
+      provenance_rule: "compare final quality-gate failures against repo_global_quality_baseline before assigning blocker_origin"
+      required_before_success:
+        - npm run lint
+        - npm run typecheck
+        - npm test
+      blocker_origin_values:
+        - introduced
+        - pre-existing
+        - unrelated
+        - inconclusive
+  reporting_contract:
+    environment_contract:
+      required: true
+      fields:
+        - access_tier
+        - runtime_mode
+        - source_of_truth
+        - reason
+        - evidence_paths
+      projection_freshness_required_when: "source_of_truth == docs_projection"
+      enterprise_fail_closed: true
+    split_verdict:
+      required_fields:
+        - squad_local_status
+        - repo_global_status
+        - blocker_origin
+        - blocking_surface
+        - evidence_paths
+        - repo_global_baseline_status
+        - repo_global_baseline_evidence_paths
+      blocker_origin_values:
+        - introduced
+        - pre-existing
+        - unrelated
+        - inconclusive
+      preserve_local_green_when_repo_global_red_on:
+        - pre-existing
+        - unrelated
+        - inconclusive
+  command_examples:
+    - "*optimize-yolo copy"
+    - "*optimize-yolo brand --business aiox --context-type brand"
+    - "*optimize-yolo copy --focus tasks"
+    - "*optimize-yolo copy --commit"
+    - "*optimize-yolo copy --commit --push"

@@ -1,0 +1,103 @@
+workflow:
+  id: wf-smoke-test-model-routing
+  name: Smoke Test Model Routing Pipeline
+  version: "1.0.0"
+  description: Canonical atomic pipeline for preflight, lookup, explicit execution, comparison, and reporting of model routing behavior.
+  type: validation
+  state_machine:
+    states: [init, preflight, lookup, execution, comparison, report, complete, failed]
+    transitions:
+      - trigger: start
+        source: init
+        dest: preflight
+      - trigger: preflight_complete
+        source: preflight
+        dest: lookup
+      - trigger: preflight_failed
+        source: preflight
+        dest: failed
+      - trigger: lookup_complete
+        source: lookup
+        dest: execution
+      - trigger: lookup_failed
+        source: lookup
+        dest: failed
+      - trigger: execution_complete
+        source: execution
+        dest: comparison
+      - trigger: execution_failed
+        source: execution
+        dest: failed
+      - trigger: comparison_complete
+        source: comparison
+        dest: report
+      - trigger: comparison_failed
+        source: comparison
+        dest: failed
+      - trigger: report_complete
+        source: report
+        dest: complete
+      - trigger: report_failed
+        source: report
+        dest: failed
+      - trigger: fail
+        source: "*"
+        dest: failed
+  sequence:
+    - step: preflight
+      id: preflight
+      phase: 1
+      phase_name: Preflight
+      agent: "@pedro-valerio"
+      action: execute_preflight
+      task_ref: smoke-test-model-routing-preflight
+      next: lookup
+    - step: lookup
+      id: lookup
+      phase: 2
+      phase_name: Lookup Validation
+      agent: "@pedro-valerio"
+      action: execute_lookup_validation
+      task_ref: smoke-test-model-routing-lookup
+      next: execution
+    - step: execution
+      id: execution
+      phase: 3
+      phase_name: Explicit Model Execution
+      agent: "@pedro-valerio"
+      action: execute_explicit_model_test
+      task_ref: smoke-test-model-routing-execution
+      next: comparison
+    - step: comparison
+      id: comparison
+      phase: 4
+      phase_name: Comparison
+      agent: "@pedro-valerio"
+      action: execute_default_vs_explicit_comparison
+      task_ref: smoke-test-model-routing-comparison
+      next: report
+    - step: report
+      id: report
+      phase: 5
+      phase_name: Report
+      agent: "@pedro-valerio"
+      action: execute_smoke_report
+      task_ref: smoke-test-model-routing-report
+    - workflow_end:
+        id: complete
+        action: workflow_complete
+  quality_gates:
+    - id: SCP_SMR_001
+      phase: report
+      type: automated
+      placement: exit
+      severity: blocking
+      description: Smoke test must produce a final report with recommendation.
+      criteria:
+        - field: smoke_test_report
+          operator: "!="
+          value: null
+        - field: recommendation
+          operator: "!="
+          value: null
+      on_fail: block

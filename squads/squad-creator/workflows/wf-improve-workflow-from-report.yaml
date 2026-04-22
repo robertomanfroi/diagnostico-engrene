@@ -1,0 +1,69 @@
+workflow:
+  id: wf-improve-workflow-from-report
+  name: Improve Workflow from Gap Report Pipeline
+  version: 1.0.0
+  description: Orquestra 6 subtasks atômicas para ingerir um gap report, aplicar remediações rastreáveis e validar o workflow resultante.
+  type: orchestration
+  agent_mapping:
+    agents:
+      squad-chief: orchestrator
+  state_machine:
+    states: [init, ingest, target, backup, apply-p1, apply-secondary, validate-report, complete, failed]
+    transitions:
+      - { trigger: start, source: init, dest: ingest }
+      - { trigger: ingest_complete, source: ingest, dest: target }
+      - { trigger: target_complete, source: target, dest: backup }
+      - { trigger: backup_complete, source: backup, dest: apply-p1 }
+      - { trigger: apply_p1_complete, source: apply-p1, dest: apply-secondary }
+      - { trigger: apply_secondary_complete, source: apply-secondary, dest: validate-report }
+      - { trigger: validate_report_complete, source: validate-report, dest: complete }
+      - { trigger: fail, source: "*", dest: failed }
+  sequence:
+    - phase: ingest
+      id: ingest
+      agent: squad-chief
+      task_ref: improve-workflow-report-ingest
+      action: ingest_gap_report
+      inputs: [gap_report_path, dry_run, priority_filter]
+      outputs: [gap_report_contract]
+      on_complete: { trigger: ingest_complete }
+    - phase: target
+      id: target
+      agent: squad-chief
+      task_ref: improve-workflow-report-target
+      action: validate_target_workflow
+      inputs: [gap_report_contract]
+      outputs: [target_workflow_contract]
+      on_complete: { trigger: target_complete }
+    - phase: backup
+      id: backup
+      agent: squad-chief
+      task_ref: improve-workflow-report-backup
+      action: create_workflow_backup
+      inputs: [target_workflow_contract, dry_run]
+      outputs: [backup_contract]
+      on_complete: { trigger: backup_complete }
+    - phase: apply-p1
+      id: apply-p1
+      agent: squad-chief
+      task_ref: improve-workflow-report-apply-p1
+      action: apply_critical_remediation
+      inputs: [gap_report_contract, target_workflow_contract, backup_contract, priority_filter]
+      outputs: [p1_change_log]
+      on_complete: { trigger: apply_p1_complete }
+    - phase: apply-secondary
+      id: apply-secondary
+      agent: squad-chief
+      task_ref: improve-workflow-report-apply-secondary
+      action: apply_secondary_remediation
+      inputs: [gap_report_contract, target_workflow_contract, p1_change_log, priority_filter]
+      outputs: [secondary_change_log, tech_debt_log]
+      on_complete: { trigger: apply_secondary_complete }
+    - phase: validate-report
+      id: validate-report
+      agent: squad-chief
+      task_ref: improve-workflow-report-validate-report
+      action: validate_bump_and_report
+      inputs: [gap_report_contract, target_workflow_contract, backup_contract, p1_change_log, secondary_change_log, tech_debt_log, dry_run]
+      outputs: [workflow_improvement_report]
+      on_complete: { trigger: validate_report_complete }

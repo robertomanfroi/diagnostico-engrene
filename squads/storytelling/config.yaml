@@ -1,0 +1,248 @@
+# Storytelling Squad Configuration
+# Elite Storytelling Minds for Narrative Excellence
+
+pack:
+  name: storytelling
+  title: "Storytelling - Elite Narrative Squad"
+  version: "1.0.0"
+  author: "AIOX Team"
+  description: "Time de mestres em storytelling organizados para criar narrativas poderosas"
+  icon: "📖"
+  slash_prefix: "story"
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# ORCHESTRATOR
+# ═══════════════════════════════════════════════════════════════════════════════
+orchestrator:
+  agent: "story-chief"
+  activation: "@story"
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# AGENTS - Elite Storytelling Minds
+# ═══════════════════════════════════════════════════════════════════════════════
+agents:
+  # Tier 0 - Foundational (Diagnostic/Framework Creators)
+  - id: joseph-campbell
+    name: "Joseph Campbell"
+    specialty: "Hero's Journey, Monomyth"
+    tier: 0
+    framework: "The Hero with a Thousand Faces"
+    executor_profile:
+      sinkra_type: Clone
+      story_role: executor
+      can_execute: true
+      core_replaces: null
+      work_contexts: ["hero's journey", "monomyth", "narrative archetype", "storytelling framework", "mythological structure"]
+      can_review: ["narrative-structure", "story-archetype"]
+
+  - id: shawn-coyne
+    name: "Shawn Coyne"
+    specialty: "Story Grid, Genre Analysis"
+    tier: 0
+    framework: "The Story Grid"
+    executor_profile:
+      sinkra_type: Clone
+      story_role: executor
+      can_execute: true
+      core_replaces: null
+      work_contexts: ["story grid", "genre analysis", "narrative diagnosis", "story structure", "editorial analysis"]
+      can_review: ["genre-classification", "story-structure"]
+
+  # Tier 1 - Masters (Proven Methodologies)
+  - id: donald-miller
+    name: "Donald Miller"
+    specialty: "StoryBrand, Business Narrative"
+    tier: 1
+    framework: "Building a StoryBrand (SB7)"
+    executor_profile:
+      sinkra_type: Clone
+      story_role: executor
+      can_execute: true
+      core_replaces: null
+      work_contexts: ["StoryBrand", "SB7", "business narrative", "brand messaging", "customer journey", "hero positioning"]
+      can_review: ["brand-narrative", "messaging", "storybrand"]
+
+  - id: nancy-duarte
+    name: "Nancy Duarte"
+    specialty: "Presentation Storytelling"
+    tier: 1
+    framework: "Resonate, Sparkline"
+    ide_sync:
+      enabled: false
+      rationale: "Expert mantida como superfície canônica em visual-knowledge-squad para evitar basename duplicado"
+    executor_profile:
+      sinkra_type: Clone
+      story_role: executor
+      can_execute: true
+      core_replaces: null
+      work_contexts: ["presentation storytelling", "sparkline", "resonate", "pitch narrative", "slide structure", "visual narrative"]
+      can_review: ["presentation-narrative", "pitch-storytelling"]
+
+  - id: dan-harmon
+    name: "Dan Harmon"
+    specialty: "Story Circle, TV Writing"
+    tier: 1
+    framework: "Story Circle (8 beats)"
+    executor_profile:
+      sinkra_type: Clone
+      story_role: executor
+      can_execute: true
+      core_replaces: null
+      work_contexts: ["story circle", "8 beats", "TV writing", "episodic narrative", "character arc", "circular structure"]
+      can_review: ["story-circle", "episodic-structure"]
+
+  - id: blake-snyder
+    name: "Blake Snyder"
+    specialty: "Screenwriting Structure"
+    tier: 1
+    framework: "Save the Cat (15 beats)"
+    executor_profile:
+      sinkra_type: Clone
+      story_role: executor
+      can_execute: true
+      core_replaces: null
+      work_contexts: ["save the cat", "15 beats", "screenwriting", "beat sheet", "script structure", "movie narrative"]
+      can_review: ["beat-sheet", "script-structure"]
+
+  # Tier 2 - Specialists
+  - id: oren-klaff
+    name: "Oren Klaff"
+    specialty: "Pitch Storytelling, Neurofinance"
+    tier: 2
+    framework: "Pitch Anything (STRONG method)"
+    executor_profile:
+      sinkra_type: Clone
+      story_role: executor
+      can_execute: true
+      core_replaces: null
+      work_contexts: ["pitch storytelling", "STRONG method", "neurofinance", "frame control", "pitch persuasion"]
+      can_review: ["pitch-narrative", "persuasion"]
+
+  - id: kindra-hall
+    name: "Kindra Hall"
+    specialty: "Strategic Storytelling, Business"
+    tier: 2
+    framework: "Stories That Stick"
+    executor_profile:
+      sinkra_type: Clone
+      story_role: executor
+      can_execute: true
+      core_replaces: null
+      work_contexts: ["strategic storytelling", "business stories", "stories that stick", "brand story", "customer story"]
+      can_review: ["business-storytelling", "brand-story"]
+
+  - id: matthew-dicks
+    name: "Matthew Dicks"
+    specialty: "Personal Storytelling, Moth"
+    tier: 2
+    framework: "Storyworthy"
+    executor_profile:
+      sinkra_type: Clone
+      story_role: executor
+      can_execute: true
+      core_replaces: null
+      work_contexts: ["personal storytelling", "storyworthy", "moth", "5-second moment", "vulnerability", "authentic narrative"]
+      can_review: ["personal-narrative", "authenticity"]
+
+  - id: marshall-ganz
+    name: "Marshall Ganz"
+    specialty: "Public Narrative, Leadership"
+    tier: 2
+    framework: "Story of Self, Us, Now"
+    executor_profile:
+      sinkra_type: Clone
+      story_role: executor
+      can_execute: true
+      core_replaces: null
+      work_contexts: ["public narrative", "leadership storytelling", "story of self", "social movement", "collective narrative"]
+      can_review: ["public-narrative", "leadership-storytelling"]
+
+  - id: park-howell
+    name: "Park Howell"
+    specialty: "Brand Storytelling"
+    tier: 2
+    framework: "Business of Story (ABT)"
+    executor_profile:
+      sinkra_type: Clone
+      story_role: executor
+      can_execute: true
+      core_replaces: null
+      work_contexts: ["brand storytelling", "ABT framework", "business of story", "narrative branding", "and-but-therefore"]
+      can_review: ["brand-storytelling", "ABT-framework"]
+
+  - id: keith-johnstone
+    name: "Keith Johnstone"
+    specialty: "Improvisational Storytelling"
+    tier: 2
+    framework: "Impro, Status Theory"
+    executor_profile:
+      sinkra_type: Clone
+      story_role: executor
+      can_execute: true
+      core_replaces: null
+      work_contexts: ["improvisational storytelling", "impro", "status theory", "spontaneous narrative", "theatrical improvisation"]
+      can_review: ["improvisation", "status-dynamics"]
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# DEPENDENCIES
+# ═══════════════════════════════════════════════════════════════════════════════
+dependencies:
+  required: []
+  optional:
+    - name: copy
+      reason: "Integration with copywriting for sales narratives"
+    - name: mmos
+      reason: "Clone additional storytelling minds"
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# METADATA
+# ═══════════════════════════════════════════════════════════════════════════════
+metadata:
+  version: "1.0.0"
+  score: 7.4
+  category: content-creation
+  complexity: intermediate
+  created: "2026-01-29"
+  last_updated: "2026-02-01"
+
+settings:
+  activation:
+    show_context_report: true
+    show_preload_report: true
+    show_quick_commands: true
+    quick_commands_limit: 6
+  preload:
+    max_shared_files: 3
+    max_product_files: 4
+
+workspace_integration:
+  level: none
+  rationale: >-
+    Storytelling depende de contexto canônico de ICP, brand, positioning,
+    offerbook, proof e pricing para criar narrativas de negócio consistentes,
+    mas o output principal continua sendo narrativo e não define namespace
+    próprio em workspace. O COO resolve readiness e o squad consome esse
+    contrato antes de output final.
+  read_paths:
+    - workspace/_system/config.yaml
+    - workspace/businesses/
+    - workspace/_templates/product-narrative/
+  write_paths: []
+  readiness_owner: workspace-chief
+  readiness_resolver: squads/storytelling/scripts/resolve-readiness.cjs
+
+data:
+  - id: story-mappings
+    name: "Story Mappings — Canonical Vocabulary"
+    format: yaml
+    description: "Traduz pedidos narrativos vagos em terminologia profissional de storytelling."
+
+# SINKRA v3.1 (Story 54.11)
+bu_mapping: "hub-framework"
+artifact_contracts:
+  - artifact_id: "narrative-output"
+    template_path: "templates/narrative-output-tmpl.md"
+    lifecycle_states: [draft, validated, approved]
+supported_modes:
+  - CRIAR
+  - ENTENDER

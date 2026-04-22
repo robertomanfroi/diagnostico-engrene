@@ -1,0 +1,103 @@
+workflow:
+  id: wf-design-clone
+  name: Design Clone Architecture Pipeline
+  version: "1.0.0"
+  description: Canonical atomic pipeline for clone context mapping, stage design, trinity mapping, memory model, and final blueprint assembly.
+  type: design
+  state_machine:
+    states: [init, contexts, stages, trinity, memory, blueprint, complete, failed]
+    transitions:
+      - trigger: start
+        source: init
+        dest: contexts
+      - trigger: contexts_complete
+        source: contexts
+        dest: stages
+      - trigger: contexts_failed
+        source: contexts
+        dest: failed
+      - trigger: stages_complete
+        source: stages
+        dest: trinity
+      - trigger: stages_failed
+        source: stages
+        dest: failed
+      - trigger: trinity_complete
+        source: trinity
+        dest: memory
+      - trigger: trinity_failed
+        source: trinity
+        dest: failed
+      - trigger: memory_complete
+        source: memory
+        dest: blueprint
+      - trigger: memory_failed
+        source: memory
+        dest: failed
+      - trigger: blueprint_complete
+        source: blueprint
+        dest: complete
+      - trigger: blueprint_failed
+        source: blueprint
+        dest: failed
+      - trigger: fail
+        source: "*"
+        dest: failed
+  sequence:
+    - step: contexts
+      id: contexts
+      phase: 1
+      phase_name: Contexts
+      agent: "@oalanicolas"
+      action: execute_context_mapping
+      task_ref: an-design-clone-contexts
+      next: stages
+    - step: stages
+      id: stages
+      phase: 2
+      phase_name: Stage Design
+      agent: "@oalanicolas"
+      action: execute_stage_design
+      task_ref: an-design-clone-stages
+      next: trinity
+    - step: trinity
+      id: trinity
+      phase: 3
+      phase_name: Trinity Mapping
+      agent: "@oalanicolas"
+      action: execute_trinity_mapping
+      task_ref: an-design-clone-trinity
+      next: memory
+    - step: memory
+      id: memory
+      phase: 4
+      phase_name: Memory Model
+      agent: "@oalanicolas"
+      action: execute_memory_design
+      task_ref: an-design-clone-memory
+      next: blueprint
+    - step: blueprint
+      id: blueprint
+      phase: 5
+      phase_name: Blueprint
+      agent: "@oalanicolas"
+      action: execute_blueprint_assembly
+      task_ref: an-design-clone-blueprint
+    - workflow_end:
+        id: complete
+        action: workflow_complete
+  quality_gates:
+    - id: SCP_ADC_001
+      phase: blueprint
+      type: automated
+      placement: exit
+      severity: blocking
+      description: Blueprint must be generated with estimated fidelity.
+      criteria:
+        - field: clone_blueprint
+          operator: "!="
+          value: null
+        - field: estimated_fidelity
+          operator: "!="
+          value: null
+      on_fail: block

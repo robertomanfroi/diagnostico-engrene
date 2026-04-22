@@ -1,0 +1,36 @@
+meta:
+  id: squad-creator-infrastructure-map
+  version: 1.0.0
+  purpose: "Mapa operacional das integrações e superfícies de execução do squad-creator base."
+
+service_catalog:
+  skill-surface-projection:
+    service_ref: local-skill-surface-runtime
+    connection: ".claude/skills/"
+    integration: "Sincronização de slash skills canônicas"
+  runtime-state:
+    service_ref: local-squad-runtime
+    connection: ".aiox/squad-runtime/"
+    integration: "Persistência de estado, lifecycle e journey log"
+  workspace-context:
+    service_ref: workspace-read-gateway
+    connection: "workspace/"
+    integration: "Leitura de contexto e templates corporativos"
+  ecosystem-registry:
+    service_ref: squad-registry-store
+    connection: "squads/sinkra-squad/data/ecosystem-registry.yaml"
+    integration: "Consulta e atualização de catálogo"
+
+integrations:
+  - name: workspace_reader
+    connection: "workspace/"
+    endpoint: local-filesystem
+    mode: read_only
+  - name: squad_runtime_state
+    connection: ".aiox/squad-runtime/"
+    endpoint: local-filesystem
+    mode: read_write
+  - name: skill_surface_projection
+    connection: ".claude/skills/"
+    endpoint: local-filesystem
+    mode: read_write

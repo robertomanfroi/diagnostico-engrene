@@ -1,0 +1,17 @@
+workflow:
+  id: wf-create-template
+  name: Pro Template Creation Router
+  version: 1.0.0
+  purpose: Route direct `*create-template` invocations through the pro compatibility wrapper and delegate execution to the canonical base task.
+  orchestrator: "@squad-chief"
+  type: direct_router
+  sequence:
+    - phase: delegate
+      id: delegate
+      agent: "@squad-chief"
+      task: create-template
+      task_ref: create-template
+      action: delegate_full_creation
+      blocking: true
+      outputs:
+        - "squads/{squad_name}/templates/{template_id}-tmpl.{ext}"

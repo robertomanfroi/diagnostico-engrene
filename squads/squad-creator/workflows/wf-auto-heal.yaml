@@ -1,0 +1,33 @@
+workflow:
+  id: wf-auto-heal
+  name: Auto-Heal Pipeline
+  version: 1.0.0
+  description: Orquestra 2 composed tasks para diagnosticar, corrigir, persistir e verificar erros operacionais do squad.
+  type: orchestration
+  agent_mapping:
+    agents:
+      squad-chief: orchestrator
+  state_machine:
+    states: [init, resolve, close, complete, failed]
+    transitions:
+      - { trigger: start, source: init, dest: resolve }
+      - { trigger: resolve_complete, source: resolve, dest: close }
+      - { trigger: close_complete, source: close, dest: complete }
+      - { trigger: fail, source: "*", dest: failed }
+  sequence:
+    - phase: resolve
+      id: resolve
+      agent: squad-chief
+      task_ref: auto-heal-resolve
+      action: diagnose_fix_and_escalate
+      inputs: [error_message, error_source, squad_name]
+      outputs: [heal_diagnosis, heal_fix_attempt, heal_escalation]
+      on_complete: { trigger: resolve_complete }
+    - phase: close
+      id: close
+      agent: squad-chief
+      task_ref: auto-heal-close
+      action: persist_and_verify
+      inputs: [heal_diagnosis, heal_fix_attempt, heal_escalation, squad_name]
+      outputs: [heal_log_entry, heal_verdict]
+      on_complete: { trigger: close_complete }

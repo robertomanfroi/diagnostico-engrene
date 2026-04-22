@@ -1,0 +1,19 @@
+status:
+  branch: master
+  modifiedFiles:
+    - .gitignore
+    - .aiox-core/
+    - .antigravity/
+    - .claude/commands/
+    - .claude/settings.json
+  modifiedFilesTotalCount: 13
+  recentCommits:
+    - 'chore: trigger GitHub Pages deploy'
+    - 'feat: deploy frontend no GitHub Pages + Método Engrene 12 passos'
+  currentEpic: null
+  currentStory: null
+  lastUpdate: '2026-04-17T02:35:36.631Z'
+  isGitRepo: true
+timestamp: 1776393336632
+ttl: 60
+gitFingerprint: 1774997954360.7332:1776392561534.343

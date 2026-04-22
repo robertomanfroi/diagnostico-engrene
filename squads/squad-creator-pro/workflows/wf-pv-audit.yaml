@@ -1,0 +1,115 @@
+workflow:
+  id: wf-pv-audit
+  name: Process Audit
+  version: "1.0.0"
+  description: >
+    Audit squad/workflow for process failures using the "Impossibilitar Caminhos"
+    framework. Three staged phases with progressive depth and explicit halts
+    for user direction between phases.
+  type: orchestration
+  command: "*audit {squad_name} [--all]"
+  state_machine:
+    states: [init, overview, sample-analysis, deep-dive, complete, failed]
+    transitions:
+      - trigger: start
+        source: init
+        dest: overview
+      - trigger: overview_complete
+        source: overview
+        dest: sample-analysis
+      - trigger: overview_halt
+        source: overview
+        dest: complete
+      - trigger: overview_failed
+        source: overview
+        dest: failed
+      - trigger: sample_analysis_complete
+        source: sample-analysis
+        dest: deep-dive
+      - trigger: sample_analysis_halt
+        source: sample-analysis
+        dest: complete
+      - trigger: sample_analysis_failed
+        source: sample-analysis
+        dest: failed
+      - trigger: deep_dive_complete
+        source: deep-dive
+        dest: complete
+      - trigger: deep_dive_failed
+        source: deep-dive
+        dest: failed
+      - trigger: fail
+        source: "*"
+        dest: failed
+  sequence:
+    - step: overview
+      id: overview
+      phase: 1
+      phase_name: STRUCTURAL OVERVIEW
+      agent: pedro-valerio
+      task_ref: pv-audit-overview
+      action: execute_structural_overview
+      description: Structural overview without reading content (~2k tokens)
+      inputs:
+        - squad_name
+      outputs:
+        - squad_overview
+      next: sample-analysis
+    - step: sample-analysis
+      id: sample-analysis
+      phase: 2
+      phase_name: SAMPLE ANALYSIS
+      agent: pedro-valerio
+      task_ref: pv-audit-sample
+      action: execute_pattern_identification
+      description: Pattern identification with representative sample (~5k tokens)
+      inputs:
+        - squad_overview
+      outputs:
+        - sample_analysis
+        - red_flags
+        - green_flags
+      next: deep-dive
+    - step: deep-dive
+      id: deep-dive
+      phase: 3
+      phase_name: DEEP-DIVE
+      agent: pedro-valerio
+      task_ref: pv-audit-deep-dive
+      action: execute_on_demand_deep_analysis
+      description: On-demand analysis of specific agent/workflow/dna (~3k tokens)
+      condition: user explicitly requests deep-dive
+      inputs:
+        - sample_analysis
+        - target_artifact
+      outputs:
+        - deep_dive_report
+    - workflow_end:
+        id: complete
+        action: workflow_complete
+  veto_conditions:
+    - id: VETO-PVA-001
+      trigger: Audit exceeds 10k token budget
+      action: BLOCK
+    - id: VETO-PVA-002
+      trigger: More than 3 files read per phase
+      action: BLOCK
+    - id: VETO-PVA-003
+      trigger: Deep-dive without user direction
+      action: BLOCK
+  inputs:
+    required:
+      - name: squad_name
+        type: string
+        description: Squad name or workflow file path
+    optional:
+      - name: mode
+        type: enum
+        values: [sample, all]
+        default: sample
+        description: Sample audit or 100% audit in batches
+  outputs:
+    primary:
+      - squad_overview
+      - sample_analysis
+      - deep_dive_report

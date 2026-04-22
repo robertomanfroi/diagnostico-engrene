@@ -1,0 +1,86 @@
+workflow:
+  id: wf-operational-test
+  name: Operational Test Pipeline
+  version: 1.0.0
+  description: Orquestra 5 subtasks atômicas para validar operacionalmente um squad com runtime configurado.
+  type: orchestration
+  agent_mapping:
+    agents:
+      squad-chief: orchestrator
+  state_machine:
+    states:
+      - init
+      - preflight
+      - target
+      - smoke
+      - baseline
+      - report
+      - complete
+      - failed
+    transitions:
+      - trigger: start
+        source: init
+        dest: preflight
+      - trigger: preflight_complete
+        source: preflight
+        dest: target
+      - trigger: target_complete
+        source: target
+        dest: smoke
+      - trigger: smoke_complete
+        source: smoke
+        dest: baseline
+      - trigger: baseline_complete
+        source: baseline
+        dest: report
+      - trigger: report_complete
+        source: report
+        dest: complete
+      - trigger: fail
+        source: "*"
+        dest: failed
+  sequence:
+    - phase: preflight
+      id: preflight
+      agent: squad-chief
+      task_ref: operational-test-preflight
+      action: validate_operational_prerequisites
+      outputs: [operational_preflight]
+      on_complete:
+        trigger: preflight_complete
+    - phase: target
+      id: target
+      agent: squad-chief
+      task_ref: operational-test-target
+      action: select_operational_target
+      inputs: [operational_preflight, test_mode, target_id, squad_name]
+      outputs: [selected_target]
+      on_complete:
+        trigger: target_complete
+    - phase: smoke
+      id: smoke
+      agent: squad-chief
+      task_ref: operational-test-smoke
+      action: run_operational_smoke_flow
+      inputs: [selected_target, test_mode, test_scope, squad_name]
+      outputs: [smoke_results]
+      on_complete:
+        trigger: smoke_complete
+    - phase: baseline
+      id: baseline
+      agent: squad-chief
+      task_ref: operational-test-baseline
+      action: register_operational_baseline
+      inputs: [selected_target, smoke_results, squad_name]
+      outputs: [operational_baseline]
+      on_complete:
+        trigger: baseline_complete
+    - phase: report
+      id: report
+      agent: squad-chief
+      task_ref: operational-test-report
+      action: emit_operational_report
+      inputs: [selected_target, smoke_results, operational_baseline]
+      outputs: [operational_report]
+      on_complete:
+        trigger: report_complete

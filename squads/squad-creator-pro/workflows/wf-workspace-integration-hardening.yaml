@@ -1,0 +1,119 @@
+workflow:
+  id: wf-workspace-integration-hardening
+  name: Workspace Integration Hardening
+  version: 1.2.0
+  purpose: Orquestrar auditoria + remediação de integração de um squad com o workspace usando contrato template-first
+  description: Brownfield hardening workflow for workspace contract audit, remediation, and revalidation.
+  orchestrator: "@squad-chief"
+  type: brownfield
+  state_machine:
+    states: [init, baseline, workspace-audit, workspace-remediation, workspace-revalidation, quality, quality-gates, complete, failed]
+    transitions:
+      - trigger: start
+        source: init
+        dest: baseline
+      - trigger: baseline_complete
+        source: baseline
+        dest: workspace-audit
+      - trigger: baseline_failed
+        source: baseline
+        dest: failed
+      - trigger: workspace_audit_complete
+        source: workspace-audit
+        dest: workspace-remediation
+      - trigger: workspace_audit_failed
+        source: workspace-audit
+        dest: failed
+      - trigger: workspace_remediation_complete
+        source: workspace-remediation
+        dest: workspace-revalidation
+      - trigger: workspace_remediation_failed
+        source: workspace-remediation
+        dest: failed
+      - trigger: workspace_revalidation_complete
+        source: workspace-revalidation
+        dest: quality
+      - trigger: workspace_revalidation_failed
+        source: workspace-revalidation
+        dest: failed
+      - trigger: quality_complete
+        source: quality
+        dest: quality-gates
+      - trigger: quality_failed
+        source: quality
+        dest: failed
+      - trigger: quality_gates_complete
+        source: quality-gates
+        dest: complete
+      - trigger: quality_gates_failed
+        source: quality-gates
+        dest: failed
+      - trigger: fail
+        source: "*"
+        dest: failed
+  sequence:
+    - phase: baseline
+      id: baseline
+      agent: "@squad-chief"
+      task: validate-squad
+      task_ref: validate-squad
+      action: capture_baseline_validation
+      notes: Captura score base e bloqueios estruturais iniciais
+    - phase: workspace-audit
+      id: workspace-audit
+      agent: "@squad-chief"
+      task: workspace-integration-hardening
+      task_ref: workspace-integration-hardening
+      action: audit_workspace_integration
+      notes: Executar em modo --audit --strict para mapear gaps de contrato e template
+      outputs:
+        - .aiox/squad-runtime/squad-upgrade/{squad_name}/workspace-hardening-audit.yaml
+    - phase: workspace-remediation
+      id: workspace-remediation
+      agent: "@squad-chief"
+      task: workspace-integration-hardening
+      task_ref: workspace-integration-hardening
+      action: remediate_workspace_integration
+      notes: Executar em modo --apply --strict para corrigir contrato, outputs canônicos e templates
+      outputs:
+        - .aiox/squad-runtime/squad-upgrade/{squad_name}/workspace-hardening-remediation.yaml
+    - phase: workspace-revalidation
+      id: workspace-revalidation
+      agent: "@squad-chief"
+      task: workspace-integration-hardening
+      task_ref: workspace-integration-hardening
+      action: revalidate_workspace_integration
+      notes: Executar em modo --audit --strict após correções
+      outputs:
+        - .aiox/squad-runtime/squad-upgrade/{squad_name}/workspace-hardening-final.yaml
+    - phase: quality
+      id: quality
+      agent: "@squad-chief"
+      task: validate-squad
+      task_ref: validate-squad
+      action: validate_post_hardening_quality
+      notes: Validação final de qualidade após hardening
+    - import: modules/module-quality-gates.yaml
+      agent: "@squad-chief"
+      action: import_module
+  checkpoints:
+    - id: CP_BASELINE
+      phase: baseline
+      decision: CONTINUE_OR_ABORT
+    - id: CP_AUDIT
+      phase: workspace-audit
+      decision: GAPS_MAPPED
+    - id: CP_REMEDIATION
+      phase: workspace-remediation
+      decision: REMEDIATION_APPLIED
+    - id: CP_WORKSPACE
+      phase: workspace-revalidation
+      decision: WORKSPACE_CONTRACT_VALID
+    - id: CP_FINAL
+      phase: quality-final-artifacts
+      decision: PASS_OR_REVISE
+  outputs:
+    - .aiox/squad-runtime/squad-upgrade/{squad_name}/workspace-hardening-audit.yaml
+    - .aiox/squad-runtime/squad-upgrade/{squad_name}/workspace-hardening-remediation.yaml
+    - .aiox/squad-runtime/squad-upgrade/{squad_name}/workspace-hardening-final.yaml
+    - .aiox/squad-runtime/squad-upgrade/{squad_name}/workspace-hardening-summary.md

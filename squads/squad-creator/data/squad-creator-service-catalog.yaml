@@ -1,0 +1,17 @@
+services:
+  local-skill-surface-runtime:
+    kind: filesystem
+    service_ref: ".claude/skills/"
+    owner: squad-creator
+  local-squad-runtime:
+    kind: filesystem
+    service_ref: ".aiox/squad-runtime/"
+    owner: squad-creator
+  workspace-read-gateway:
+    kind: filesystem
+    service_ref: "workspace/"
+    owner: c-level
+  squad-registry-store:
+    kind: yaml-registry
+    service_ref: "squads/sinkra-squad/data/ecosystem-registry.yaml"
+    owner: squad-creator

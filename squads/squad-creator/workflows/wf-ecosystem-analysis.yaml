@@ -1,0 +1,338 @@
+# migrated_from: squads/kaizen/workflows/wf-ecosystem-analysis.yaml | migration_story: STORY-108.3 | date: 2026-04-04
+workflow_name: full_ecosystem_analysis
+description: "Orchestrate all 6 Kaizen Squad agents for comprehensive ecosystem analysis. Executes in 5 phases: data collection, Tier 0 diagnosis (parallel), Tier 1 analysis (parallel), Tier 2 cost specialist, and synthesis with RULE-RD-001 enforcement."
+agent_sequence:
+  - kaizen-chief
+  - topology-analyst
+  - performance-tracker
+  - bottleneck-hunter
+  - capability-mapper
+  - tech-radar
+  - cost-analyst
+  - kaizen-chief
+success_indicators:
+  - Report has all 6 dimensions analyzed
+  - "Max 5 prioritized recommendations (RULE-RD-001: N>=3 enforced)"
+  - Each recommendation has evidence + action + cost + ROI
+  - All quality gates (QG-KZ-001 through QG-KZ-003) passed
+quality_policy:
+  analysis_timeout:
+    threshold: 20
+  critical_evidence_min:
+    threshold: 3
+  prioritized_actions_max:
+    threshold: 5
+  output_quality_min:
+    threshold: 0.8
+workflow:
+  description: Workflow SINKRA-native de análise do ecossistema como Organism linear com checkpoints e journey log.
+  type: sinkra-native-meta-analysis
+  id: wf-ecosystem-analysis
+  name: Full Ecosystem Analysis
+  version: 1.0.0
+  orchestrator: kaizen-chief
+  mode: autonomous
+  estimated_duration: 10-20 minutes
+  sinkra:
+    organism_id: org-ecosystem-analysis
+    organism_pattern: linear
+    molecule_sequence: [mol-diagnosis, mol-governance, mol-optimization]
+    quality_gate_source: squads/squad-creator/data/quality-gates.yaml
+    journey_log_source: squads/squad-creator/data/journey-log-events.yaml
+  triggers:
+    proactive:
+      - event: git commit in squads/
+        cadence: on change
+      - event: weekly schedule
+        cadence: every Sunday 20:00 BRT
+    reactive:
+      - command: "*analyze"
+  sequence:
+    - step: phase-0
+      id: phase-0
+      phase: 1
+      phase_name: Data Collection
+      agent: kaizen-chief
+      action: execute_data-collection
+      next: phase-0-5
+    - step: phase-0-5
+      id: phase-0-5
+      phase: 2
+      phase_name: Autonomy & Output Quality Audit
+      agent: kaizen-chief
+      action: execute_autonomy-output-quality-audit
+      next: phase-1
+    - step: phase-1
+      id: phase-1
+      phase: 3
+      phase_name: Tier 0 Diagnosis
+      agent: kaizen-chief
+      action: execute_tier-0-diagnosis
+      next: phase-2
+    - step: phase-2
+      id: phase-2
+      phase: 4
+      phase_name: Tier 1 Analysis
+      agent: kaizen-chief
+      action: execute_tier-1-analysis
+      next: phase-3
+    - step: phase-3
+      id: phase-3
+      phase: 5
+      phase_name: Tier 2 Cost Analysis
+      agent: kaizen-chief
+      action: execute_tier-2-cost-analysis
+      next: phase-4
+    - step: phase-4
+      id: phase-4
+      phase: 6
+      phase_name: Synthesis & Report Generation
+      agent: kaizen-chief
+      action: execute_synthesis-report-generation
+      next: agent-1
+    - step: agent-1
+      id: agent-1
+      phase: 7
+      phase_name: kaizen-chief
+      agent: kaizen-chief
+      action: execute_kaizen-chief
+      next: agent-2
+    - step: agent-2
+      id: agent-2
+      phase: 8
+      phase_name: topology-analyst
+      agent: topology-analyst
+      action: execute_topology-analyst
+      next: agent-3
+    - step: agent-3
+      id: agent-3
+      phase: 9
+      phase_name: performance-tracker
+      agent: performance-tracker
+      action: execute_performance-tracker
+      next: agent-4
+    - step: agent-4
+      id: agent-4
+      phase: 10
+      phase_name: bottleneck-hunter
+      agent: bottleneck-hunter
+      action: execute_bottleneck-hunter
+      next: agent-5
+    - step: agent-5
+      id: agent-5
+      phase: 11
+      phase_name: capability-mapper
+      agent: capability-mapper
+      action: execute_capability-mapper
+      next: agent-6
+    - step: agent-6
+      id: agent-6
+      phase: 12
+      phase_name: tech-radar
+      agent: tech-radar
+      action: execute_tech-radar
+      next: agent-7
+    - step: agent-7
+      id: agent-7
+      phase: 13
+      phase_name: cost-analyst
+      agent: cost-analyst
+      action: execute_cost-analyst
+      next: agent-8
+    - step: agent-8
+      id: agent-8
+      phase: 14
+      phase_name: kaizen-chief
+      agent: kaizen-chief
+      action: execute_kaizen-chief
+    - workflow_end:
+        id: complete
+        action: workflow_complete
+  phases:
+    phase_0:
+      name: Data Collection
+      executor: worker
+      duration: 1-2 minutes
+      checkpoint: QG-KZ-001
+      steps:
+        - id: "0.1"
+          name: Scan squad registry
+          action: Read squads/sinkra-squad/data/ecosystem-registry.yaml
+          output: squad_list
+        - id: "0.2"
+          name: Scan active squads
+          action: Glob squads/*/config.yaml
+          output: active_squads
+        - id: "0.3"
+          name: Count agents per squad
+          action: Glob squads/*/agents/*.md per squad
+          output: agent_counts
+        - id: "0.4"
+          name: Scan stories/epics
+          action: Glob docs/stories/*.md + docs/prd/*.md
+          output: stories_epics
+        - id: "0.5"
+          name: Collect recent git activity
+          action: git log --oneline -50
+          output: recent_changes
+      checkpoint_criteria:
+        - squad_list retrieved
+        - active_squads scanned
+        - agent_counts calculated
+      veto_conditions:
+        - IF no squads found → ABORT with 'Empty ecosystem'
+      journey_log: JLOG-KZ-001
+    phase_0_5:
+      name: Autonomy & Output Quality Audit
+      execution: parallel
+      duration: 30 seconds
+      checkpoint: QG-KZ-001.5
+      steps:
+        - id: 0.5.1
+          name: Audit autonomy levels
+          action: bash scripts/kaizen-audit-autonomy.sh
+          executor: worker
+          output: autonomy_report
+        - id: 0.5.2
+          name: Audit output quality
+          action: bash scripts/kaizen-audit-output-quality.sh content-engine carousel
+          executor: worker
+          output: output_quality_report
+        - id: 0.5.3
+          name: Run auto-healing gate
+          action: bash scripts/auto-healing-gate.sh --all
+          executor: worker
+          output: healing_report
+      checkpoint_criteria:
+        - autonomy_report has all squads scored
+        - output_quality_report has at least 5 outputs audited
+        - healing_report generated (PASS or NEEDS_REVIEW)
+      journey_log: JLOG-KZ-002
+    phase_1:
+      name: Tier 0 Diagnosis
+      execution: parallel
+      duration: 3-5 minutes
+      checkpoint: QG-KZ-002
+      agents:
+        - agent: topology-analyst
+          task: Analyze squad structure, types, interaction modes, cognitive load
+          input: phase_0 outputs
+          output: topology_report
+          framework: Team Topologies (4 types + 3 modes + cognitive load)
+        - agent: performance-tracker
+          task: Calculate DORA metrics, BSC perspectives, OKR status per squad
+          input: phase_0 outputs + historical data
+          output: performance_report
+          framework: DORA + BSC + OKR
+      checkpoint_criteria:
+        - topology_report has squad type assignments
+        - performance_report has DORA metrics per squad
+        - Both reports have findings with evidence
+      veto_conditions:
+        - IF topology_report is empty → RETRY once, then ABORT
+        - IF performance data unavailable → SKIP metrics, note in report
+      journey_log: JLOG-KZ-003
+    phase_2:
+      name: Tier 1 Analysis
+      execution: parallel
+      duration: 3-5 minutes
+      depends_on: phase_1
+      agents:
+        - agent: bottleneck-hunter
+          task: Identify system constraints using TOC 5 Focusing Steps
+          input: topology_report + performance_report
+          output: bottleneck_report
+          framework: TOC + OMTM
+        - agent: capability-mapper
+          task: Map capabilities, identify gaps, recommend resources
+          input: phase_0 outputs + topology_report
+          output: capability_report
+          framework: Wardley Maps + 4R Model
+        - agent: tech-radar
+          task: Evaluate tools/APIs/MCPs, update radar, run fitness functions
+          input: phase_0 outputs + capability_report
+          output: radar_report
+          framework: Technology Radar + Fitness Functions
+      checkpoint_criteria:
+        - bottleneck_report identifies top constraint
+        - capability_report lists gaps with recommendations
+        - radar_report has updated quadrants
+      journey_log: JLOG-KZ-004
+    phase_3:
+      name: Tier 2 Cost Analysis
+      execution: sequential
+      duration: 2-3 minutes
+      depends_on: phase_2
+      agents:
+        - agent: cost-analyst
+          task: Calculate costs, ROI per squad, identify waste
+          input: All previous reports
+          output: cost_report
+          framework: FinOps + BSC Financial Perspective
+      journey_log: JLOG-KZ-005
+      checkpoint_criteria:
+        - cost_report has spend per squad
+        - ROI calculated for each recommendation
+    phase_4:
+      name: Synthesis & Report Generation
+      executor: kaizen-chief
+      duration: 2-3 minutes
+      depends_on: phase_3
+      steps:
+        - id: "4.1"
+          name: Merge all findings
+          action: Combine 6 reports into unified findings list
+        - id: 4.1.5
+          name: Enforce RULE-RD-001 (N<3 validation)
+          action: |
+            For each finding in unified list:
+            1. Count N = number of independent evidence occurrences across source reports
+            2. IF N >= 3 → KEEP as actionable finding
+            3. IF N < 3 → DOWNGRADE level to MONITORAR (do NOT promote to recommendation)
+            4. Log all downgrades: "{finding} downgraded: N={N}, sources={list}"
+          veto: IF any recommendation with N<3 passes to step 4.3 → BLOCK and re-run 4.1.5
+          output: validated_findings (only N>=3 proceed to ranking)
+        - id: "4.2"
+          name: Rank by impact
+          action: "Score each validated finding: impact (1-10) x urgency (1-10) x feasibility (1-10)"
+          criteria: Top 5 by composite score
+          input: validated_findings from 4.1.5 (pre-filtered by N>=3)
+        - id: "4.3"
+          name: Generate recommendations
+          action: "For each top finding: action + evidence + cost + ROI"
+        - id: "4.4"
+          name: Format report
+          action: Apply templates/weekly-report-tmpl.md
+          output: Weekly Kaizen Report
+        - id: "4.5"
+          name: Save report
+          action: Write to data/reports/week-{N}-{date}.md
+      checkpoint_criteria:
+        - Report has all 6 dimensions
+        - Max 5 prioritized recommendations
+        - Each recommendation has evidence + action + cost
+      veto_conditions:
+        - IF any recommendation lacks evidence → REMOVE from report
+        - IF >5 recommendations → CUT lowest impact
+  output:
+    primary: data/reports/week-{N}-{date}.md
+    format: Weekly Kaizen Report (Markdown)
+    distribution:
+      - Display to user
+      - Save to data/reports/
+  error_handling:
+    agent_timeout:
+      threshold: 5 minutes per agent
+      action: Skip agent, note gap in report
+    agent_failure:
+      action: Retry once, then skip with note
+    data_unavailable:
+      action: Report with available data, note gaps
+  handoff_prompts:
+    kaizen-chief_to_topology-analyst: Handoff context from kaizen-chief to topology-analyst. Preserve outputs, risks, and open decisions.
+    topology-analyst_to_performance-tracker: Handoff context from topology-analyst to performance-tracker. Preserve outputs, risks, and open decisions.
+    performance-tracker_to_bottleneck-hunter: Handoff context from performance-tracker to bottleneck-hunter. Preserve outputs, risks, and open decisions.
+    bottleneck-hunter_to_capability-mapper: Handoff context from bottleneck-hunter to capability-mapper. Preserve outputs, risks, and open decisions.
+    capability-mapper_to_tech-radar: Handoff context from capability-mapper to tech-radar. Preserve outputs, risks, and open decisions.
+    tech-radar_to_cost-analyst: Handoff context from tech-radar to cost-analyst. Preserve outputs, risks, and open decisions.
+    cost-analyst_to_kaizen-chief: Handoff context from cost-analyst to kaizen-chief. Preserve outputs, risks, and open decisions.

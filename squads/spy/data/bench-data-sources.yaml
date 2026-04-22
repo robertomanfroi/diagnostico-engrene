@@ -1,0 +1,46 @@
+# Bench Data Sources v1.0
+# Data acquisition strategy per comparison type
+# Referenced by: bench-detect.md, bench-inventory.md
+#
+# Each type defines:
+#   - primary: preferred data acquisition method
+#   - protocol: shorthand for the acquisition strategy
+#   - methods: Claude Code tools used for data collection
+#   - sources: where data comes from
+#   - never: hard constraints on what NOT to do
+
+types:
+  codebase:
+    primary: "git clone to .bench-repos/{subject}/"
+    protocol: "LOCAL_CLONE_FIRST"
+    methods: [Glob, Grep, Read, Bash]
+    sources: ["GitHub repo", "local filesystem"]
+    never: ["WebFetch for structural data", "estimate counts"]
+
+  llm:
+    primary: "Official benchmark results + API testing"
+    protocol: "BENCHMARK_DATA_FIRST"
+    methods: [WebSearch, WebFetch]
+    sources: ["official docs", "papers", "leaderboards", "pricing pages"]
+    never: ["fabricate benchmark scores", "estimate without source"]
+
+  product:
+    primary: "Product documentation + public info"
+    protocol: "DOCS_AND_REVIEWS_FIRST"
+    methods: [WebSearch, WebFetch]
+    sources: ["product website", "pricing page", "changelog", "G2/Capterra reviews"]
+    never: ["assume features without verification", "use outdated pricing"]
+
+  company:
+    primary: "Public data + news + careers"
+    protocol: "PUBLIC_DATA_FIRST"
+    methods: [WebSearch, WebFetch]
+    sources: ["company website", "Crunchbase", "LinkedIn", "news", "press releases"]
+    never: ["use unverified financial data", "speculate on private metrics"]
+
+  technology:
+    primary: "Official docs + GitHub repo stats"
+    protocol: "DOCS_AND_ECOSYSTEM_FIRST"
+    methods: [WebSearch, WebFetch]
+    sources: ["official docs", "GitHub", "npm/PyPI stats", "community forums"]
+    never: ["compare without version context", "ignore breaking changes"]

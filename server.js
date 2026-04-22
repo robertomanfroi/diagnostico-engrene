@@ -1627,7 +1627,7 @@ app.post('/api/analisar', upload.fields([
   }
   analiseEmCurso++;
 
-  // Keepalive: envia \n a cada 20s para evitar timeout do proxy Nginx do Render
+  // Keepalive: envia \n a cada 20s para evitar timeout de proxy reverso
   // JSON.parse ignora whitespace no inicio, entao o cliente processa normalmente
   res.setHeader('Content-Type', 'application/json; charset=utf-8');
   res.setHeader('Transfer-Encoding', 'chunked');

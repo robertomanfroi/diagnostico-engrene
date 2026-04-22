@@ -1,0 +1,16 @@
+# migrated_from: squads/kaizen/data/kaizen-infrastructure-map.yaml | migration_story: STORY-108.3 | date: 2026-04-04 | strategy: legacy (infrastructure map from kaizen, archived here)
+version: "1.0.0"
+infrastructure:
+  git_metrics:
+    connection: "git log --oneline -50"
+    service_ref: "infrastructure/git-ops/"
+  ecosystem_scan:
+    integration: "glob squads/* + docs/stories/*"
+    service_ref: "squads/kaizen/scripts/"
+  report_storage:
+    connection: "data/reports/"
+    service_catalog: "services/reporting/catalog.yaml"
+  autonomy_audit:
+    integration: "scripts/kaizen-audit-autonomy.sh"
+    service_ref: "squads/kaizen/scripts/"
+

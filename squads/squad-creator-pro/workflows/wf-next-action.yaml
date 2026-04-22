@@ -1,0 +1,113 @@
+workflow:
+  id: wf-next-action
+  name: Next Action
+  version: "1.0.0"
+  description: >
+    Standardize stateful greetings with a final Next Action CTA, inferred from
+    current gaps and operational continuity. Audit + Implementation pattern.
+  type: orchestration
+  command: "*next-action {squad_name} [--audit|--apply]"
+  state_machine:
+    states: [init, discovery, gap-map, implement, complete, failed]
+    transitions:
+      - trigger: start
+        source: init
+        dest: discovery
+      - trigger: discovery_complete
+        source: discovery
+        dest: gap-map
+      - trigger: discovery_failed
+        source: discovery
+        dest: failed
+      - trigger: gap_map_complete
+        source: gap-map
+        dest: implement
+      - trigger: gap_map_audit_only
+        source: gap-map
+        dest: complete
+      - trigger: gap_map_failed
+        source: gap-map
+        dest: failed
+      - trigger: implement_complete
+        source: implement
+        dest: complete
+      - trigger: implement_failed
+        source: implement
+        dest: failed
+      - trigger: fail
+        source: "*"
+        dest: failed
+  sequence:
+    - step: discovery
+      id: discovery
+      phase: 1
+      phase_name: DISCOVERY
+      agent: squad-chief
+      task_ref: next-action-discovery
+      action: execute_map_greeting_and_context_sources
+      description: Map greeting scripts, context sources, existing commands, friction points
+      inputs:
+        - squad_name
+      outputs:
+        - discovery_map
+      next: gap-map
+    - step: gap-map
+      id: gap-map
+      phase: 2
+      phase_name: GAP MAP
+      agent: squad-chief
+      task_ref: next-action-gap-map
+      action: execute_build_decision_table
+      description: Build decision table mapping signals to next actions by priority
+      inputs:
+        - discovery_map
+      outputs:
+        - gap_map
+      next: implement
+    - step: implement
+      id: implement
+      phase: 3
+      phase_name: IMPLEMENT
+      agent: squad-chief
+      task_ref: next-action-implement
+      action: execute_apply_pattern_and_create_tests
+      description: Apply pattern to greeting script, add CTA, create validation tests
+      condition: mode == apply
+      inputs:
+        - gap_map
+        - greeting_script_path
+      outputs:
+        - updated_greeting
+        - validation_tests
+    - workflow_end:
+        id: complete
+        action: workflow_complete
+  inputs:
+    required:
+      - name: squad_name
+        type: string
+        description: Squad name or greeting_script_path
+    optional:
+      - name: mode
+        type: enum
+        values: [audit, apply]
+        default: audit
+        description: Audit-only or apply changes
+  outputs:
+    primary:
+      - gap_map
+      - updated_greeting
+      - validation_tests
+
+  quality_gates:
+    - id: SCP_NXA_001
+      phase: implement
+      type: automated
+      placement: exit
+      severity: warning
+      description: "Next action must produce implementable recommendation"
+      criteria:
+        - field: action_implemented
+          operator: "=="
+          value: true
+      on_fail: warn
