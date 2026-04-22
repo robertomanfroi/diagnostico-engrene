@@ -1,0 +1,28 @@
+name: Keep Alive — Diagnóstico Engrene
+
+on:
+  schedule:
+    # Pinga a cada 5 minutos (limite mínimo do GitHub Actions)
+    - cron: '*/5 * * * *'
+  workflow_dispatch: # permite rodar manualmente
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping health check
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 https://diagnostico-engrene.onrender.com/health)
+          echo "Status: $STATUS"
+          if [ "$STATUS" != "200" ]; then
+            echo "⚠️ Site retornou $STATUS — pode estar acordando do hibernate"
+            # Segunda tentativa após 20s (Render leva ~30s para acordar)
+            sleep 20
+            STATUS2=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 https://diagnostico-engrene.onrender.com/health)
+            echo "Status (retry): $STATUS2"
+            if [ "$STATUS2" != "200" ]; then
+              echo "❌ Site fora do ar após retry"
+              exit 1
+            fi
+          fi
+          echo "✅ Site no ar"
