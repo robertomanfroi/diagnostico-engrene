@@ -2098,6 +2098,11 @@ app.get('/api/status', (req, res) => {
   });
 });
 
+// ── Health check (Render keep-alive) ───────────────────────
+app.get('/health', (req, res) => {
+  res.status(200).json({ status: 'ok', ts: Date.now() });
+});
+
 // ── Serve frontend ─────────────────────────────────────────
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'frontend', 'index.html'));
@@ -2112,4 +2117,15 @@ const server = app.listen(PORT, () => {
   console.log(`   🎙️  Transcriber — Whisper API: transcrição ${process.env.OPENAI_API_KEY ? '✅' : '⚠️  (sem OPENAI_API_KEY, usa fallback local)'}`);
   console.log(`   🧠 Analyst     — Claude Haiku: análise profunda\n`);
   server.timeout = 120000;
+
+  // ── Self-ping a cada 14 min para evitar hibernate no Render free tier ──
+  const SELF_URL = process.env.RENDER_EXTERNAL_URL || `http://localhost:${PORT}`;
+  setInterval(async () => {
+    try {
+      const fetch = (await import('node-fetch')).default;
+      await fetch(`${SELF_URL}/health`, { method: 'GET', signal: AbortSignal.timeout(10000) });
+    } catch (e) {
+      // silencia — se falhar o Render já vai acordar na próxima requisição real
+    }
+  }, 14 * 60 * 1000);
 });
