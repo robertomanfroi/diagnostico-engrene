@@ -12,13 +12,12 @@ jobs:
     steps:
       - name: Ping health check
         run: |
-          STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 https://diagnostico-engrene.onrender.com/health)
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 https://diagnostico-engrene-production.up.railway.app/health)
           echo "Status: $STATUS"
           if [ "$STATUS" != "200" ]; then
-            echo "⚠️ Site retornou $STATUS — pode estar acordando do hibernate"
-            # Segunda tentativa após 20s (Render leva ~30s para acordar)
-            sleep 20
-            STATUS2=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 https://diagnostico-engrene.onrender.com/health)
+            echo "⚠️ Site retornou $STATUS"
+            sleep 15
+            STATUS2=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 https://diagnostico-engrene-production.up.railway.app/health)
             echo "Status (retry): $STATUS2"
             if [ "$STATUS2" != "200" ]; then
               echo "❌ Site fora do ar após retry"
