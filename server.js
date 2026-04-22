@@ -2122,8 +2122,7 @@ const server = app.listen(PORT, () => {
   const SELF_URL = process.env.RENDER_EXTERNAL_URL || `http://localhost:${PORT}`;
   setInterval(async () => {
     try {
-      const fetch = (await import('node-fetch')).default;
-      await fetch(`${SELF_URL}/health`, { method: 'GET', signal: AbortSignal.timeout(10000) });
+      await fetch(`${SELF_URL}/health`, { method: 'GET' });
     } catch (e) {
       // silencia — se falhar o Render já vai acordar na próxima requisição real
     }
