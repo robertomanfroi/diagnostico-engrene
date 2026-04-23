@@ -12,6 +12,14 @@ const Anthropic = require('@anthropic-ai/sdk');
 const OpenAI    = require('openai');
 const fetch     = require('node-fetch');
 
+// ── Handlers globais — previnem crash do processo por exceções não capturadas ──
+process.on('uncaughtException', (err) => {
+  console.error('🔴 UNCAUGHT EXCEPTION:', err.stack || err.message || err);
+});
+process.on('unhandledRejection', (reason) => {
+  console.error('🔴 UNHANDLED REJECTION:', reason?.stack || reason);
+});
+
 const app  = express();
 const PORT = process.env.PORT || 3000;
 
@@ -626,12 +634,13 @@ except Exception as e:
     const env = { ...process.env };
     const stdout = await new Promise((resolve, reject) => {
       const proc = spawn('python3', ['-c', script], { env });
-      let out = '', err = '';
-      const timer = setTimeout(() => { proc.kill(); reject(new Error('Timeout instagrapi 60s')); }, 60000);
+      let out = '', err = '', settled = false;
+      const done = (fn, val) => { if (!settled) { settled = true; fn(val); } };
+      const timer = setTimeout(() => { proc.kill(); done(reject, new Error('Timeout instagrapi 60s')); }, 60000);
       proc.stdout.on('data', d => out += d);
       proc.stderr.on('data', d => err += d);
-      proc.on('close', () => { clearTimeout(timer); resolve(out.trim()); });
-      proc.on('error', e => { clearTimeout(timer); reject(e); });
+      proc.on('close', () => { clearTimeout(timer); done(resolve, out.trim()); });
+      proc.on('error', e => { clearTimeout(timer); done(reject, e); });
     });
 
     if (!stdout) {
@@ -708,12 +717,13 @@ except Exception as e:
   try {
     const out = await new Promise((resolve, reject) => {
       const proc = spawn('python3', ['-c', script], { env: process.env });
-      let stdout = '', stderr = '';
-      const timer = setTimeout(() => { proc.kill(); reject(new Error('Timeout instaloader 25s')); }, 25000);
+      let stdout = '', stderr = '', settled = false;
+      const done = (fn, val) => { if (!settled) { settled = true; fn(val); } };
+      const timer = setTimeout(() => { proc.kill(); done(reject, new Error('Timeout instaloader 25s')); }, 25000);
       proc.stdout.on('data', d => stdout += d);
       proc.stderr.on('data', d => stderr += d);
-      proc.on('close', () => { clearTimeout(timer); resolve(stdout.trim()); });
-      proc.on('error', e => { clearTimeout(timer); reject(e); });
+      proc.on('close', () => { clearTimeout(timer); done(resolve, stdout.trim()); });
+      proc.on('error', e => { clearTimeout(timer); done(reject, e); });
     });
     if (out) {
       const data = JSON.parse(out);
@@ -747,9 +757,11 @@ async function agentDownloader(reelUrl, sv) {
         '-f', 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best',
         reelUrl
       ]);
-      const timer = setTimeout(() => { proc.kill(); reject(new Error('Timeout yt-dlp 60s')); }, 60000);
-      proc.on('close', code => { clearTimeout(timer); code === 0 ? resolve() : reject(new Error(`yt-dlp exit ${code}`)); });
-      proc.on('error', e => { clearTimeout(timer); reject(e); });
+      let settled = false;
+      const done = (fn, val) => { if (!settled) { settled = true; fn(val); } };
+      const timer = setTimeout(() => { proc.kill(); done(reject, new Error('Timeout yt-dlp 60s')); }, 60000);
+      proc.on('close', code => { clearTimeout(timer); code === 0 ? done(resolve) : done(reject, new Error(`yt-dlp exit ${code}`)); });
+      proc.on('error', e => { clearTimeout(timer); done(reject, e); });
     });
 
     if (fs.existsSync(tmpPath)) {
@@ -1640,9 +1652,12 @@ app.post('/api/analisar', upload.fields([
   const uploadedFiles = [];
   const jobId = `job_${Date.now()}`;
   const sv    = new Supervisor(jobId);
+  // Declara fora do try para evitar ReferenceError no catch
+  let arroba = '', clienteIP = 'unknown', clienteFP = '';
 
   try {
-    const { nome, nicho, arroba, objetivo, descricao } = req.body;
+    const { nome, nicho, objetivo, descricao } = req.body;
+    arroba = (req.body.arroba || '').toString();
 
     // ── Validação básica ────────────────────────────────────
     if (!nome?.trim() || !nicho?.trim() || !arroba?.trim()) {
@@ -1651,10 +1666,10 @@ app.post('/api/analisar', upload.fields([
     }
 
     // ── Rate Limiting ───────────────────────────────────────
-    const clienteIP = req.headers['x-forwarded-for']?.split(',')[0]?.trim()
-                   || req.socket?.remoteAddress
-                   || 'unknown';
-    const clienteFP = (req.body._dfp || '').toString().trim().slice(0, 20);
+    clienteIP = req.headers['x-forwarded-for']?.split(',')[0]?.trim()
+             || req.socket?.remoteAddress
+             || 'unknown';
+    clienteFP = (req.body._dfp || '').toString().trim().slice(0, 20);
     const rl = checkRateLimit(arroba.trim(), clienteIP, clienteFP);
     if (rl.bloqueado) {
       clearInterval(keepAlive);
@@ -1698,7 +1713,7 @@ app.post('/api/analisar', upload.fields([
       for (let i = 0; i < datas.length - 1; i++) {
         diasEntrePosts.push((datas[i] - datas[i+1]) / (1000 * 60 * 60 * 24));
       }
-      const mediaIntervaloDias = diasEntrePosts.reduce((a, b) => a + b, 0) / diasEntrePosts.length;
+      const mediaIntervaloDias = diasEntrePosts.length > 0 ? diasEntrePosts.reduce((a, b) => a + b, 0) / diasEntrePosts.length : 0;
       const diasDesdeUltimo = (Date.now() - datas[0]) / (1000 * 60 * 60 * 24);
       const postsUltimos30 = datas.filter(d => (Date.now() - d) / (1000 * 60 * 60 * 24) <= 30).length;
       frequenciaCalculada = `Intervalo médio entre posts: ${mediaIntervaloDias.toFixed(1)} dias | Posts nos últimos 30 dias: ${postsUltimos30} | Último post: há ${diasDesdeUltimo.toFixed(0)} dias`;
@@ -1907,9 +1922,7 @@ INSTRUÇÃO: Execute TODOS OS 18 PASSOS do Método Engrene (PASSOs 1 a 12 do dia
     clearInterval(keepAlive);
     uploadedFiles.forEach(f => { try { fs.unlinkSync(f); } catch(e) {} });
     sv.err('supervisor', error.message);
-    const safeIP = (typeof clienteIP !== 'undefined') ? clienteIP : 'unknown';
-    const safeFP = (typeof clienteFP !== 'undefined') ? clienteFP : '';
-    registrarErro(safeIP, safeFP, arroba);
+    registrarErro(clienteIP, clienteFP, arroba);
     res.end(JSON.stringify({ sucesso: false, erro: error.message }));
   } finally {
     analiseEmCurso--;
@@ -1929,10 +1942,12 @@ app.post('/api/analisar-manual', async (req, res) => {
 
   const jobId = `manual_${Date.now()}`;
   const sv    = new Supervisor(jobId);
+  // Declara fora do try para evitar ReferenceError no catch
+  let arroba = '', clienteIP = 'unknown', clienteFP = '';
 
   try {
     const {
-      nome, nicho, arroba,
+      nome, nicho,
       objetivo, frequencia, descricao,
       seg_total,       // seguidores totais
       med_curtidas,    // média de curtidas por post
@@ -1941,6 +1956,7 @@ app.post('/api/analisar-manual', async (req, res) => {
       posts_descricao, // descrição livre dos últimos posts
       tipo_conta       // pessoal/comercial
     } = req.body;
+    arroba = (req.body.arroba || '').toString();
 
     if (!nome?.trim() || !nicho?.trim() || !arroba?.trim()) {
       analiseEmCurso--;
@@ -1948,10 +1964,10 @@ app.post('/api/analisar-manual', async (req, res) => {
     }
 
     // ── Rate Limiting (mesmo critério do endpoint principal) ──
-    const clienteIP = req.headers['x-forwarded-for']?.split(',')[0]?.trim()
-                   || req.socket?.remoteAddress
-                   || 'unknown';
-    const clienteFP = (req.body._dfp || '').toString().trim().slice(0, 20);
+    clienteIP = req.headers['x-forwarded-for']?.split(',')[0]?.trim()
+             || req.socket?.remoteAddress
+             || 'unknown';
+    clienteFP = (req.body._dfp || '').toString().trim().slice(0, 20);
     const rl = checkRateLimit(arroba.trim(), clienteIP, clienteFP);
     if (rl.bloqueado) {
       analiseEmCurso--;
@@ -2035,9 +2051,7 @@ NOTA: Dados coletados manualmente pelo usuário durante o evento. Use exatamente
 
   } catch(error) {
     sv.err('supervisor', error.message);
-    const safeIP = (typeof clienteIP !== 'undefined') ? clienteIP : 'unknown';
-    const safeFP = (typeof clienteFP !== 'undefined') ? clienteFP : '';
-    registrarErro(safeIP, safeFP, arroba);
+    registrarErro(clienteIP, clienteFP, arroba);
     res.status(500).json({ sucesso: false, erro: error.message });
   } finally {
     analiseEmCurso--;
