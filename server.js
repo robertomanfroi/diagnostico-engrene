@@ -109,7 +109,11 @@ function checkRateLimit(arroba, ip, fp) {
 
 function registrarAnalise(arroba, ip, fp) {
   const username = arroba.toLowerCase().replace('@', '');
-  rateLimits.usernames[username] = Date.now();
+  // Preserva o timestamp da PRIMEIRA análise da semana — não sobrescreve
+  // Assim a janela de 7 dias expira a partir da 1ª análise, não da última
+  if (!rateLimits.usernames[username]) {
+    rateLimits.usernames[username] = Date.now();
+  }
   if (!rateLimits.usernameCount) rateLimits.usernameCount = {};
   rateLimits.usernameCount[username] = (rateLimits.usernameCount[username] || 0) + 1;
   saveRateLimits();
