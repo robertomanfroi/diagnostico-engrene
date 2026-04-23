@@ -1907,7 +1907,9 @@ INSTRUÇÃO: Execute TODOS OS 18 PASSOS do Método Engrene (PASSOs 1 a 12 do dia
     clearInterval(keepAlive);
     uploadedFiles.forEach(f => { try { fs.unlinkSync(f); } catch(e) {} });
     sv.err('supervisor', error.message);
-    registrarErro(clienteIP, clienteFP, arroba);
+    const safeIP = (typeof clienteIP !== 'undefined') ? clienteIP : 'unknown';
+    const safeFP = (typeof clienteFP !== 'undefined') ? clienteFP : '';
+    registrarErro(safeIP, safeFP, arroba);
     res.end(JSON.stringify({ sucesso: false, erro: error.message }));
   } finally {
     analiseEmCurso--;
@@ -2033,7 +2035,9 @@ NOTA: Dados coletados manualmente pelo usuário durante o evento. Use exatamente
 
   } catch(error) {
     sv.err('supervisor', error.message);
-    registrarErro(clienteIP, clienteFP, arroba);
+    const safeIP = (typeof clienteIP !== 'undefined') ? clienteIP : 'unknown';
+    const safeFP = (typeof clienteFP !== 'undefined') ? clienteFP : '';
+    registrarErro(safeIP, safeFP, arroba);
     res.status(500).json({ sucesso: false, erro: error.message });
   } finally {
     analiseEmCurso--;
