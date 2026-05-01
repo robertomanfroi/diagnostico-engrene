@@ -27,6 +27,26 @@ const PORT = process.env.PORT || 3000;
 let analiseEmCurso = 0;
 const MAX_ANALISES = 5;
 
+// ── Fila de análises (jobs aguardando slot) ──────────────────────
+const filaJobs  = [];        // array de jobs em espera
+const jobsMap   = new Map(); // jobId → estado do job
+const JOB_TTL   = 30 * 60 * 1000; // descarta jobs após 30min
+const TEMPO_EST = 75;        // segundos estimados por análise
+
+function processarProximoDaFila() {
+  if (filaJobs.length === 0 || analiseEmCurso >= MAX_ANALISES) return;
+  const job = filaJobs.shift();
+  // Atualiza posição dos restantes
+  filaJobs.forEach((j, i) => { j.posicao = i + 1; });
+  job.status = 'processando';
+  job.iniciadoEm = Date.now();
+  analiseEmCurso++;
+  job.executar().catch(() => {}).finally(() => {
+    analiseEmCurso--;
+    processarProximoDaFila();
+  });
+}
+
 // ── Rate Limiting: 1 análise por @ por semana + 2 por IP/fingerprint por semana ──
 const RATE_LIMIT_SEMANAS_MS = 7 * 24 * 60 * 60 * 1000; // 7 dias
 const RATE_LIMIT_IP_MAX     = 2; // análises por IP por semana
@@ -1637,45 +1657,48 @@ app.post('/api/analisar', upload.fields([
   { name: 'print_audiencia',maxCount: 1 },
 ]), async (req, res) => {
 
-  // ── Limite de concorrência ───────────────────────────────
-  if (analiseEmCurso >= MAX_ANALISES) {
-    return res.status(429).json({ sucesso: false, erro: 'Muitas análises simultâneas. Aguarde um momento e tente novamente.' });
+  // ── Validação básica (antes de enfileirar) ──────────────
+  const { nome, nicho, objetivo, descricao } = req.body;
+  const _arroba = (req.body.arroba || '').toString();
+  if (!nome?.trim() || !nicho?.trim() || !_arroba?.trim()) {
+    return res.status(400).json({ sucesso: false, erro: 'Nome, nicho e @ do Instagram são obrigatórios.' });
   }
-  analiseEmCurso++;
 
-  // Keepalive: envia \n a cada 20s para evitar timeout de proxy reverso
-  // JSON.parse ignora whitespace no inicio, entao o cliente processa normalmente
-  res.setHeader('Content-Type', 'application/json; charset=utf-8');
-  res.setHeader('Transfer-Encoding', 'chunked');
-  const keepAlive = setInterval(() => { try { res.write('\n'); } catch(e) {} }, 20000);
+  // ── Rate Limiting (antes de enfileirar) ─────────────────
+  const _clienteIP = req.headers['x-forwarded-for']?.split(',')[0]?.trim()
+                  || req.socket?.remoteAddress
+                  || 'unknown';
+  const _clienteFP = (req.body._dfp || '').toString().trim().slice(0, 20);
+  const _rl = checkRateLimit(_arroba.trim(), _clienteIP, _clienteFP);
+  if (_rl.bloqueado) {
+    return res.status(429).json({ sucesso: false, erro: _rl.motivo });
+  }
 
+  // ── Cria job único para esta requisição ──────────────────
+  const jobId = `job_${Date.now()}_${Math.random().toString(36).slice(2,7)}`;
+  const job = {
+    jobId,
+    status: 'aguardando',
+    posicao: filaJobs.length + 1,
+    criadoEm: Date.now(),
+    iniciadoEm: null,
+    resultado: null,
+    erro: null,
+    executar: null
+  };
+  jobsMap.set(jobId, job);
+  // Limpa jobs velhos do mapa
+  for (const [id, j] of jobsMap) {
+    if (Date.now() - j.criadoEm > JOB_TTL) jobsMap.delete(id);
+  }
+
+  // ── Define a função de execução do job ───────────────────
+  job.executar = async () => {
   const uploadedFiles = [];
-  const jobId = `job_${Date.now()}`;
   const sv    = new Supervisor(jobId);
-  // Declara fora do try para evitar ReferenceError no catch
-  let arroba = '', clienteIP = 'unknown', clienteFP = '';
+  let arroba = _arroba, clienteIP = _clienteIP, clienteFP = _clienteFP;
 
   try {
-    const { nome, nicho, objetivo, descricao } = req.body;
-    arroba = (req.body.arroba || '').toString();
-
-    // ── Validação básica ────────────────────────────────────
-    if (!nome?.trim() || !nicho?.trim() || !arroba?.trim()) {
-      clearInterval(keepAlive);
-      return res.end(JSON.stringify({ sucesso: false, erro: 'Nome, nicho e @ do Instagram são obrigatórios.' }));
-    }
-
-    // ── Rate Limiting ───────────────────────────────────────
-    clienteIP = req.headers['x-forwarded-for']?.split(',')[0]?.trim()
-             || req.socket?.remoteAddress
-             || 'unknown';
-    clienteFP = (req.body._dfp || '').toString().trim().slice(0, 20);
-    const rl = checkRateLimit(arroba.trim(), clienteIP, clienteFP);
-    if (rl.bloqueado) {
-      clearInterval(keepAlive);
-      analiseEmCurso--;
-      return res.end(JSON.stringify({ sucesso: false, erro: rl.motivo }));
-    }
 
     const reelUrl     = (req.body.reel_url     || '').trim();
     const reelLegenda = (req.body.reel_legenda || '').trim();
@@ -1898,15 +1921,14 @@ INSTRUÇÃO: Execute TODOS OS 18 PASSOS do Método Engrene (PASSOs 1 a 12 do dia
       registrarAnalise(arroba.trim(), clienteIP, clienteFP);
     }
 
-    clearInterval(keepAlive);
-
     if (relatorio.length <= 200) {
       registrarErro(clienteIP, clienteFP, arroba.trim());
-      res.end(JSON.stringify({ sucesso: false, erro: 'Análise não disponível — tente novamente.' }));
+      job.erro = 'Análise não disponível — tente novamente.';
+      job.status = 'erro';
       return;
     }
 
-    res.end(JSON.stringify({
+    job.resultado = {
       sucesso: true,
       relatorio,
       tokens_usados: tokens,
@@ -1916,17 +1938,56 @@ INSTRUÇÃO: Execute TODOS OS 18 PASSOS do Método Engrene (PASSOs 1 a 12 do dia
         transcricao: squadResultado.transcricao ? 'whisper' : (reelLegenda ? 'manual' : 'não disponível'),
         virais:      squadResultado.conteudosVirais ? 'apify' : 'não coletado'
       }
-    }));
+    };
+    job.status = 'concluido';
 
   } catch (error) {
-    clearInterval(keepAlive);
     uploadedFiles.forEach(f => { try { fs.unlinkSync(f); } catch(e) {} });
     sv.err('supervisor', error.message);
     registrarErro(clienteIP, clienteFP, arroba);
-    res.end(JSON.stringify({ sucesso: false, erro: error.message }));
-  } finally {
-    analiseEmCurso--;
+    job.erro = error.message;
+    job.status = 'erro';
   }
+  }; // fim job.executar
+
+  // ── Enfileira ou executa imediatamente ───────────────────
+  if (analiseEmCurso < MAX_ANALISES) {
+    job.status = 'processando';
+    job.iniciadoEm = Date.now();
+    analiseEmCurso++;
+    job.executar().catch(() => {}).finally(() => {
+      analiseEmCurso--;
+      processarProximoDaFila();
+    });
+  } else {
+    filaJobs.push(job);
+  }
+
+  const posicao = job.status === 'processando' ? 0 : job.posicao;
+  const tempoEstSeg = posicao === 0 ? TEMPO_EST : TEMPO_EST + (posicao * TEMPO_EST);
+  return res.json({ jobId, status: job.status, posicao, tempoEstSeg });
+});
+
+// ══════════════════════════════════════════════════════════════
+//  ENDPOINT: GET /api/job/:jobId — polling de status do job
+// ══════════════════════════════════════════════════════════════
+app.get('/api/job/:jobId', (req, res) => {
+  const job = jobsMap.get(req.params.jobId);
+  if (!job) return res.status(404).json({ sucesso: false, erro: 'Job não encontrado.' });
+
+  const posicao = job.status === 'aguardando' ? job.posicao : 0;
+  const decorrido = job.iniciadoEm ? Math.floor((Date.now() - job.iniciadoEm) / 1000) : 0;
+  const tempoEstSeg = job.status === 'aguardando'
+    ? TEMPO_EST + (posicao * TEMPO_EST)
+    : Math.max(0, TEMPO_EST - decorrido);
+
+  if (job.status === 'concluido') {
+    return res.json({ status: 'concluido', ...job.resultado });
+  }
+  if (job.status === 'erro') {
+    return res.json({ status: 'erro', sucesso: false, erro: job.erro });
+  }
+  res.json({ status: job.status, posicao, tempoEstSeg, analiseEmCurso, maxAnalises: MAX_ANALISES });
 });
 
 // ══════════════════════════════════════════════════════════════
@@ -1935,15 +1996,44 @@ INSTRUÇÃO: Execute TODOS OS 18 PASSOS do Método Engrene (PASSOs 1 a 12 do dia
 // ══════════════════════════════════════════════════════════════
 app.post('/api/analisar-manual', async (req, res) => {
 
-  if (analiseEmCurso >= MAX_ANALISES) {
-    return res.status(429).json({ sucesso: false, erro: 'Muitas análises simultâneas. Aguarde.' });
+  // ── Validação básica (antes de enfileirar) ───────────────
+  const _mNome   = req.body.nome;
+  const _mNicho  = req.body.nicho;
+  const _mArroba = (req.body.arroba || '').toString();
+  if (!_mNome?.trim() || !_mNicho?.trim() || !_mArroba?.trim()) {
+    return res.status(400).json({ sucesso: false, erro: 'Nome, nicho e @ são obrigatórios.' });
   }
-  analiseEmCurso++;
 
-  const jobId = `manual_${Date.now()}`;
-  const sv    = new Supervisor(jobId);
-  // Declara fora do try para evitar ReferenceError no catch
-  let arroba = '', clienteIP = 'unknown', clienteFP = '';
+  // ── Rate Limiting (antes de enfileirar) ─────────────────
+  const _mClienteIP = req.headers['x-forwarded-for']?.split(',')[0]?.trim()
+                   || req.socket?.remoteAddress
+                   || 'unknown';
+  const _mClienteFP = (req.body._dfp || '').toString().trim().slice(0, 20);
+  const _mRl = checkRateLimit(_mArroba.trim(), _mClienteIP, _mClienteFP);
+  if (_mRl.bloqueado) {
+    return res.status(429).json({ sucesso: false, erro: _mRl.motivo });
+  }
+
+  // ── Cria job ─────────────────────────────────────────────
+  const jobId = `manual_${Date.now()}_${Math.random().toString(36).slice(2,7)}`;
+  const job = {
+    jobId,
+    status: 'aguardando',
+    posicao: filaJobs.length + 1,
+    criadoEm: Date.now(),
+    iniciadoEm: null,
+    resultado: null,
+    erro: null,
+    executar: null
+  };
+  jobsMap.set(jobId, job);
+  for (const [id, j] of jobsMap) {
+    if (Date.now() - j.criadoEm > JOB_TTL) jobsMap.delete(id);
+  }
+
+  job.executar = async () => {
+  const sv = new Supervisor(jobId);
+  let arroba = _mArroba, clienteIP = _mClienteIP, clienteFP = _mClienteFP;
 
   try {
     const {
@@ -1956,23 +2046,6 @@ app.post('/api/analisar-manual', async (req, res) => {
       posts_descricao, // descrição livre dos últimos posts
       tipo_conta       // pessoal/comercial
     } = req.body;
-    arroba = (req.body.arroba || '').toString();
-
-    if (!nome?.trim() || !nicho?.trim() || !arroba?.trim()) {
-      analiseEmCurso--;
-      return res.status(400).json({ sucesso: false, erro: 'Nome, nicho e @ são obrigatórios.' });
-    }
-
-    // ── Rate Limiting (mesmo critério do endpoint principal) ──
-    clienteIP = req.headers['x-forwarded-for']?.split(',')[0]?.trim()
-             || req.socket?.remoteAddress
-             || 'unknown';
-    clienteFP = (req.body._dfp || '').toString().trim().slice(0, 20);
-    const rl = checkRateLimit(arroba.trim(), clienteIP, clienteFP);
-    if (rl.bloqueado) {
-      analiseEmCurso--;
-      return res.status(429).json({ sucesso: false, erro: rl.motivo });
-    }
 
     sv.info('supervisor', `Análise manual: ${nome} | @${arroba} | ${nicho}`);
 
@@ -2042,20 +2115,38 @@ NOTA: Dados coletados manualmente pelo usuário durante o evento. Use exatamente
 
     registrarAnalise(arroba.trim(), clienteIP, clienteFP);
 
-    res.json({
+    job.resultado = {
       sucesso: true,
       relatorio,
       tokens_usados: tokens,
       fontes: { perfil: 'manual', transcricao: 'não disponível', virais: conteudosVirais ? 'apify' : 'não coletado' }
-    });
+    };
+    job.status = 'concluido';
 
   } catch(error) {
     sv.err('supervisor', error.message);
     registrarErro(clienteIP, clienteFP, arroba);
-    res.status(500).json({ sucesso: false, erro: error.message });
-  } finally {
-    analiseEmCurso--;
+    job.erro = error.message;
+    job.status = 'erro';
   }
+  }; // fim job.executar
+
+  // ── Enfileira ou executa imediatamente ───────────────────
+  if (analiseEmCurso < MAX_ANALISES) {
+    job.status = 'processando';
+    job.iniciadoEm = Date.now();
+    analiseEmCurso++;
+    job.executar().catch(() => {}).finally(() => {
+      analiseEmCurso--;
+      processarProximoDaFila();
+    });
+  } else {
+    filaJobs.push(job);
+  }
+
+  const posicaoM = job.status === 'processando' ? 0 : job.posicao;
+  const tempoEstSegM = posicaoM === 0 ? TEMPO_EST : TEMPO_EST + (posicaoM * TEMPO_EST);
+  return res.json({ jobId, status: job.status, posicao: posicaoM, tempoEstSeg: tempoEstSegM });
 });
 
 // ── Admin: reset rate limits (todos) ───────────────────────

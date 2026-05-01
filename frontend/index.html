@@ -1603,22 +1603,6 @@
       estEl.textContent = restante > 0 ? `~${restante}s` : 'Finalizando…';
     }, 1000);
 
-    // ── Poll status da fila a cada 5s ─────────────────────
-    const statusInterval = setInterval(async () => {
-      try {
-        const API_BASE = window.location.hostname.includes('github.io') ? 'https://diagnostico-engrene-production.up.railway.app' : '';
-        const s = await fetch(API_BASE + '/api/status').then(r => r.json());
-        tempoEst = s.tempoEstimadoSeg || 60;
-        estEl.textContent = `~${Math.max(0, tempoEst - segundos)}s`;
-        if (s.analiseEmCurso >= s.maxAnalises) {
-          filaEl.style.display = 'block';
-          filaTxt.textContent = `${s.analiseEmCurso} análises`;
-        } else {
-          filaEl.style.display = 'none';
-        }
-      } catch(e) {}
-    }, 5000);
-
     // Animação dos steps de loading
     const ls = ['ls1','ls2','ls3','ls4'];
     let idx = 0;
@@ -1635,6 +1619,30 @@
       }
     }, 10000);
 
+    let pollInterval = null;
+
+    function pararTudo() {
+      clearInterval(tick);
+      clearInterval(timerInterval);
+      if (pollInterval) clearInterval(pollInterval);
+    }
+
+    function mostrarErro(msgErro) {
+      pararTudo();
+      btn.disabled = false;
+      document.getElementById('loading-screen').style.display = 'none';
+      document.getElementById('form-screen').style.display = 'block';
+      if (msgErro.includes('pattern') || msgErro.includes('URL') || msgErro.includes('url')) {
+        msgErro = 'Verifique o link do Reel. Ele deve começar com https://';
+      } else if (msgErro.includes('Failed to fetch') || msgErro.includes('NetworkError')) {
+        msgErro = 'Sem conexão com o servidor. Tente novamente.';
+      }
+      const errSubmit = document.getElementById('err-submit');
+      errSubmit.innerHTML = '❌ ' + msgErro;
+      errSubmit.style.display = 'block';
+      errSubmit.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
     try {
       const fd = new FormData();
       fd.append('nome',             document.getElementById('f-nome').value);
@@ -1648,40 +1656,53 @@
       const res  = await fetch(API_BASE + '/api/analisar', { method:'POST', body:fd });
       const data = await res.json();
 
-      clearInterval(tick);
-      clearInterval(timerInterval);
-      clearInterval(statusInterval);
-      ls.forEach(id => {
-        document.getElementById(id).classList.remove('ativo');
-        document.getElementById(id).classList.add('done');
-      });
+      // Erro de validação/rate limit (sem jobId)
+      if (!data.jobId) {
+        throw new Error(data.erro || 'Erro desconhecido');
+      }
 
-      if (!data.sucesso) throw new Error(data.erro || 'Erro desconhecido');
+      const jobId = data.jobId;
 
-      exibirResultado(data.relatorio, data.fontes);
+      // Atualiza UI com posição inicial
+      if (data.posicao > 0) {
+        filaEl.style.display = 'block';
+        filaTxt.textContent = `Posição ${data.posicao} da fila`;
+        tempoEst = data.tempoEstSeg || 75;
+      } else {
+        filaEl.style.display = 'none';
+        tempoEst = data.tempoEstSeg || 75;
+      }
+
+      // ── Polling do job a cada 3s ─────────────────────────
+      pollInterval = setInterval(async () => {
+        try {
+          const jr = await fetch(API_BASE + `/api/job/${jobId}`).then(r => r.json());
+
+          if (jr.status === 'aguardando') {
+            filaEl.style.display = 'block';
+            filaTxt.textContent = `Posição ${jr.posicao} da fila`;
+            tempoEst = jr.tempoEstSeg || 75;
+            estEl.textContent = `~${Math.max(0, jr.tempoEstSeg)}s`;
+          } else if (jr.status === 'processando') {
+            filaEl.style.display = 'none';
+            tempoEst = jr.tempoEstSeg || 75;
+          } else if (jr.status === 'concluido') {
+            pararTudo();
+            ls.forEach(id => {
+              document.getElementById(id).classList.remove('ativo');
+              document.getElementById(id).classList.add('done');
+            });
+            exibirResultado(jr.relatorio, jr.fontes);
+          } else if (jr.status === 'erro') {
+            mostrarErro(jr.erro || 'Erro na análise');
+          }
+        } catch(e) {
+          // ignora erros de rede transientes no poll
+        }
+      }, 3000);
 
     } catch(e) {
-      clearInterval(tick);
-      clearInterval(timerInterval);
-      clearInterval(statusInterval);
-      btn.disabled = false;
-      document.getElementById('loading-screen').style.display = 'none';
-      document.getElementById('form-screen').style.display = 'block';
-
-      // Mostra erro em div dedicada (não contamina validação de objetivo)
-      let msgErro = e.message;
-      if (msgErro.includes('pattern') || msgErro.includes('URL') || msgErro.includes('url')) {
-        msgErro = 'Verifique o link do Reel. Ele deve começar com https://';
-      } else if (msgErro.includes('Failed to fetch') || msgErro.includes('NetworkError')) {
-        msgErro = 'Sem conexão com o servidor. Tente novamente.';
-      } else if (msgErro.includes('já foi analisado') || msgErro.includes('esta semana')) {
-        msgErro = msgErro; // Usa a mensagem exata do servidor (já clara e específica)
-      }
-      const errSubmit = document.getElementById('err-submit');
-      errSubmit.innerHTML = '❌ ' + msgErro;
-      errSubmit.style.display = 'block';
-      // Scroll para o erro ficar visível
-      errSubmit.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      mostrarErro(e.message);
     }
   }
 
