@@ -1426,7 +1426,7 @@
           </div>
         </div>
         <div class="loading-fila" id="loading-fila">
-          <span id="fila-txt">32 análises</span> em andamento. Sua análise está na fila
+          <span id="fila-txt">Posição 1 da fila</span> — sua análise começa em breve
         </div>
         <div class="loading-steps">
           <div class="lstep" id="ls1"><div class="lstep-dot"></div>Scout buscando métricas do perfil</div>
@@ -1676,7 +1676,9 @@
       // ── Polling do job a cada 3s ─────────────────────────
       pollInterval = setInterval(async () => {
         try {
-          const jr = await fetch(API_BASE + `/api/job/${jobId}`).then(r => r.json());
+          const jRes = await fetch(API_BASE + `/api/job/${jobId}`);
+          if (jRes.status === 404) { mostrarErro('Sessão expirada. Tente novamente.'); return; }
+          const jr = await jRes.json();
 
           if (jr.status === 'aguardando') {
             filaEl.style.display = 'block';
@@ -1700,6 +1702,11 @@
           // ignora erros de rede transientes no poll
         }
       }, 3000);
+
+      // Timeout de segurança: após 10 min sem resultado, encerra com erro
+      setTimeout(() => {
+        if (pollInterval) mostrarErro('A análise demorou mais que o esperado. Tente novamente.');
+      }, 10 * 60 * 1000);
 
     } catch(e) {
       mostrarErro(e.message);
