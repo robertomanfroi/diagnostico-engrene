@@ -1714,7 +1714,6 @@ app.post('/api/analisar', upload.fields([
 
     // ── Sem dados reais: erro claro ──────────────────────────
     if (!perfilData) {
-      clearInterval(keepAlive);
       const isPrivate = squadResultado.perfilApify?.erroTipo === 'private';
       const erroMsg = isPrivate
         ? `O perfil @${arroba} está configurado como privado. Para analisar, deixe o perfil público e tente novamente.`
