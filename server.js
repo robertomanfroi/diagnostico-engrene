@@ -476,21 +476,18 @@ async function agentScout(username, sv) {
 }
 
 // ══════════════════════════════════════════════════════════════
-//  AGENT: DESTAQUES — louisdeconinck~instagram-highlights-scraper (actor dedicado)
+//  AGENT: DESTAQUES — igview-owner~instagram-highlights-scraper (actor dedicado)
 // ══════════════════════════════════════════════════════════════
 async function agentDestaques(username, sv) {
   sv.info('destaques', `Coletando destaques de @${username}...`);
   try {
     // Actor dedicado para highlights — não requer login, funciona com perfis públicos
-    const url = `https://api.apify.com/v2/acts/louisdeconinck~instagram-highlights-scraper/runs` +
+    const url = `https://api.apify.com/v2/acts/igview-owner~instagram-highlights-scraper/runs` +
                 `?token=${process.env.APIFY_TOKEN}&waitForFinish=90`;
     const resp = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        usernames: [username],
-        proxy: { useApifyProxy: true }
-      }),
+      body: JSON.stringify({ username }),
       signal: AbortSignal.timeout(110000)
     });
     if (!resp.ok) {
@@ -514,11 +511,11 @@ async function agentDestaques(username, sv) {
       sv.info('destaques', 'Nenhum destaque encontrado (perfil sem highlights)');
       return { temDestaques: false, total: 0, lista: [] };
     }
-    // Cada item é um highlight com título e mídias internas
+    // Cada item: { highlightId, highlightTitle, coverImageUrl, coverImageUrlWrapped }
     const lista = items.map(h => ({
-      titulo:      h.title || h.name || h.id || 'Sem título',
-      capinha_url: h.coverUrl || h.coverImageUrl || h.thumbnailUrl || '',
-      total_itens: h.itemsCount ?? (Array.isArray(h.items) ? h.items.length : 0),
+      titulo:      h.highlightTitle || h.title || h.name || 'Sem título',
+      capinha_url: h.coverImageUrl || h.coverImageUrlWrapped || '',
+      total_itens: 0,
     }));
     sv.info('destaques', `✅ ${lista.length} destaques coletados`);
     return { temDestaques: true, total: lista.length, lista };

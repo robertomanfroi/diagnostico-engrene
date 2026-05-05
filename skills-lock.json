@@ -16,6 +16,18 @@
       "sourceType": "github",
       "computedHash": "e5ef96faafd7eca72c156e25a0aac321a35cc4964d1c4448c73e3529962a190b"
     },
+    "remotion": {
+      "source": "google-labs-code/stitch-skills",
+      "sourceType": "github",
+      "skillPath": "skills/remotion/SKILL.md",
+      "computedHash": "73a794b428f2bb568859f0db83b66219c842a0a088db9818a45ac72c37b6aa66"
+    },
+    "remotion-best-practices": {
+      "source": "remotion-dev/skills",
+      "sourceType": "github",
+      "skillPath": "skills/remotion/SKILL.md",
+      "computedHash": "df654933e451556147e384078c3fbdbac997cb0fe4d2f2db7642000c239304c5"
+    },
     "sensei": {
       "source": "microsoft/github-copilot-for-azure",
       "sourceType": "github",
