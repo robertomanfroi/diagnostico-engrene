@@ -1,11 +1,11 @@
 [phases.setup]
-nixPkgs = ["nodejs_20", "python3", "python3Packages.pip", "ffmpeg"]
+nixPkgs = ["nodejs_20", "python3", "ffmpeg"]
 
 [phases.install]
 cmds = [
   "npm ci --only=production",
   "curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /usr/local/bin/yt-dlp && chmod a+rx /usr/local/bin/yt-dlp",
-  "python3 -m pip install --break-system-packages instagrapi instaloader 2>/dev/null || python3 -m pip install instagrapi instaloader"
+  "curl -sS https://bootstrap.pypa.io/get-pip.py | python3 - 2>/dev/null; python3 -m pip install instagrapi instaloader 2>/dev/null || true"
 ]
 
 [start]
