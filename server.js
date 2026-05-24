@@ -2212,6 +2212,11 @@ app.get('/health', (req, res) => {
   res.status(200).json({ status: 'ok', ts: Date.now() });
 });
 
+// ── Redirect raiz para página de obrigado ──────────────────
+app.get('/', (req, res) => {
+  res.redirect(301, 'https://suellenwarmling-obrigado.netlify.app/ebook-analise-instagram-ia.html');
+});
+
 // ── Serve frontend ─────────────────────────────────────────
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'frontend', 'index.html'));
