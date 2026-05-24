@@ -219,6 +219,11 @@ app.use((req, res, next) => {
   next();
 });
 
+// ── Redirect raiz para página de obrigado ──────────────────
+app.get('/', (req, res) => {
+  res.redirect(301, 'https://suellenwarmling-obrigado.netlify.app/ebook-analise-instagram-ia.html');
+});
+
 app.use(express.static(path.join(__dirname, 'frontend')));
 
 // ── Upload config ──────────────────────────────────────────
@@ -2210,11 +2215,6 @@ app.get('/api/status', (req, res) => {
 // ── Health check (Render keep-alive) ───────────────────────
 app.get('/health', (req, res) => {
   res.status(200).json({ status: 'ok', ts: Date.now() });
-});
-
-// ── Redirect raiz para página de obrigado ──────────────────
-app.get('/', (req, res) => {
-  res.redirect(301, 'https://suellenwarmling-obrigado.netlify.app/ebook-analise-instagram-ia.html');
 });
 
 // ── Serve frontend ─────────────────────────────────────────
