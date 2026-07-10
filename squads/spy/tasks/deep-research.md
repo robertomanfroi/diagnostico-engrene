@@ -1,5 +1,16 @@
 # Task: Deep Player Research (Composed)
 
+```yaml
+id: deep-research
+name: "Deep Research"
+category: research
+agent: research-head
+elicit: true
+autonomous: false
+type: molecule
+description: "Composed deep-dive stub with 7 internal atoms: collect, select, transcribe, patterns, comments, synthesis, publish"
+```
+
 ## Contrato SINKRA
 
 Domain: `Operational`
@@ -18,6 +29,7 @@ Checklist:
 pre_condition: evidências mínimas carregadas e subject validado
 post_condition: artefato persistido com achados e próximos passos rastreáveis
 performance: falhar alto, registrar fontes e manter consistência entre evidências e relatório
+error_handling: "on_fail: HALT phase, preserve partial artifacts, log failure context"
 
 ## Task Anatomy
 

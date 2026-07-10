@@ -1,5 +1,17 @@
 # Task: Full Framework Benchmark (Composed)
 
+```yaml
+id: bench-framework
+name: "Full Framework Benchmark"
+category: benchmark-legacy
+agent: bench-analyst
+elicit: true
+autonomous: false
+type: molecule
+workflow: bench-comparison-pipeline
+description: "Composed public stub for the full benchmark pipeline"
+```
+
 ## Contrato SINKRA
 
 Domain: `Tactical`
@@ -19,6 +31,7 @@ Checklist:
 pre_condition: evidências mínimas carregadas e subject validado
 post_condition: artefato persistido com achados e próximos passos rastreáveis
 performance: falhar alto, registrar fontes e manter consistência entre evidências e relatório
+error_handling: "on_fail: WARN and preserve partial, log deprecation context"
 
 ## Task Anatomy
 
@@ -35,7 +48,7 @@ performance: falhar alto, registrar fontes e manter consistência entre evidênc
 ```yaml
 id: bench-framework
 name: "Full Framework Benchmark"
-category: benchmark
+category: benchmark-legacy
 agent: bench-analyst
 elicit: true
 autonomous: false

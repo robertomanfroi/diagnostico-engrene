@@ -2203,6 +2203,11 @@ app.get('/health', (req, res) => {
   res.status(200).json({ status: 'ok', ts: Date.now() });
 });
 
+// ── Página da aula: análise de Instagram com IA ────────────
+app.get(['/analise-instagram', '/analise-instagram.html'], (req, res) => {
+  res.sendFile(path.join(__dirname, 'frontend', 'analise-instagram.html'));
+});
+
 // ── Serve frontend ─────────────────────────────────────────
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'frontend', 'index.html'));

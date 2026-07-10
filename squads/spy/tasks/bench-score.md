@@ -1,9 +1,21 @@
 # Task: Universal Weighted Scoring
 
+```yaml
+id: bench-score
+name: "Universal Scoring"
+category: benchmark-core
+agent: bench-analyst
+elicit: false
+autonomous: false
+type: atom
+description: "Weighted multi-dimension quantitative scoring using dimension pack"
+```
+
 ## Contrato SINKRA
 
 Domain: `Tactical`
 
+task: benchScore()
 responsavel: bench-analyst
 atomic_layer: Atom
 Entrada:
@@ -15,6 +27,7 @@ Checklist:
 pre_condition: evidências mínimas carregadas e subject validado
 post_condition: artefato persistido com achados e próximos passos rastreáveis
 performance: falhar alto, registrar fontes e manter consistência entre evidências e relatório
+error_handling: "on_fail: HALT phase, preserve partial artifacts, log failure context"
 
 ## Task Anatomy
 

@@ -15,12 +15,13 @@ Checklist:
 pre_condition: evidências mínimas carregadas e subject validado
 post_condition: artefato persistido com achados e próximos passos rastreáveis
 performance: falhar alto, registrar fontes e manter consistência entre evidências e relatório
+error_handling: "on_fail: HALT phase, preserve partial artifacts, log failure context"
 
 ## Metadata
 ```yaml
 id: bench-absorb
 name: "Feature Absorption Roadmap"
-category: benchmark
+category: benchmark-codebase
 agent: bench-analyst
 elicit: false
 autonomous: true

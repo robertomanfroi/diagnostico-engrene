@@ -33,7 +33,7 @@ performance: falhar alto, registrar fontes e manter consistência entre evidênc
 ```yaml
 id: bench-deep-compare
 name: "Deep Component-by-Component Comparison"
-category: benchmark
+category: benchmark-codebase
 agent: bench-analyst
 elicit: false
 autonomous: true

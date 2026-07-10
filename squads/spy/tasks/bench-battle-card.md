@@ -1,9 +1,21 @@
 # Task: Universal Battle Card Generator (Autonomous)
 
+```yaml
+id: bench-battle-card
+name: "Battle Card"
+category: benchmark-core
+agent: bench-analyst
+elicit: false
+autonomous: true
+type: atom
+description: "1-page quick comparison for decision makers"
+```
+
 ## Contrato SINKRA
 
 Domain: `Strategic`
 
+task: benchBattleCard()
 responsavel: bench-analyst
 atomic_layer: Atom
 Entrada:
@@ -15,6 +27,7 @@ Checklist:
 pre_condition: evidências mínimas carregadas e subject validado
 post_condition: artefato persistido com achados e próximos passos rastreáveis
 performance: falhar alto, registrar fontes e manter consistência entre evidências e relatório
+error_handling: "on_fail: WARN and continue, log failure"
 
 ## Task Anatomy
 
@@ -33,7 +46,7 @@ performance: falhar alto, registrar fontes e manter consistência entre evidênc
 ```yaml
 id: bench-battle-card
 name: "Universal Battle Card Generator"
-category: benchmark
+category: benchmark-core
 agent: bench-analyst
 elicit: false
 autonomous: true

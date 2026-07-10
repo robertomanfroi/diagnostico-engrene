@@ -17,12 +17,13 @@ Checklist:
 pre_condition: evidências mínimas carregadas e subject validado
 post_condition: artefato persistido com achados e próximos passos rastreáveis
 performance: falhar alto, registrar fontes e manter consistência entre evidências e relatório
+error_handling: "on_fail: WARN and preserve partial, log deprecation context"
 
 ## Metadata
 ```yaml
 id: bench-quick-compare
 name: "Quick Framework Comparison"
-category: benchmark
+category: benchmark-legacy
 agent: bench-analyst
 elicit: false
 autonomous: true

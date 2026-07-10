@@ -7,6 +7,7 @@ workflow:
     Universal 10-phase benchmark pipeline supporting codebase, LLM, product, company, and technology comparisons. Orchestrates type detection, dual-subject inventory, comparison matrix, quantitative scoring, gap analysis, type-specific deep dives, executive reporting, battle card generation, and quality gate validation. Produces dual-format output (JSON + MD) for all artifacts.
   author: AIOX Spy Squad
   updated_at: "2026-02-17"
+  quality_gates_ref: "squads/spy/data/quality-gates.yaml"
   inputs:
     subject_a:
       type: string
@@ -1062,7 +1063,15 @@ workflow:
               label: REDO - Significant quality issues
               action: Identify root cause, re-run pipeline
         pass_criteria: ">= 90% of checks pass for APPROVED verdict"
-        on_pass: Pipeline complete. Benchmark published.
+        on_pass: |
+          Pipeline complete. Benchmark published.
+          Write execution entry to data/pipeline-execution-log.yaml with:
+          - pipeline: bench-comparison-pipeline
+          - subjects: [subject_a, subject_b]
+          - comparison_type: {comparison_type}
+          - phases_executed: [completed phases]
+          - quality_gate_result: {verdict}
+          - artifacts_produced: [generated artifacts]
         on_fail: Generate quality report with specific failures.
       error_handling:
         on_failure: HALT_PIPELINE

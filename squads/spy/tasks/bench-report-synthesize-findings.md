@@ -2,7 +2,7 @@
 
 ## Contrato SINKRA
 
-Domain: `Strategic`
+Domain: `Tactical`
 
 task: benchReportSynthesizeFindings()
 responsavel: bench-analyst
@@ -17,6 +17,7 @@ Checklist:
 pre_condition: evidências mínimas carregadas e subject validado
 post_condition: artefato persistido com achados e próximos passos rastreáveis
 performance: falhar alto, registrar fontes e manter consistência entre evidências e relatório
+error_handling: "on_fail: HALT report phase, preserve upstream evidence"
 
 ## Metadata
 

@@ -1,9 +1,21 @@
 # Task: LLM Evaluation
 
+```yaml
+id: bench-llm-eval
+name: "LLM Evaluation"
+category: benchmark-llm
+agent: bench-analyst
+elicit: true
+autonomous: false
+type: atom
+description: "LLM specs, benchmarks, pricing comparison"
+```
+
 ## Contrato SINKRA
 
 Domain: `Tactical`
 
+task: benchLlmEval()
 responsavel: bench-analyst
 atomic_layer: Atom
 Entrada:
@@ -15,6 +27,7 @@ Checklist:
 pre_condition: evidências mínimas carregadas e subject validado
 post_condition: artefato persistido com achados e próximos passos rastreáveis
 performance: falhar alto, registrar fontes e manter consistência entre evidências e relatório
+error_handling: "on_fail: HALT evaluation, preserve partial data"
 
 ## Metadata
 ```yaml

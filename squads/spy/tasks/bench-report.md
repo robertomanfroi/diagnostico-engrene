@@ -1,5 +1,16 @@
 # Task: Executive Report Consolidation (Composed)
 
+```yaml
+id: bench-report
+name: "Executive Report"
+category: benchmark-core
+agent: bench-analyst
+elicit: false
+autonomous: true
+type: molecule
+description: "Composed executive report stub with 3 internal atoms: load-evidence, synthesize-findings, publish"
+```
+
 ## Contrato SINKRA
 
 Domain: `Strategic`
@@ -16,6 +27,7 @@ Checklist:
 pre_condition: evidências mínimas carregadas e subject validado
 post_condition: artefato persistido com achados e próximos passos rastreáveis
 performance: falhar alto, registrar fontes e manter consistência entre evidências e relatório
+error_handling: "on_fail: HALT phase, preserve partial artifacts, log failure context"
 
 ## Task Anatomy
 

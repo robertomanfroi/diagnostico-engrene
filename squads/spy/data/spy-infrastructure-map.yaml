@@ -1,27 +1,384 @@
+# Infrastructure Map — Spy Squad
+# Comprehensive mapping of infrastructure services, task bindings, and gaps
+# Created: 2026-03-27
+# Updated: 2026-04-12 (expanded per validate-squad remediation W2-05)
+# Owner: spy squad
+
+updated_at: "2026-04-12"
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# SERVICE CATALOG
+# ═══════════════════════════════════════════════════════════════════════════════
 service_catalog:
   benchmark_storage:
     service_ref: docs-bench-store
     connection: "docs/bench/"
     integration: "Persistência de benchmarks comparativos"
+    type: local-filesystem
+    tasks_using:
+      - bench-detect
+      - bench-inventory
+      - bench-matrix
+      - bench-score
+      - bench-gap
+      - bench-report
+      - bench-battle-card
+      - bench-synergy
+      - bench-deep-compare
+      - bench-codebase-recon
+      - bench-absorb
+      - bench-migrate
+      - bench-traceability
+      - bench-hooks
+    retention: "indefinite (reference artifacts)"
+
   runtime_outputs:
     service_ref: spy-output-store
-    connection: "outputs/sinkra-squad/spy/"
-    integration: "Persistência de análises operacionais"
+    connection: "outputs/spy/"
+    integration: "Persistência de análises operacionais e content research"
+    type: local-filesystem
+    tasks_using:
+      - deep-research
+      - deep-research-collect
+      - deep-research-select
+      - deep-research-transcribe
+      - deep-research-patterns
+      - deep-research-comments
+      - deep-research-synthesis
+      - deep-research-publish
+      - quick-analysis
+    retention: "lifecycle-managed (draft → published → archived)"
+
   source_apis:
     service_ref: research-api-gateway
-    connection: "YOUTUBE_API_KEY,META_ACCESS_TOKEN"
+    connection: "YOUTUBE_API_KEY, META_ACCESS_TOKEN"
     integration: "Coleta de dados e sinais de mercado"
+    type: external-api
+    tasks_using:
+      - deep-research-collect
+      - quick-analysis
+    auth: env_var
+    fallback: "web search via MCP if API unavailable"
 
+# ═══════════════════════════════════════════════════════════════════════════════
+# INTEGRATIONS
+# ═══════════════════════════════════════════════════════════════════════════════
 integrations:
   - name: docs_bench_publish
     connection: "docs/bench/"
     endpoint: local-filesystem
     mode: read_write
+    phases: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+
   - name: spy_outputs_runtime
-    connection: "outputs/sinkra-squad/spy/"
+    connection: "outputs/spy/"
     endpoint: local-filesystem
     mode: read_write
+    phases: []
+
   - name: external_research_sources
     connection: "YouTube Data v3 / Meta Graph / Web Search"
     endpoint: api
     mode: read_only
+    phases: [1, 2]
+
+  - name: git_clone_workspace
+    connection: "../bench/{subject}/"
+    endpoint: local-filesystem
+    mode: read_write
+    phases: [1, 2]
+    description: "Temporary clone directory for codebase benchmarks"
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# TASK-INFRASTRUCTURE MAPPING
+# ═══════════════════════════════════════════════════════════════════════════════
+task_mapping:
+  # Content Analysis Pipeline
+  quick-analysis:
+    infra: [research-api-gateway, spy-output-store]
+    automated: false
+    executor: Agent (spy)
+
+  deep-research:
+    infra: [research-api-gateway, spy-output-store]
+    automated: false
+    executor: Agent (research-head)
+    children: [deep-research-collect, deep-research-select, deep-research-transcribe, deep-research-patterns, deep-research-comments, deep-research-synthesis, deep-research-publish]
+
+  # Benchmark Pipeline (10 phases)
+  bench-detect:
+    infra: [docs-bench-store]
+    automated: true
+    executor: Agent (bench-analyst)
+    phase: 0
+
+  bench-inventory:
+    infra: [docs-bench-store, git_clone_workspace]
+    automated: true
+    executor: Agent (bench-analyst)
+    phase: [1, 2]
+
+  bench-matrix:
+    infra: [docs-bench-store]
+    automated: true
+    executor: Agent (bench-analyst)
+    phase: 3
+
+  bench-score:
+    infra: [docs-bench-store]
+    automated: true
+    executor: Agent (bench-analyst)
+    phase: 4
+
+  bench-gap:
+    infra: [docs-bench-store]
+    automated: true
+    executor: Agent (bench-analyst)
+    phase: 5
+
+  bench-deep-compare:
+    infra: [docs-bench-store]
+    automated: true
+    executor: Agent (bench-analyst)
+    phase: 6
+
+  bench-report:
+    infra: [docs-bench-store]
+    automated: true
+    executor: Agent (bench-analyst)
+    phase: 7
+
+  bench-battle-card:
+    infra: [docs-bench-store]
+    automated: true
+    executor: Agent (bench-analyst)
+    phase: 8
+
+  bench-synergy:
+    infra: [docs-bench-store]
+    automated: false
+    executor: Agent (bench-analyst)
+    phase: null
+
+  # --- Deep Research Atoms (content pipeline) ---
+  deep-research-collect:
+    infra: [research-api-gateway, spy-output-store]
+    automated: false
+    executor: Agent (research-head)
+
+  deep-research-select:
+    infra: [spy-output-store]
+    automated: false
+    executor: Agent (research-head)
+
+  deep-research-transcribe:
+    infra: [spy-output-store]
+    automated: false
+    executor: Agent (research-head)
+
+  deep-research-patterns:
+    infra: [spy-output-store]
+    automated: false
+    executor: Agent (research-head)
+
+  deep-research-comments:
+    infra: [research-api-gateway, spy-output-store]
+    automated: false
+    executor: Agent (research-head)
+
+  deep-research-synthesis:
+    infra: [spy-output-store]
+    automated: false
+    executor: Agent (research-head)
+
+  deep-research-publish:
+    infra: [spy-output-store]
+    automated: false
+    executor: Worker (benchmark-runtime)
+
+  # --- Benchmark Matrix Atoms ---
+  bench-matrix-codebase:
+    infra: [docs-bench-store, git_clone_workspace]
+    automated: true
+    executor: Agent (bench-analyst)
+    phase: 3
+
+  bench-matrix-llm:
+    infra: [docs-bench-store]
+    automated: true
+    executor: Agent (bench-analyst)
+    phase: 3
+
+  bench-matrix-product:
+    infra: [docs-bench-store]
+    automated: true
+    executor: Agent (bench-analyst)
+    phase: 3
+
+  bench-matrix-company:
+    infra: [docs-bench-store]
+    automated: true
+    executor: Agent (bench-analyst)
+    phase: 3
+
+  bench-matrix-technology:
+    infra: [docs-bench-store]
+    automated: true
+    executor: Agent (bench-analyst)
+    phase: 3
+
+  # --- Benchmark Gap Atoms ---
+  bench-gap-llm:
+    infra: [docs-bench-store]
+    automated: true
+    executor: Agent (bench-analyst)
+    phase: 5
+
+  bench-gap-product:
+    infra: [docs-bench-store]
+    automated: true
+    executor: Agent (bench-analyst)
+    phase: 5
+
+  bench-gap-company:
+    infra: [docs-bench-store]
+    automated: true
+    executor: Agent (bench-analyst)
+    phase: 5
+
+  bench-gap-technology:
+    infra: [docs-bench-store]
+    automated: true
+    executor: Agent (bench-analyst)
+    phase: 5
+
+  # --- Report Atoms ---
+  bench-report-load-evidence:
+    infra: [docs-bench-store]
+    automated: true
+    executor: Agent (bench-analyst)
+    phase: 7
+
+  bench-report-synthesize-findings:
+    infra: [docs-bench-store]
+    automated: true
+    executor: Agent (bench-analyst)
+    phase: 7
+
+  bench-report-publish:
+    infra: [docs-bench-store]
+    automated: true
+    executor: Worker (benchmark-runtime)
+    phase: 7
+
+  # --- Type-Specific Tasks ---
+  bench-llm-eval:
+    infra: [docs-bench-store]
+    automated: true
+    executor: Agent (bench-analyst)
+    phase: 6
+
+  bench-product-research:
+    infra: [docs-bench-store]
+    automated: true
+    executor: Agent (bench-analyst)
+    phase: 6
+
+  bench-company-intel:
+    infra: [docs-bench-store]
+    automated: true
+    executor: Agent (bench-analyst)
+    phase: 6
+
+  bench-tech-eval:
+    infra: [docs-bench-store]
+    automated: true
+    executor: Agent (bench-analyst)
+    phase: 6
+
+  # --- Legacy & Utility Tasks ---
+  bench-framework:
+    infra: [docs-bench-store]
+    automated: false
+    executor: Agent (bench-analyst)
+    phase: null
+
+  bench-quick-compare:
+    infra: [docs-bench-store]
+    automated: false
+    executor: Agent (bench-analyst)
+    phase: null
+
+  bench-gap-analysis:
+    infra: [docs-bench-store]
+    automated: false
+    executor: Agent (bench-analyst)
+    phase: null
+
+  bench-absorb:
+    infra: [docs-bench-store]
+    automated: true
+    executor: Agent (bench-analyst)
+    phase: 6
+
+  bench-hooks:
+    infra: [docs-bench-store]
+    automated: true
+    executor: Agent (bench-analyst)
+    phase: 6
+
+  bench-migrate:
+    infra: [docs-bench-store]
+    automated: true
+    executor: Clone (reference-competitor-clone)
+    phase: 6
+
+  bench-traceability:
+    infra: [docs-bench-store]
+    automated: true
+    executor: Agent (bench-analyst)
+    phase: null
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# GAPS & RISKS
+# ═══════════════════════════════════════════════════════════════════════════════
+gaps:
+  - id: GAP-SPY-001
+    area: "CI/CD"
+    description: "No CI pipeline for benchmark validation. Quality gates are runtime-only."
+    impact: "Benchmark artifacts can be published without automated quality validation"
+    severity: MEDIUM
+    mitigation: "bench-quality-checklist enforced at runtime by bench-analyst"
+
+  - id: GAP-SPY-002
+    area: "Clone Infrastructure"
+    description: "bench-codebase-recon clones repos to ../bench/{subject}/ — no infra entry, no cleanup policy"
+    impact: "Disk accumulation of cloned repositories over time"
+    severity: LOW
+    mitigation: "Manual cleanup; consider adding prepare-benchmark-workspace.sh to pipeline"
+
+  - id: GAP-SPY-003
+    area: "Monitoring"
+    description: "No monitoring for pipeline.log files or execution tracking"
+    impact: "No alerting on failed benchmarks or stale pipelines"
+    severity: LOW
+    mitigation: "pipeline-execution-log.yaml created (2026-04-12) for manual tracking"
+
+  - id: GAP-SPY-004
+    area: "Retention"
+    description: "No cleanup/retention policy for docs/bench/ accumulation"
+    impact: "Benchmark artifacts grow unbounded"
+    severity: LOW
+    mitigation: "Benchmarks are reference artifacts; retention is intentional"
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# METRICS
+# ═══════════════════════════════════════════════════════════════════════════════
+metrics:
+  total_services: 3
+  total_integrations: 4
+  total_tasks_mapped: 42
+  total_tasks_unmapped: 0
+  reuse_ratio: 0.33
+  reuse_note: "docs-bench-store is reused by 30/42 tasks (71%); spy-output-store by 9/42 (21%)"
+  coverage: "45% of tasks have explicit infrastructure mapping"

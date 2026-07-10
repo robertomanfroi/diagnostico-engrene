@@ -1,9 +1,21 @@
 # Task: Quick Player Analysis
 
+```yaml
+id: quick-analysis
+name: "Quick Player Analysis"
+category: analysis
+agent: spy
+elicit: true
+autonomous: false
+type: atom
+description: "8-minute player analysis with engagement metrics and pattern extraction"
+```
+
 ## Contrato SINKRA
 
 Domain: `Operational`
 
+task: quickAnalysis()
 responsavel: spy
 atomic_layer: Atom
 Entrada:
@@ -16,6 +28,7 @@ Checklist:
 pre_condition: evidências mínimas carregadas e subject validado
 post_condition: artefato persistido com achados e próximos passos rastreáveis
 performance: falhar alto, registrar fontes e manter consistência entre evidências e relatório
+error_handling: "on_fail: HALT phase, preserve partial artifacts, log failure context"
 
 **Task ID:** quick-analysis
 **Version:** 2.0.0

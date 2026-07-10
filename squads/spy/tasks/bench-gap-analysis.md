@@ -2,7 +2,7 @@
 
 ## Contrato SINKRA
 
-Domain: `Strategic`
+Domain: `Tactical`
 
 responsavel: bench-analyst
 atomic_layer: Atom
@@ -15,12 +15,13 @@ Checklist:
 pre_condition: evidências mínimas carregadas e subject validado
 post_condition: artefato persistido com achados e próximos passos rastreáveis
 performance: falhar alto, registrar fontes e manter consistência entre evidências e relatório
+error_handling: "on_fail: WARN and preserve partial, log deprecation context"
 
 ## Metadata
 ```yaml
 id: bench-gap-analysis
 name: "Gap Analysis & Feature Absorption"
-category: benchmark
+category: benchmark-legacy
 agent: bench-analyst
 elicit: true
 estimated_duration: "15-20min"

@@ -1,6 +1,40 @@
 # Task: bench-synergy
 
-**Agent:** bench-analyst
+```yaml
+id: bench-synergy
+name: "Synergy Analysis"
+category: benchmark-core
+agent: bench-analyst
+elicit: true
+autonomous: false
+type: atom
+description: "Analyze synergy potential between two previously benchmarked subjects"
+```
+
+## Contrato SINKRA
+
+Domain: `Tactical`
+
+task: benchSynergy()
+responsavel: bench-analyst
+atomic_layer: Atom
+Entrada:
+  - subject_a
+  - subject_b
+Saida:
+  - synergy-analysis.json
+  - synergy-analysis.md
+  - hybrid-architecture.md
+  - integration-roadmap.md
+Checklist:
+  - `checklists/bench-quality-checklist.md`
+pre_condition: "Benchmark completo para ambos os subjects (scorecard.json + gap-analysis.json existem em docs/bench/{slug}/)"
+post_condition: "synergy-analysis.json e synergy-analysis.md publicados com classificação quantitativa"
+performance: "falhar alto, registrar fontes e manter consistência entre evidências e relatório"
+error_handling:
+  - on_missing_benchmark: "HALT — benchmark prerequisite must exist"
+  - on_incomplete_data: "WARN and proceed with available data, flag gaps"
+
 **Command:** `*bench-synergy {subject_a} vs {subject_b}`
 **Template:** `squads/spy/templates/bench-synergy-tmpl.md`
 **Prerequisite:** Benchmark must exist at `docs/bench/{slug}/` with scorecard.json + gap-analysis.json
@@ -229,6 +263,18 @@ Update:
 - [ ] Roadmap has 4 phases with deliverables
 - [ ] Dual format output (JSON + MD)
 - [ ] All claims cite source artifact or analysis
+
+---
+
+## Acceptance Criteria
+
+- [ ] Synergy classification (COMPLEMENTARY/OVERLAPPING/COMPETING/INDEPENDENT) determined with quantitative evidence
+- [ ] All 9 synergy categories assessed with evidence and effort rating
+- [ ] Hybrid architecture designed with topology, interface contracts, and RACI matrix
+- [ ] Value equation produces numeric Net Synergy result
+- [ ] Implementation roadmap with 4 phases and concrete deliverables
+- [ ] Dual format output: synergy-analysis.json + synergy-analysis.md
+- [ ] All claims traceable to source benchmark artifacts
 
 ---
 

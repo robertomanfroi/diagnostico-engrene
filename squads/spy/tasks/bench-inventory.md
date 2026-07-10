@@ -1,5 +1,16 @@
 # Task: Universal Subject Inventory (Composed)
 
+```yaml
+id: bench-inventory
+name: "AIOX Self-Inventory"
+category: benchmark
+agent: bench-analyst
+elicit: false
+autonomous: true
+type: molecule
+description: "Composed router for type-specific inventory atoms (codebase, llm, product, company, technology)"
+```
+
 ## Contrato SINKRA
 
 Domain: `Tactical`
@@ -19,6 +30,7 @@ Checklist:
 pre_condition: evidências mínimas carregadas e subject validado
 post_condition: artefato persistido com achados e próximos passos rastreáveis
 performance: falhar alto, registrar fontes e manter consistência entre evidências e relatório
+error_handling: "on_fail: HALT phase, preserve partial artifacts, log failure context"
 
 ## Task Anatomy
 

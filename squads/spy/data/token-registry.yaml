@@ -1,9 +1,14 @@
+# Token Registry — Spy Squad
+# 12 SINKRA tokens across 9 families governing benchmark and research
+# Version: 2.0.0 (enriched per sinkra-upgrade-squad)
+
 time:
   - benchmark_window
 capacity:
   - max_parallel_subjects
 threshold:
   - benchmark_quality_gate
+  - report_release_gate
 priority:
   - subject_priority
 permission:
@@ -12,6 +17,7 @@ taxonomy:
   - comparison_type
 behavior:
   - fail_loud_publish
+  - benchmark_evidence_pack
 accountability:
   - spy_operator_approval
 mode:
@@ -22,36 +28,137 @@ tokens:
   - token_name: benchmark_window
     family: Time
     semantic: "Janela temporal usada para recorte de evidências"
+    sinkra_refs:
+      - composition_mapping.atoms.tasks/bench-detect.md
+      - composition_mapping.molecules.mol-benchmark-core
+    default_value: "30d"
+    enforcement: advisory
+    version: "1.0.0"
+    produces_by: [bench-detect]
+    consumes_by: [bench-score, bench-gap]
+
   - token_name: max_parallel_subjects
     family: Capacity
     semantic: "Número máximo de sujeitos processados em paralelo"
+    sinkra_refs:
+      - composition_mapping.atoms.tasks/bench-inventory.md
+    default_value: 2
+    enforcement: strict
+    version: "1.0.0"
+    produces_by: [bench-detect]
+    consumes_by: [bench-inventory, bench-matrix]
+
   - token_name: benchmark_quality_gate
     family: Threshold
     semantic: "Threshold principal para benchmark aprovado"
+    sinkra_refs:
+      - data/quality-gates.yaml → benchmark_pipeline.scorecard_integrity
+      - workflows/bench-comparison-pipeline.yaml → phase 9 checkpoint
+    default_value: 0.9
+    enforcement: veto
+    version: "1.0.0"
+    produces_by: [bench-score]
+    consumes_by: [bench-report, bench-battle-card]
+
   - token_name: subject_priority
     family: Priority
     semantic: "Prioridade relativa entre subjects e fontes"
+    sinkra_refs:
+      - composition_mapping.atoms.tasks/bench-detect.md
+    default_value: "equal"
+    enforcement: advisory
+    version: "1.0.0"
+    produces_by: [bench-detect]
+    consumes_by: [bench-inventory]
+
   - token_name: source_access_scope
     family: Permission
     semantic: "Escopo permitido de acesso a dados e repositórios"
+    sinkra_refs:
+      - data/capability-tools.yaml
+      - data/bench-data-sources.yaml
+    default_value: "public"
+    enforcement: strict
+    version: "1.0.0"
+    produces_by: [bench-detect]
+    consumes_by: [bench-codebase-recon, bench-inventory]
+
   - token_name: comparison_type
     family: Taxonomy
     semantic: "Tipo canônico de comparação benchmark"
+    sinkra_refs:
+      - composition_mapping.atoms.tasks/bench-detect.md
+      - workflows/bench-comparison-pipeline.yaml → type_routing
+    default_value: "auto"
+    enforcement: strict
+    version: "1.0.0"
+    produces_by: [bench-detect]
+    consumes_by: [bench-inventory, bench-matrix, bench-score, bench-gap, bench-deep-compare]
+
   - token_name: fail_loud_publish
     family: Behavior
     semantic: "Comportamento de falha explícita na publicação"
+    sinkra_refs:
+      - config.yaml → logging.error_behavior
+    default_value: true
+    enforcement: strict
+    version: "1.0.0"
+    produces_by: [config]
+    consumes_by: [bench-report-publish]
+
   - token_name: spy_operator_approval
     family: Accountability
     semantic: "Aprovação humana obrigatória para publicação crítica"
+    sinkra_refs:
+      - agents/spy-operator.md
+      - data/quality-gates.yaml → governance
+    default_value: true
+    enforcement: veto
+    version: "1.0.0"
+    produces_by: [spy-operator]
+    consumes_by: [bench-report, bench-battle-card]
+
   - token_name: ENTENDER
     family: Mode
     semantic: "Modo de entendimento profundo"
+    sinkra_refs:
+      - config.yaml → supported_modes
+    default_value: null
+    enforcement: advisory
+    version: "1.0.0"
+    produces_by: [config]
+    consumes_by: [deep-research-collect, deep-research-patterns]
+
   - token_name: EXPLORAR
     family: Mode
     semantic: "Modo de exploração comparativa"
+    sinkra_refs:
+      - config.yaml → supported_modes
+      - workflows/bench-comparison-pipeline.yaml
+    default_value: null
+    enforcement: advisory
+    version: "1.0.0"
+    produces_by: [config]
+    consumes_by: [bench-detect, bench-matrix, bench-score]
+
   - token_name: benchmark_evidence_pack
     family: Behavior
     semantic: "Pacote rastreável de evidências por benchmark"
+    sinkra_refs:
+      - data/quality-gates.yaml → governance.evidence_traceability
+    default_value: null
+    enforcement: strict
+    version: "1.0.0"
+    produces_by: [bench-inventory, bench-codebase-recon]
+    consumes_by: [bench-report-load-evidence, bench-traceability]
+
   - token_name: report_release_gate
     family: Threshold
     semantic: "Gate final para relatório executivo"
+    sinkra_refs:
+      - data/quality-gates.yaml → reporting.artifact_publish_success
+    default_value: 1.0
+    enforcement: veto
+    version: "1.0.0"
+    produces_by: [bench-report-synthesize-findings]
+    consumes_by: [bench-report-publish]
