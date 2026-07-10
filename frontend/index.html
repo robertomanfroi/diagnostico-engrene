@@ -1658,7 +1658,7 @@
       fd.append('descricao',        document.getElementById('f-desc').value || '');
       fd.append('_dfp',             window._deviceFingerprint || '');
 
-      const API_BASE = window.location.hostname.includes('github.io') ? 'https://diagnostico-engrene-production.up.railway.app' : '';
+      const API_BASE = window.location.hostname.includes('github.io') ? 'https://diagnostico-engrene.onrender.com' : '';
       const res  = await fetch(API_BASE + '/api/analisar', { method:'POST', body:fd });
       const data = await res.json();
 
