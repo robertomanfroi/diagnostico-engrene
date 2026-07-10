@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Analise seu Instagram com IA — Método Engrene</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Montserrat:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --laranja: #FC4C04;
+    --preto: #101010;
+    --creme: #FCE9D9;
+    --cinza: #6B6B6B;
+    --cinza-claro: #F5F0EB;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Instrument Sans', sans-serif; color: var(--preto); font-size: 17px; line-height: 1.75; }
+
+  /* CAPA */
+  .capa { background: var(--preto); padding: 80px 40px; text-align: center; }
+  .badge { display: inline-block; background: var(--laranja); color: #fff; font-family: 'Montserrat', sans-serif; font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; padding: 7px 18px; border-radius: 100px; margin-bottom: 36px; }
+  .capa h1 { font-family: 'Montserrat', sans-serif; font-size: 46px; font-weight: 900; color: var(--creme); line-height: 1.15; margin-bottom: 20px; max-width: 640px; margin-left: auto; margin-right: auto; }
+  .capa h1 span { color: var(--laranja); }
+  .capa p { font-size: 18px; color: rgba(252,233,217,0.65); max-width: 480px; margin: 0 auto; }
+
+  /* SEÇÕES */
+  .secao { padding: 64px 40px; max-width: 720px; margin: 0 auto; }
+  .secao-creme { background: var(--creme); }
+  .secao-creme .inner { max-width: 720px; margin: 0 auto; padding: 64px 40px; }
+  .secao-preto { background: var(--preto); }
+  .secao-preto .inner { max-width: 720px; margin: 0 auto; padding: 64px 40px; }
+  .secao-laranja { background: var(--laranja); }
+  .secao-laranja .inner { max-width: 720px; margin: 0 auto; padding: 64px 40px; }
+
+  /* TIPO */
+  .label { font-family: 'Montserrat', sans-serif; font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--laranja); display: block; margin-bottom: 12px; }
+  h2 { font-family: 'Montserrat', sans-serif; font-size: 32px; font-weight: 800; line-height: 1.2; margin-bottom: 20px; }
+  p { margin-bottom: 16px; }
+  .divisor { width: 48px; height: 4px; background: var(--laranja); border-radius: 2px; margin-bottom: 24px; }
+
+  /* DOR */
+  .dor { background: var(--preto); border-left: 4px solid var(--laranja); border-radius: 0 10px 10px 0; padding: 20px 24px; margin-bottom: 16px; }
+  .dor strong { color: var(--creme); display: block; margin-bottom: 4px; }
+  .dor span { color: rgba(252,233,217,0.6); font-size: 15px; }
+
+  /* PASSOS */
+  .passo { display: grid; grid-template-columns: 56px 1fr; margin-bottom: 40px; }
+  .passo-num { font-family: 'Montserrat', sans-serif; font-size: 56px; font-weight: 900; color: var(--laranja); opacity: 0.2; line-height: 1; }
+  .passo-body { border-left: 2px solid #e0d0c4; padding-left: 24px; padding-bottom: 40px; }
+  .passo:last-child .passo-body { border-left-color: transparent; }
+  .passo-body h3 { font-family: 'Montserrat', sans-serif; font-size: 18px; font-weight: 700; margin-bottom: 8px; }
+  .passo-body p { font-size: 15px; color: var(--cinza); margin: 0; }
+
+  /* PLACEHOLDER IMAGEM */
+  .img-box { background: var(--cinza-claro); border: 2px dashed #ccc; border-radius: 10px; height: 220px; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #aaa; font-size: 13px; margin-top: 14px; gap: 8px; text-align: center; padding: 16px; }
+  .img-box .ico { font-size: 32px; opacity: 0.35; }
+
+  /* DICA */
+  .dica { background: rgba(252,76,4,0.07); border: 1px solid rgba(252,76,4,0.18); border-radius: 10px; padding: 16px 20px; display: flex; gap: 12px; margin-top: 14px; }
+  .dica .e { font-size: 20px; flex-shrink: 0; }
+  .dica p { font-size: 15px; margin: 0; }
+
+  /* PROMPT */
+  .prompt-wrap { background: var(--preto); border-radius: 14px; overflow: hidden; }
+  .prompt-bar { background: #1a1a1a; padding: 14px 20px; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid #2a2a2a; }
+  .dot { width: 11px; height: 11px; border-radius: 50%; }
+  .dr { background: #ff5f56; } .dy { background: #ffbd2e; } .dg { background: #27c93f; }
+  .prompt-label { font-size: 12px; color: rgba(255,255,255,0.3); margin-left: auto; }
+  .prompt-txt { padding: 28px; font-family: 'Courier New', monospace; font-size: 13px; line-height: 1.8; color: var(--creme); white-space: pre-wrap; word-break: break-word; max-height: 480px; overflow-y: auto; }
+  .prompt-txt::-webkit-scrollbar { width: 5px; }
+  .prompt-txt::-webkit-scrollbar-thumb { background: var(--laranja); border-radius: 3px; }
+  .btn-copiar { display: block; background: var(--laranja); color: #fff; border: none; padding: 14px 28px; border-radius: 8px; font-family: 'Montserrat', sans-serif; font-size: 14px; font-weight: 700; cursor: pointer; margin: 16px auto 0; }
+
+  /* CTA */
+  .preco-box { background: var(--preto); border-radius: 16px; padding: 36px; text-align: center; display: inline-block; min-width: 280px; margin-bottom: 28px; }
+  .preco-de { font-size: 15px; color: rgba(252,233,217,0.4); text-decoration: line-through; }
+  .preco-val { font-family: 'Montserrat', sans-serif; font-size: 60px; font-weight: 900; color: var(--laranja); line-height: 1; }
+  .preco-det { font-size: 13px; color: rgba(252,233,217,0.4); }
+  .btn-cta { display: block; background: var(--laranja); color: #fff; text-decoration: none; text-align: center; padding: 20px 44px; border-radius: 12px; font-family: 'Montserrat', sans-serif; font-size: 17px; font-weight: 800; max-width: 440px; margin: 0 auto 12px; }
+  .garantia { font-size: 13px; color: var(--cinza); text-align: center; }
+
+  /* BULLETS */
+  .lista { list-style: none; margin-bottom: 32px; }
+  .lista li { display: flex; gap: 12px; margin-bottom: 14px; font-size: 16px; align-items: flex-start; }
+  .lista li::before { content: '✓'; width: 22px; height: 22px; background: var(--laranja); color: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; flex-shrink: 0; margin-top: 2px; }
+
+  /* FOOTER */
+  .footer { background: var(--preto); padding: 32px; text-align: center; }
+  .footer p { color: rgba(252,233,217,0.3); font-size: 12px; margin: 0; }
+
+  @media print {
+    @page { size: A4; margin: 0; }
+
+    *, *::before, *::after {
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+      box-sizing: border-box !important;
+    }
+
+    html { margin: 0 !important; padding: 0 !important; }
+
+    body {
+      margin: 0 !important;
+      padding: 0 !important;
+      font-size: 13px !important;
+      line-height: 1.6 !important;
+      width: 210mm !important;
+    }
+
+    /* ── Wrappers de seção: largura total, sem centralização ── */
+    .capa,
+    .secao-creme,
+    .secao-preto,
+    .secao-laranja,
+    .footer {
+      width: 100% !important;
+      max-width: 100% !important;
+      margin: 0 !important;
+      display: block !important;
+    }
+
+    /* ── Conteúdo interno: padding cria margens visuais ── */
+    .capa {
+      padding: 52px 60px 60px !important;
+      page-break-after: always !important;
+    }
+    .secao {
+      width: 100% !important;
+      max-width: 100% !important;
+      margin: 0 !important;
+      padding: 44px 60px !important;
+    }
+    .secao-creme .inner,
+    .secao-preto .inner,
+    .secao-laranja .inner {
+      width: 100% !important;
+      max-width: 100% !important;
+      margin: 0 !important;
+      padding: 44px 60px !important;
+    }
+
+    /* ── Tipografia ── */
+    .capa h1 { font-size: 36px !important; max-width: 100% !important; }
+    h2 { font-size: 26px !important; }
+    h3 { font-size: 16px !important; }
+    .capa p { max-width: 100% !important; font-size: 15px !important; }
+
+    /* ── Prompt: sem scroll, fonte menor para caber ── */
+    .secao-preto { page-break-before: always !important; }
+    .prompt-wrap { border-radius: 0 !important; }
+    .prompt-txt {
+      max-height: none !important;
+      overflow: visible !important;
+      font-size: 9.5px !important;
+      line-height: 1.6 !important;
+      padding: 20px 28px !important;
+    }
+
+    /* ── Evitar cortes ── */
+    .dor, .dica, .passo, .preco-box { page-break-inside: avoid !important; }
+    h2, h3 { page-break-after: avoid !important; }
+
+    /* ── Ocultar interativos ── */
+    .btn-copiar { display: none !important; }
+
+    /* ── Links ── */
+    a { color: inherit !important; }
+    .btn-cta { background: #FC4C04 !important; color: #fff !important; }
+  }
+</style>
+</head>
+<body>
+
+<!-- CAPA -->
+<div class="capa">
+  <span class="badge">Método Engrene · Suellen Warmling</span>
+  <h1>Como analisar seu Instagram<br>usando <span>Inteligência Artificial</span></h1>
+  <p>Descubra em minutos o que está travando o crescimento do seu negócio — sem precisar de especialista.</p>
+
+</div>
+
+
+<!-- DOR -->
+<div class="secao-creme">
+  <div class="inner">
+    <span class="label">Antes de começar</span>
+    <h2>Isso parece familiar?</h2>
+
+    <div class="dor">
+      <strong>📱 "Posto, mas ninguém vê"</strong>
+      <span>Horas criando conteúdo e no final: 10 curtidas, sendo 7 das amigas.</span>
+    </div>
+    <div class="dor">
+      <strong>⏰ "Não tenho tempo para criar conteúdo"</strong>
+      <span>Você cuida de tudo sozinha. Atende, produz, organiza… e ainda tem que aparecer no Instagram?</span>
+    </div>
+    <div class="dor">
+      <strong>🤖 "Tentei usar IA mas saiu tudo genérico"</strong>
+      <span>Abriu o ChatGPT, digitou alguma coisa, saiu um texto que não parecia seu. E fechou.</span>
+    </div>
+
+    <p style="margin-top: 24px;">O problema não é você. É que ninguém nunca olhou pro seu perfil com olhos de especialista e disse exatamente o que precisa mudar.</p>
+    <p><strong>Esse guia resolve isso.</strong></p>
+  </div>
+</div>
+
+
+<!-- O QUE É -->
+<div class="secao">
+  <span class="label">A solução</span>
+  <div class="divisor"></div>
+  <h2>O que você vai fazer</h2>
+  <p>Você vai usar o <strong>Claude</strong> — uma inteligência artificial gratuita — para fazer uma análise completa do seu Instagram.</p>
+  <p>Você compartilha a tela do seu computador com ele. Ele olha seu perfil ao vivo e te entrega um diagnóstico completo: o que está errado, por que está errado, e o que fazer primeiro.</p>
+  <p><strong>Leva de 10 a 20 minutos. Não precisa saber nada de tecnologia.</strong></p>
+</div>
+
+
+<!-- PASSO A PASSO -->
+<div class="secao-creme">
+  <div class="inner">
+    <span class="label">Como fazer</span>
+    <div class="divisor"></div>
+    <h2>Passo a passo</h2>
+    <p style="color: var(--cinza); margin-bottom: 32px;">Siga com calma. É mais simples do que parece.</p>
+
+    <p style="font-family: 'Montserrat', sans-serif; font-size: 14px; font-weight: 700; color: var(--preto); margin-bottom: 14px;">Assista o vídeo abaixo para entender como usar</p>
+    <a href="https://www.youtube.com/watch?v=zwyLwpAVI_M" target="_blank" style="display: block; position: relative; border-radius: 14px; overflow: hidden; text-decoration: none; margin-bottom: 8px;">
+      <img src="https://img.youtube.com/vi/zwyLwpAVI_M/maxresdefault.jpg" alt="Assista como usar" style="width: 100%; display: block; border-radius: 14px;">
+      <div style="position: absolute; inset: 0; background: rgba(0,0,0,0.4); border-radius: 14px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px;">
+        <div style="width: 72px; height: 72px; background: #FC4C04; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+          <svg width="30" height="30" viewBox="0 0 24 24" fill="white"><path d="M8 5v14l11-7z"/></svg>
+        </div>
+        <span style="font-family: 'Montserrat', sans-serif; font-size: 15px; font-weight: 700; color: #fff;">▶ Assistir o vídeo tutorial</span>
+      </div>
+    </a>
+
+  </div>
+</div>
+
+
+<!-- O PROMPT -->
+<div class="secao-preto">
+  <div class="inner">
+    <span class="label" style="color: rgba(252,233,217,0.5);">O prompt completo</span>
+    <h2 style="color: var(--creme); margin-bottom: 8px;">Copie e cole esse texto no Claude</h2>
+    <p style="color: rgba(252,233,217,0.5); font-size: 15px; margin-bottom: 28px;">Preencha só os campos entre [colchetes]. O resto não mude.</p>
+
+    <div class="prompt-wrap">
+      <div class="prompt-bar">
+        <div class="dot dr"></div><div class="dot dy"></div><div class="dot dg"></div>
+        <span class="prompt-label">prompt-analise-instagram.txt</span>
+      </div>
+      <div class="prompt-txt" id="prompt-texto">Você é uma consultora especialista em Instagram para negócios locais brasileiros, treinada com o Método Engrene da Suellen Warmling — baseado em mais de 120 análises reais.
+
+Estou compartilhando minha tela pela extensão do Chrome. Você está vendo meu perfil do Instagram ao vivo.
+
+MEUS DADOS:
+Nome: [SEU NOME]
+Nicho: [SEU NICHO]
+Instagram: @[SEU @]
+
+---
+
+PRÉ-ANÁLISE — VERIFICAÇÃO OBRIGATÓRIA
+
+Antes de qualquer passo, confirme:
+• O perfil está visível e público na tela?
+• Consegue ler a bio, ver a foto de perfil e a grade de posts?
+
+Se o perfil estiver privado ou inacessível: escreva "Não consigo ver o perfil — ele está privado ou não carregou. Verifique o acesso e tente novamente." e pare aqui.
+Se estiver visível: escreva "Perfil visível. Iniciando análise." e avance para o PASSO 0.
+
+---
+
+PROTOCOLO DE EXECUÇÃO
+
+Execute os 11 passos em ordem exata, do PASSO 0 ao PASSO 10. Não pule, não reordene, não agrupe.
+Ao iniciar cada passo: escreva "PASSO X — [NOME DO PASSO]"
+Ao finalizar cada passo: cite o que viu + classifique + avance imediatamente.
+
+REGRA DE DADOS INVISÍVEIS
+Se uma informação não estiver visível na tela, escreva: "Não foi possível analisar — [dado] não estava visível." Nunca suponha, estime ou invente. Continue os demais elementos do mesmo passo e avance normalmente.
+
+REGRA DE LINGUAGEM
+Fale como uma amiga que entende de Instagram — simples, direta, sem termos técnicos.
+Não use: algoritmo, engajamento, feed, CTA, funil, persona, tráfego, otimizar.
+Use: "o Instagram", "curtidas e comentários", "chamada para comprar", "a sua página", "a grade de posts".
+Proibido: "talvez", "poderia", "acho que", "pode ser". A análise é afirmativa. Se está errado, diz que está errado.
+
+REGRA DE CONCISÃO
+Cada passo: máximo 150 palavras. Diagnóstico final: máximo 350 palavras no total.
+Cite dados reais — não explique o que é óbvio.
+
+REGRA DE NÃO REPETIÇÃO
+Se um problema já foi citado em um passo anterior, não repita nos seguintes. Cada observação aparece uma única vez em todo o diagnóstico.
+
+CLASSIFICAÇÃO OBRIGATÓRIA EM CADA PASSO
+• APROVADO — está funcionando bem
+• ATENÇÃO — tem problema, precisa corrigir em breve
+• URGENTE — está bloqueando vendas agora (use no máximo 3x em todo o diagnóstico)
+
+FÓRMULA PARA TODO PONTO NEGATIVO (ATENÇÃO ou URGENTE)
+Use esta estrutura sem exceção:
+→ Vi: [dado exato que apareceu na tela]
+→ Problema: [o que está errado comparado ao ideal]
+→ Custo: [o que isso impede em vendas agora]
+→ Ação: [instrução exata — texto para copiar, elemento para criar ou mudar]
+Proibido dizer "melhore", "revise", "atualize" sem dizer exatamente o que fazer.
+
+ANTI-PATTERNS — NUNCA FAÇA:
+• Elogiar de forma genérica ("Ótima bio!" sem citar o que está bom)
+• Sugerir ações vagas ("Crie mais conteúdo", "Melhore a qualidade")
+• Usar URGENTE para problemas médios — reserve para o que realmente trava vendas
+• Repetir a mesma crítica em passos diferentes
+• Inventar dados que não estão visíveis na tela
+
+---
+
+PASSO 0 — PRIMEIRA IMPRESSÃO
+Olhe a grade de fotos e a foto de perfil. Não role a página ainda.
+• Dá para entender o que esse negócio faz em 3 segundos?
+• A foto de perfil mostra o rosto? Fundo limpo? Passa confiança?
+• O visual parece profissional ou amador?
+
+---
+
+PASSO 1 — NOME DE USUÁRIO (@)
+Leia o @. Teste: uma pessoa poderia digitar esse @ sem errar?
+• Tem pontos, underlines duplos, números soltos ou palavras difíceis?
+• Se houver problema: escreva o @ ideal para esse nicho e cidade.
+
+---
+
+PASSO 2 — NOME EM NEGRITO NO PERFIL
+Leia o nome em negrito abaixo do @.
+• Tem as 3 partes: nome do negócio + o que faz + cidade?
+• Exemplos que funcionam: "Confeitaria Artesanal · BH", "Studio de Maquiagem · São Paulo"
+• Se não tiver as 3 partes: escreva o nome ideal com as informações do negócio.
+
+---
+
+PASSO 3 — BIO (texto de apresentação)
+Leia a bio completa. Verifique os 5 elementos:
+
+① O que faz + diferencial (não pode ser vago: "faço com amor" não conta)
+② Promessa de resultado real ("suas unhas duram 3 semanas" é promessa — "unhas lindas" não é)
+③ Número de experiência: anos de mercado, clientes atendidos, projetos entregues
+④ Convite para agir: "Agende pelo link", "Fale no WhatsApp"
+⑤ Link presente
+
+Para cada elemento: PRESENTE / AUSENTE / FRACO
+• APROVADO = 4 ou 5 elementos funcionando
+• ATENÇÃO = 3 elementos
+• URGENTE = 2 ou menos
+
+Se faltar algum elemento: reescreva a bio completa usando as informações do negócio.
+
+---
+
+PASSO 4 — LINK DA BIO
+• O link existe? Para onde leva?
+• Se for WhatsApp: o formato correto é wa.me/55 + DDD + número (sem zero na frente, sem redirecionador).
+• Se for Linktree ou Bitly: explique em 1 frase por que esse tipo de link afasta clientes e diga o formato certo.
+• Se não tiver link: diga o que está sendo perdido.
+
+---
+
+PASSO 5 — POSTS FIXADOS
+Olhe os posts no topo do perfil (até 3 fixados).
+• Tem posts fixados? O que está fixado em cada posição?
+• Estratégia ideal: 1° apresentação do negócio, 2° catálogo ou preços, 3° depoimento ou promoção recente
+• Se não tiver fixados ou se estiver errado: diga o que deveria estar em cada posição.
+
+Se não der para ver o conteúdo: "Não foi possível analisar — conteúdo dos posts fixados não visível." e avance.
+
+---
+
+PASSO 6 — DESTAQUES (bolinhas abaixo da bio)
+• Quantos destaques existem? Liste os títulos visíveis.
+• As capinhas têm estilo parecido entre si?
+• Os títulos são claros? ("Natal 2022" é ruim. "Cardápio" é bom. "❤️❤️❤️" é inútil.)
+• Tem destaque de: serviços ou cardápio / depoimentos / como comprar ou agendar?
+
+Se algum título não for visível: "Não foi possível analisar — título do destaque não visível."
+
+---
+
+PASSO 7 — FREQUÊNCIA DE POSTAGEM
+Olhe as datas visíveis nos posts da grade. Use só o que aparece na tela — não invente datas.
+• Qual a data do post mais recente?
+• Existe intervalo maior que 2 semanas sem posts?
+• Os posts aparecem de forma regular ou em blocos com grandes pausas?
+
+Se datas não estiverem visíveis: "Não foi possível analisar — datas dos posts não visíveis."
+
+---
+
+PASSO 8 — FOTOS E VÍDEOS
+Olhe os últimos 9 a 12 posts visíveis na grade.
+• Qualidade visual boa? (iluminação, foco — não desfocado ou escuro)
+• As cores e estilo combinam entre os posts ou parecem de perfis diferentes?
+• A dona do negócio aparece nos posts? (rostos vendem mais que só produto)
+• Tem variedade de formatos? (foto, vídeo, reel, carrossel)
+
+Padrão esperado por nicho:
+• Confeitaria/gastronomia: produto bem iluminado, close no detalhe
+• Moda: vídeo experimentando a peça, não só foto estática
+• Beleza (cabelo, unhas, maquiagem): antes e depois lado a lado
+• Serviços (coach, consultoria, personal): a pessoa falando, não só texto
+
+Se posts não estiverem visíveis: "Não foi possível analisar — posts não visíveis na grade."
+
+---
+
+PASSO 9 — CAPAS DOS REELS
+Olhe os reels visíveis na grade (ícone de vídeo).
+• Os reels têm título ou frase escrita na capa? Cite o texto real de cada capa que conseguir ler.
+• Reel sem texto na capa não aparece para pessoas novas — é invisível.
+• As capas chamam atenção ou são cenas aleatórias sem contexto?
+
+Se não houver reels visíveis: "Não foi possível analisar — nenhum reel visível na grade."
+
+---
+
+PASSO 10 — LEGENDAS
+Leia as legendas dos posts visíveis na tela. Para cada legenda que conseguir ler, avalie:
+• Tem informação real do produto ou serviço? (preço, prazo, material, resultado)
+• Tem convite claro para comprar, agendar ou perguntar?
+• O texto parece a voz da dona do negócio ou foi gerado por IA?
+
+Sinais de legenda gerada por IA:
+— Começa com "Descubra", "Transforme", "Eleve", "Mergulhe", "Potencialize"
+— Emojis no final de cada frase como pontuação
+— Linguagem genérica sem nenhum detalhe específico do negócio
+— Texto que poderia ser de qualquer pessoa, em qualquer nicho
+
+Se detectar IA: explique em 2 frases simples por que isso afasta clientes reais.
+Se nenhuma legenda estiver acessível: "Não foi possível analisar — legendas não visíveis."
+
+---
+
+DIAGNÓSTICO FINAL
+
+Após os 11 passos, entregue o relatório neste formato exato:
+
+## RESUMO DO PERFIL
+(1 frase que define o problema central deste perfil)
+
+---
+
+## FAÇA ISSO AGORA
+(As 2 ações mais urgentes, em ordem de impacto)
+1. [ação específica] — leva cerca de [X minutos]
+2. [ação específica] — leva cerca de [X minutos]
+
+---
+
+## O QUE ESTÁ FUNCIONANDO BEM
+(Mínimo 2 pontos. Cite o elemento específico — não elogie de forma genérica)
+
+---
+
+## OS 3 PROBLEMAS MAIS URGENTES
+
+Problema 1:
+→ Vi: [dado real observado na tela]
+→ Problema: [gap em relação ao ideal]
+→ Custo: [impacto direto em vendas]
+→ Ação: [instrução exata — texto para copiar, elemento para criar ou mudar]
+
+Problema 2: [mesma estrutura]
+
+Problema 3: [mesma estrutura]
+
+---
+
+## PRÓXIMO PASSO
+Uma única ação para fazer hoje — a mais simples e de maior impacto.
+Diga exatamente o que muda quando ela for feita.</div>
+    </div>
+    <button class="btn-copiar" onclick="copiar()">Copiar Prompt</button>
+  </div>
+</div>
+
+
+<!-- FOOTER -->
+<div class="footer">
+  <p>© 2025 Suellen Warmling · Método Engrene · Todos os direitos reservados</p>
+</div>
+
+<script>
+function copiar() {
+  const t = document.getElementById('prompt-texto').innerText;
+  navigator.clipboard.writeText(t).then(() => {
+    const b = document.querySelector('.btn-copiar');
+    b.textContent = '✓ Copiado!';
+    b.style.background = '#27C93F';
+    setTimeout(() => { b.textContent = 'Copiar Prompt'; b.style.background = 'var(--laranja)'; }, 2500);
+  });
+}
+</script>
+</body>
+</html>
